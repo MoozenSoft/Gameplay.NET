@@ -97,6 +97,7 @@ dotnet run --project samples/Gameplay.Host/Gameplay.Host.csproj
 
 - 文档和注释使用**中文**，专业术语使用英文
 - C# 命名遵循 .NET 惯例（PascalCase 公开成员，camelCase 私有成员）
+- 使用文件范围的命名空间（比如：`namespace Gameplay;`，不加大括号缩进）
 
 <!-- CODEGRAPH_START -->
 ## CodeGraph
