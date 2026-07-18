@@ -98,6 +98,35 @@ dotnet run --project samples/Gameplay.Host/Gameplay.Host.csproj
 - 文档和注释使用**中文**，专业术语使用英文
 - C# 命名遵循 .NET 惯例（PascalCase 公开成员，camelCase 私有成员）
 - 使用文件范围的命名空间（比如：`namespace Gameplay;`，不加大括号缩进）
+- 遵守 TDD（测试驱动开发）
+- 优先使用 0 GC 方案，但酌情权衡——热路径（每帧遍历大量 Entity 的 System）严格要求；冷路径（初始化、配置加载、RPC 处理）可放松，以可读性为先：
+  - **struct 代替 class**：值类型栈分配，无 GC 压力；ECS Component 均为 struct
+  - **`ref struct` / `ref` 返回 / `ref` 字段（C# 11）**：防止值类型逃逸到堆；`ref struct` 内可存 ref 字段
+  - **`scoped ref`（C# 11）**：约束 ref 生命周期，避免编译器保守的逃逸分析
+  - **`in` 参数修饰符**：按只读引用传递大 struct，避免拷贝开销
+  - **`ref readonly` 返回**：返回只读引用，避免拷贝
+  - **`Span<T>` / `ReadOnlySpan<T>` / `Memory<T>`**：栈上安全视图，零分配切片
+  - **`stackalloc`**：栈上分配临时缓冲区（`Span<int> buf = stackalloc int[64]`）
+  - **`[SkipLocalsInit]`**：跳过 `stackalloc` 零初始化（已知写入全部元素时用）
+  - **`InlineArray`（C# 12）**：`[InlineArray(16)]` 在 struct 内嵌入固定长度数组，不分配堆内存
+  - **`fixed` 字段**：`fixed int buffer[64]` 在 struct 内直接嵌入，无需单独数组对象
+  - **`params Span<T>`（C# 13 / net10.0）**：params 传参不分配数组
+  - **ArrayPool / ObjectPool**：复用临时数组和对象，`Rent` → `Return`；`finally` 块归还
+  - **`GC.AllocateUninitializedArray<T>()`**：跳过数组零初始化（你立即写入全部元素时用）
+  - **`Array.Empty<T>()`**：共享空数组单例，代替 `new T[0]`
+  - **`CollectionsMarshal.AsSpan<T>()`**：从 `List<T>` 获取内部 `Span`，零分配访问
+  - **`SearchValues<T>`**：预计算搜索模式，零分配字符串/字节查找
+  - **`ValueStringBuilder`**：栈上字符串拼接，不分配 `StringBuilder`（可参考 .NET 内部实现或自定义）
+  - **`ValueTask<T>` / `ValueTask`**：避免同步完成路径的 `Task` 分配；ECS 中 async 很少用，但 RPC 层适用
+  - **`StringBuilderCache` / `StringPool`**：缓存并复用 `StringBuilder` 实例
+  - **`[ThreadStatic]` / `ThreadLocal<T>`**：每线程复用缓冲区，无锁无分配
+  - **`static` 匿名函数**：`static () => ...` 禁止闭包捕获，杜绝隐式委托分配
+  - **手动 struct 枚举器**：实现 `Current` / `MoveNext()` / `GetEnumerator()` 为 struct 类型，`foreach` 不装箱
+  - **枚举 / bit flags 代替 `string`**：用 `enum` 或 `[Flags]` 做标识/标签，避免字符串比较和分配
+  - **`IEquatable<T>` / `IComparable<T>`**：泛型接口避免值类型装箱
+  - **避免 LINQ 在热路径**：`foreach` 遍历 `List<T>`（非 `IEnumerable<T>`）不分配枚举器
+  - **避免闭包 / 缓存委托**：不在循环中 `() => ...` 或 `new EventHandler(...)`
+  - **`[MethodImpl(AggressiveInlining)]`**：热路径小方法内联，减少调用开销
 
 <!-- CODEGRAPH_START -->
 ## CodeGraph
