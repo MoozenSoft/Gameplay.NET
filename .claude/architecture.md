@@ -6,6 +6,14 @@ Gameplay.dll 基于 [Friflo.Engine.ECS](https://github.com/friflo/Friflo.Engine.
 
 **不是所有功能都进 ECS**。分界线：多 Entity 批量遍历 → Component + System；单例服务 / 消息路由 / 基础设施 → 普通对象（POCO）。
 
+**新 Feature 评估**：加入前自问三题——
+
+| 问题 | ECS ✅ | POCO ✅ |
+|------|--------|---------|
+| 遍历大量 Entity？ | 是 | 否（≤1 个 Entity） |
+| 核心是数据还是规则？ | 数据驱动 | 规则/流程驱动 |
+| 每帧 Tick 还是事件触发？ | 每帧 Tick | 事件触发 |
+
 ## 功能蓝图
 
 ### ECS 域（Component + Entity + System）
