@@ -4,14 +4,14 @@
 
 ## 目标
 
-搭建 Gameplay.NET 的工程骨架并完成最小垂直切片验证，确保 ECS 框架在双 TFM（`netstandard2.1` + `net10`）上正常编译和运行。
+搭建 Gameplay.NET 的工程骨架并完成最小垂直切片验证，确保 ECS 框架在双 TFM（`netstandard2.1` + `net10.0`）上正常编译和运行。
 
 ## 1. 工程骨架
 
 ### Gameplay.csproj
 
 ```xml
-<TargetFrameworks>netstandard2.1;net10</TargetFrameworks>
+<TargetFrameworks>netstandard2.1;net10.0</TargetFrameworks>
 ```
 
 PackageReference：
@@ -20,7 +20,7 @@ PackageReference：
 ### Gameplay.Tests.csproj
 
 ```xml
-<TargetFramework>net10</TargetFramework>
+<TargetFramework>net10.0</TargetFramework>
 ```
 
 PackageReference：
@@ -39,8 +39,8 @@ ProjectReference：
 
 ```bash
 dotnet build src/Gameplay/Gameplay.csproj -f netstandard2.1
-dotnet build src/Gameplay/Gameplay.csproj -f net10
-dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj -f net10
+dotnet build src/Gameplay/Gameplay.csproj -f net10.0
+dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj -f net10.0
 ```
 
 ## 2. NetMode 枚举

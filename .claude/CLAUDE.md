@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-Gameplay.NET —— 专注游戏玩法的 .NET 类库。目标平台 **netstandard2.1** + **net10**，产出 `Gameplay.dll`。
+Gameplay.NET —— 专注游戏玩法的 .NET 类库。目标平台 **netstandard2.1** + **net10.0**，产出 `Gameplay.dll`。
 
 三种 Target 模式：**Client**（客户端）、**Server**（Dedicated Server）、**Host**（Listen Server）。
 
@@ -53,7 +53,7 @@ Gameplay.Infrastructure.dll  Gameplay.RPG.dll
 
 运行时通过 `World.GetNetMode()` 返回 `NetMode` 枚举区分模式。详见 `.claude/architecture.md`。
 
-多目标 `netstandard2.1` + `net10`，详见 `.claude/architecture.md`。
+多目标 `netstandard2.1` + `net10.0`，详见 `.claude/architecture.md`。
 
 ## 构建命令
 
@@ -82,7 +82,7 @@ dotnet build src/Gameplay/Gameplay.csproj -f netstandard2.1
 dotnet test Gameplay.NET.slnx
 dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj
 dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj --filter "FullyQualifiedName~ClassName"
-dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj -f net10
+dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj -f net10.0
 ```
 
 ## 示例运行

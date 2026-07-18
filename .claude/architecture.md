@@ -170,12 +170,12 @@ public enum NetMode
 
 ## 多目标
 
-目标平台 **netstandard2.1** + **net10**。
+目标平台 **netstandard2.1** + **net10.0**。
 
 | TFM | 定位 | 典型使用场景 |
 |-----|------|-------------|
 | `netstandard2.1` | 最大兼容 | Unity、Godot 等引擎集成 |
-| `net10` | 最新 API | 独立 Server/Client 进程、AOT 发布 |
+| `net10.0` | 最新 API | 独立 Server/Client 进程、AOT 发布 |
 
 代码中通过 TFM 条件编译区分 API：
 

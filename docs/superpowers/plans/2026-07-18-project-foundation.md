@@ -6,11 +6,11 @@
 
 **Architecture:** 4 个源文件 + 1 个测试文件。World 直接暴露 Friflo 的 `EntityStore`，不建封装层。NetMode 是纯枚举。HealthComponent 是纯数据 struct。
 
-**Tech Stack:** .NET (netstandard2.1 + net10), Friflo.Engine.ECS, xUnit
+**Tech Stack:** .NET (netstandard2.1 + net10.0), Friflo.Engine.ECS, xUnit
 
 ## Global Constraints
 
-- 目标 TFM：`netstandard2.1;net10`（Gameplay.dll）, `net10`（测试项目）
+- 目标 TFM：`netstandard2.1;net10.0`（Gameplay.dll）, `net10.0`（测试项目）
 - 文件范围命名空间（`namespace Gameplay;`，不用大括号缩进）
 - 文档和注释使用中文
 - Friflo.Engine.ECS 通过 NuGet 引用
@@ -25,7 +25,7 @@
 - Create: `Gameplay.NET.slnx`
 
 **Interfaces:**
-- Produces: `Gameplay.csproj`（`<TargetFrameworks>netstandard2.1;net10</TargetFrameworks>`，引用 `Friflo.Engine.ECS`）
+- Produces: `Gameplay.csproj`（`<TargetFrameworks>netstandard2.1;net10.0</TargetFrameworks>`，引用 `Friflo.Engine.ECS`）
 
 - [ ] **Step 1: 创建 Gameplay.csproj**
 
@@ -35,7 +35,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1;net10</TargetFrameworks>
+    <TargetFrameworks>netstandard2.1;net10.0</TargetFrameworks>
     <RootNamespace>Gameplay</RootNamespace>
     <AssemblyName>Gameplay</AssemblyName>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -69,10 +69,10 @@ dotnet restore src/Gameplay/Gameplay.csproj
 
 - [ ] **Step 4: 验证解决方案构建**
 
-先只构建 net10（快），然后构建 netstandard2.1：
+先只构建 net10.0（快），然后构建 netstandard2.1：
 
 ```bash
-dotnet build Gameplay.NET.slnx -f net10
+dotnet build Gameplay.NET.slnx -f net10.0
 dotnet build Gameplay.NET.slnx -f netstandard2.1
 ```
 
@@ -98,7 +98,7 @@ git commit -m "feat: 添加 Gameplay.csproj 和解决方案文件
 
 **Interfaces:**
 - Consumes: `src/Gameplay/Gameplay.csproj`（ProjectReference）
-- Produces: `Gameplay.Tests.csproj`（`net10`，引用 xUnit + Gameplay 项目）
+- Produces: `Gameplay.Tests.csproj`（`net10.0`，引用 xUnit + Gameplay 项目）
 
 - [ ] **Step 1: 创建 Gameplay.Tests.csproj**
 
@@ -108,7 +108,7 @@ git commit -m "feat: 添加 Gameplay.csproj 和解决方案文件
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Gameplay.Tests</RootNamespace>
     <AssemblyName>Gameplay.Tests</AssemblyName>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -164,7 +164,7 @@ dotnet test Gameplay.NET.slnx
 git add tests/Gameplay.Tests/Gameplay.Tests.csproj Gameplay.NET.slnx
 git commit -m "feat: 添加测试项目 Gameplay.Tests
 
-- net10 xUnit 测试项目
+- net10.0 xUnit 测试项目
 - Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 
@@ -245,7 +245,7 @@ public class World
 - [ ] **Step 3: 构建验证双 TFM**
 
 ```bash
-dotnet build Gameplay.NET.slnx -f net10
+dotnet build Gameplay.NET.slnx -f net10.0
 dotnet build Gameplay.NET.slnx -f netstandard2.1
 ```
 
@@ -345,7 +345,7 @@ dotnet test Gameplay.NET.slnx
 - [ ] **Step 5: 最终验证双 TFM 构建**
 
 ```bash
-dotnet build Gameplay.NET.slnx -f net10
+dotnet build Gameplay.NET.slnx -f net10.0
 dotnet build Gameplay.NET.slnx -f netstandard2.1
 ```
 
