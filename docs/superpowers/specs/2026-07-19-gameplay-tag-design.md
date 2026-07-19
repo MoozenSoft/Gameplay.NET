@@ -85,6 +85,7 @@ public static class GameplayTagManager
 - **预计算展开集**：采用 Dirty + `Build()` 模式。`RegisterTags` 标记脏，首次 `RequestTag`（或手动 `Build()`）统一重算所有展开集。
 - **Tag 名验证**：去首尾空格，不允许空字符串，不允许以点开头/结尾，不允许连续点（`..`）。大小写敏感。除此之外不限制字符集。
 - **重复注册**：幂等，已存在的 Tag 直接返回已有句柄。
+- **批量注册优化**：`RegisterTags` 内部解析所有 Tag 名后，先统计新增总数，一次性扩容数组，避免多次分配和复制。
 
 ### 展开集示例
 
@@ -245,6 +246,7 @@ public struct GameplayTags : IComponent
 
 - **作为 IComponent 而非 Friflo ITag**：突破 255 上限，支持层级，不改变 Archetype（添加/移除 GameplayTag 不引起结构性变更）。
 - **内部字段名 `tagSet`**（非 `set`）：与 C# 关键字区分，避免混淆。
+- **Tag 全部移除后组件留在 Entity 上**：`RemoveTag` 清空所有 Tag 后不移除 `GameplayTags` 组件，避免隐式结构性变更（改 Archetype）。空位集内存开销极小（bits=null）。
 
 ## 7. 使用示例
 
@@ -299,6 +301,7 @@ foreach (var (tags, hp) in query.Entities)
 | `MatchesExact_SameIdReturnsTrue` | 精确匹配验证 |
 | `GameplayTags_AddAndHasTag` | Entity 添加 Tag 后可查询 |
 | `GameplayTags_RemoveTag` | 移除 Tag 后 HasTag 返回 false |
+| `GameplayTags_EmptyKeepsComponent` | Tag 全部移除后 GameplayTags 组件仍存在 |
 | `GameplayTags_MatchesParent` | Entity 有 `Damage.Fire`，`Matches(Damage)` → true |
 | `GameplayTags_MatchesAny` | 两个 Entity 的 GameplayTags 交集检查 |
 | `GameplayTagSet_HasAny` | 位集 HasAny 的逻辑正确性 |
