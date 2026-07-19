@@ -100,6 +100,8 @@ public static class GameplayTagManager
 
     // ---- 内部 ----
 
+    internal static int TagCount => nameToId.Count;
+
     internal static string? GetName(int id)
         => id > 0 && id < nodes.Length && nodes[id] != null
             ? nodes[id].FullName : null;
