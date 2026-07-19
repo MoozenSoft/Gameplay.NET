@@ -19,7 +19,7 @@ src/Gameplay/GameplayTags/
 ├── GameplayTags.cs          # struct : IComponent，Entity 上的 Tag 运行时集合
 └── GameplayTagQuery.cs      # static，查询便利扩展
 
-tests/Gameplay.Tests/
+tests/Gameplay.Tests/GameplayTags/
 └── GameplayTagTests.cs
 ```
 
@@ -296,7 +296,7 @@ foreach (var (tags, hp) in query.Entities)
 
 ## 9. 测试计划
 
-文件：`tests/Gameplay.Tests/GameplayTagTests.cs`
+文件：`tests/Gameplay.Tests/GameplayTags/GameplayTagTests.cs`
 
 | 测试 | 说明 |
 |------|------|
