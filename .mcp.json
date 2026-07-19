@@ -7,6 +7,10 @@
         "serve",
         "--mcp"
       ]
+    },
+    "friflo-ecs": {
+      "type": "http",
+      "url": "https://friflo.gitbook.io/friflo.engine.ecs/~gitbook/mcp"
     }
   }
 }
