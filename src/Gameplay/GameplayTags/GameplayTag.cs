@@ -29,9 +29,9 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
         => GameplayTagManager.GetExpandedSet(id);
 
     public bool Equals(GameplayTag other) => id == other.id;
-    public override bool Equals(object obj) => obj is GameplayTag other && Equals(other);
+    public override bool Equals(object? obj) => obj is GameplayTag other && Equals(other);
     public override int GetHashCode() => id;
 
     public override string ToString()
-        => IsValid ? GameplayTagManager.GetName(id) : "Invalid";
+        => IsValid ? GameplayTagManager.GetName(id)! : "Invalid";
 }

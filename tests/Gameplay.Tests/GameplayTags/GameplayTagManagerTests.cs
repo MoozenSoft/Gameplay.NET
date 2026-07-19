@@ -1,3 +1,4 @@
+using System;
 using Xunit;
 
 namespace Gameplay.Tests;
@@ -105,5 +106,35 @@ public class GameplayTagManagerTests
         var invalid = default(GameplayTag);
         Assert.False(invalid.IsValid);
         Assert.Equal("Invalid", invalid.ToString());
+    }
+
+    // ---- 验证层负向测试 ----
+
+    [Fact]
+    public void RegisterTags_EmptyName_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            GameplayTagManager.RegisterTags(""));
+    }
+
+    [Fact]
+    public void RegisterTags_LeadingDot_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            GameplayTagManager.RegisterTags(".Damage"));
+    }
+
+    [Fact]
+    public void RegisterTags_TrailingDot_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            GameplayTagManager.RegisterTags("Damage."));
+    }
+
+    [Fact]
+    public void RegisterTags_DoubleDot_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            GameplayTagManager.RegisterTags("Damage..Fire"));
     }
 }

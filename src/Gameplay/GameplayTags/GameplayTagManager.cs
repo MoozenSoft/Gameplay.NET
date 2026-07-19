@@ -65,7 +65,7 @@ public static class GameplayTagManager
         foreach (var fullName in newNames)
         {
             string[] parts = fullName.Split('.');
-            GameplayTagNode parent = null;
+            GameplayTagNode? parent = null;
 
             for (int i = 0; i < parts.Length; i++)
             {
@@ -100,7 +100,7 @@ public static class GameplayTagManager
 
     // ---- 内部 ----
 
-    internal static string GetName(int id)
+    internal static string? GetName(int id)
         => id > 0 && id < nodes.Length && nodes[id] != null
             ? nodes[id].FullName : null;
 
