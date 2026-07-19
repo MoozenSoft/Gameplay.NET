@@ -16,8 +16,7 @@ src/Gameplay/GameplayTags/
 ├── GameplayTagNode.cs       # internal，层级树节点
 ├── GameplayTagManager.cs    # static class，全局注册中心 + 展开集预计算
 ├── GameplayTagSet.cs        # internal struct，可扩展 long[] 位集
-├── GameplayTags.cs          # struct : IComponent，Entity 上的 Tag 运行时集合
-└── GameplayTagQuery.cs      # static，查询便利扩展
+└── GameplayTags.cs          # struct : IComponent，Entity 上的 Tag 运行时集合
 
 tests/Gameplay.Tests/GameplayTags/
 └── GameplayTagTests.cs
@@ -57,11 +56,20 @@ public static class GameplayTagManager
     // Tag ID → 展开子孙位集（预计算，查询时直接用）
     private static GameplayTagSet[] expandedSets;
 
-    /// <summary>批量注册（通常在游戏启动时调用一次）。</summary>
+    /// <summary>
+    /// 批量注册（通常在游戏启动时调用一次）。<br/>
+    /// 这是唯一创建 GameplayTag 的入口。子 Tag 注册时自动创建缺失的父节点。
+    /// </summary>
     public static void RegisterTags(params string[] tagNames);
 
-    /// <summary>注册或获取已存在的 GameplayTag。</summary>
+    /// <summary>
+    /// 获取已注册的 GameplayTag。只读，不创建。不存在则返回 <see cref="GameplayTag.Invalid"/>。
+    /// </summary>
     public static GameplayTag RequestTag(string tagName);
+
+    // 内部
+    private static bool dirty;  // 树变更后置脏，Build() 时重算展开集
+    internal static void Build();   // 统一重算所有展开集（惰性触发：首次 RequestTag 时）
 
     // 内部查询
     internal static string GetName(int id);
@@ -74,7 +82,9 @@ public static class GameplayTagManager
 
 - **线程安全**：不做。`RegisterTags` 在启动阶段调用一次，后续所有操作只读。与 UE5 FGameplayTag 一致。
 - **数组而非 List**：`nodes[id]` 和 `expandedSets[id]` 用数组下标 O(1) 访问，无 boxing。
-- **预计算展开集**：注册时把每个 Tag 及其所有子孙 Tag 的 ID 展开到位集中。查询 `Matches("Damage")` 时直接用预计算的展开集做位与，零递归、零字符串操作。
+- **预计算展开集**：采用 Dirty + `Build()` 模式。`RegisterTags` 标记脏，首次 `RequestTag`（或手动 `Build()`）统一重算所有展开集。
+- **Tag 名验证**：去首尾空格，不允许空字符串，不允许以点开头/结尾，不允许连续点（`..`）。大小写敏感。除此之外不限制字符集。
+- **重复注册**：幂等，已存在的 Tag 直接返回已有句柄。
 
 ### 展开集示例
 
@@ -236,24 +246,7 @@ public struct GameplayTags : IComponent
 - **作为 IComponent 而非 Friflo ITag**：突破 255 上限，支持层级，不改变 Archetype（添加/移除 GameplayTag 不引起结构性变更）。
 - **内部字段名 `tagSet`**（非 `set`）：与 C# 关键字区分，避免混淆。
 
-## 7. 查询便利扩展（可选）
-
-文件：`src/Gameplay/GameplayTags/GameplayTagQuery.cs`
-
-```csharp
-namespace Gameplay;
-
-public static class GameplayTagQueryExtensions
-{
-    /// <summary>为查询添加 GameplayTags 组件的结构筛选。</summary>
-    public static ArchetypeQuery WithGameplayTags(this ArchetypeQuery query)
-        => query.AllComponents(ComponentTypes.Get<GameplayTags>());
-}
-```
-
-这是一个语法糖——只做第一层（结构筛选），不做第二层（数据筛选）。真正的 Tag 匹配始终在循环内的 `Matches()` 里。
-
-## 8. 使用示例
+## 7. 使用示例
 
 ```csharp
 // 1. 启动时一次性注册所有 GameplayTag
@@ -277,8 +270,7 @@ entity.GetComponent<GameplayTags>().AddTag(DamageTag);
 entity.GetComponent<GameplayTags>().AddTag(StunTag);
 
 // 4. System 中查询
-var query = world.Store.Query<GameplayTags, HealthComponent>()
-    .WithGameplayTags();
+var query = world.Store.Query<GameplayTags, HealthComponent>();
 
 foreach (var (tags, hp) in query.Entities)
 {
@@ -294,7 +286,7 @@ foreach (var (tags, hp) in query.Entities)
 }
 ```
 
-## 9. 测试计划
+## 8. 测试计划
 
 文件：`tests/Gameplay.Tests/GameplayTags/GameplayTagTests.cs`
 
@@ -311,9 +303,8 @@ foreach (var (tags, hp) in query.Entities)
 | `GameplayTags_MatchesAny` | 两个 Entity 的 GameplayTags 交集检查 |
 | `GameplayTagSet_HasAny` | 位集 HasAny 的逻辑正确性 |
 | `GameplayTagSet_LargeId` | id > 64 的扩容和位操作正确性 |
-| `WithGameplayTags_FilterByComponent` | 结构筛选只返回有 GameplayTags 组件的 Entity |
 
-## 10. 不在范围内
+## 9. 不在范围内
 
 - Tag Change Events（Tag 增删时的回调）
 - JSON 序列化支持
