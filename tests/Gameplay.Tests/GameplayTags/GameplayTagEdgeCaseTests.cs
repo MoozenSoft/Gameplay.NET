@@ -1,8 +1,10 @@
 using System;
 using Friflo.Engine.ECS;
+using Gameplay;
+using Gameplay.GameplayTags;
 using Xunit;
 
-namespace Gameplay.Tests;
+namespace Gameplay.Tests.GameplayTags;
 
 public class GameplayTagEdgeCaseTests
 {
@@ -70,11 +72,11 @@ public class GameplayTagEdgeCaseTests
         var entityA = world.Store.CreateEntity();
         var entityB = world.Store.CreateEntity();
 
-        entityA.AddComponent(new GameplayTags());
-        entityB.AddComponent(new GameplayTags());
+        entityA.AddComponent(new GameplayTagsComponent());
+        entityB.AddComponent(new GameplayTagsComponent());
 
-        ref var tagsA = ref entityA.GetComponent<GameplayTags>();
-        ref var tagsB = ref entityB.GetComponent<GameplayTags>();
+        ref var tagsA = ref entityA.GetComponent<GameplayTagsComponent>();
+        ref var tagsB = ref entityB.GetComponent<GameplayTagsComponent>();
 
         tagsA.AddTag(GameplayTag.Request("Damage"));
         tagsB.AddTag(GameplayTag.Request("Buff"));

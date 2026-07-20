@@ -1,6 +1,6 @@
 using System;
 
-namespace Gameplay;
+namespace Gameplay.GameplayTags;
 
 /// <summary>不可变的轻量 GameplayTag 句柄，包装一个 int id。</summary>
 public readonly struct GameplayTag : IEquatable<GameplayTag>

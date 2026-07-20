@@ -1,7 +1,9 @@
 using Friflo.Engine.ECS;
+using Gameplay;
+using Gameplay.GameplayTags;
 using Xunit;
 
-namespace Gameplay.Tests;
+namespace Gameplay.Tests.GameplayTags;
 
 public class GameplayTagsTests
 {
@@ -23,10 +25,10 @@ public class GameplayTagsTests
     {
         var world = CreateWorld();
         var entity = world.Store.CreateEntity();
-        entity.AddComponent(new GameplayTags());
+        entity.AddComponent(new GameplayTagsComponent());
 
         var fireTag = GameplayTag.Request("Damage.Fire");
-        ref var tags = ref entity.GetComponent<GameplayTags>();
+        ref var tags = ref entity.GetComponent<GameplayTagsComponent>();
         tags.AddTag(fireTag);
 
         Assert.True(tags.HasTag(fireTag));
@@ -38,10 +40,10 @@ public class GameplayTagsTests
     {
         var world = CreateWorld();
         var entity = world.Store.CreateEntity();
-        entity.AddComponent(new GameplayTags());
+        entity.AddComponent(new GameplayTagsComponent());
 
         var fireTag = GameplayTag.Request("Damage.Fire");
-        ref var tags = ref entity.GetComponent<GameplayTags>();
+        ref var tags = ref entity.GetComponent<GameplayTagsComponent>();
         tags.AddTag(fireTag);
         tags.RemoveTag(fireTag);
 
@@ -54,15 +56,15 @@ public class GameplayTagsTests
     {
         var world = CreateWorld();
         var entity = world.Store.CreateEntity();
-        entity.AddComponent(new GameplayTags());
+        entity.AddComponent(new GameplayTagsComponent());
 
         var fireTag = GameplayTag.Request("Damage.Fire");
-        ref var tags = ref entity.GetComponent<GameplayTags>();
+        ref var tags = ref entity.GetComponent<GameplayTagsComponent>();
         tags.AddTag(fireTag);
         tags.RemoveTag(fireTag);
 
         // 组件仍存在于 Entity 上
-        Assert.True(entity.HasComponent<GameplayTags>());
+        Assert.True(entity.HasComponent<GameplayTagsComponent>());
     }
 
     [Fact]
@@ -70,10 +72,10 @@ public class GameplayTagsTests
     {
         var world = CreateWorld();
         var entity = world.Store.CreateEntity();
-        entity.AddComponent(new GameplayTags());
+        entity.AddComponent(new GameplayTagsComponent());
 
         var doTTag = GameplayTag.Request("Damage.Fire.DoT");
-        ref var tags = ref entity.GetComponent<GameplayTags>();
+        ref var tags = ref entity.GetComponent<GameplayTagsComponent>();
         tags.AddTag(doTTag);
 
         // 层级匹配：DoT 是 Damage 的子孙
@@ -90,10 +92,10 @@ public class GameplayTagsTests
     {
         var world = CreateWorld();
         var entity = world.Store.CreateEntity();
-        entity.AddComponent(new GameplayTags());
+        entity.AddComponent(new GameplayTagsComponent());
 
         var regenTag = GameplayTag.Request("Buff.Regeneration");
-        ref var tags = ref entity.GetComponent<GameplayTags>();
+        ref var tags = ref entity.GetComponent<GameplayTagsComponent>();
         tags.AddTag(regenTag);
 
         // Buff.Regeneration 与 Damage 不相关
@@ -106,10 +108,10 @@ public class GameplayTagsTests
     {
         var world = CreateWorld();
         var entity = world.Store.CreateEntity();
-        entity.AddComponent(new GameplayTags());
+        entity.AddComponent(new GameplayTagsComponent());
 
         var doTTag = GameplayTag.Request("Damage.Fire.DoT");
-        ref var tags = ref entity.GetComponent<GameplayTags>();
+        ref var tags = ref entity.GetComponent<GameplayTagsComponent>();
         tags.AddTag(doTTag);
 
         // 精确匹配：Entity 没有 Damage 这个 Tag（只有 DoT）
@@ -122,14 +124,14 @@ public class GameplayTagsTests
     {
         var world = CreateWorld();
         var entity1 = world.Store.CreateEntity();
-        entity1.AddComponent(new GameplayTags());
-        ref var tags1 = ref entity1.GetComponent<GameplayTags>();
+        entity1.AddComponent(new GameplayTagsComponent());
+        ref var tags1 = ref entity1.GetComponent<GameplayTagsComponent>();
         tags1.AddTag(GameplayTag.Request("Damage.Fire"));
         tags1.AddTag(GameplayTag.Request("Buff.Regeneration"));
 
         var entity2 = world.Store.CreateEntity();
-        entity2.AddComponent(new GameplayTags());
-        ref var tags2 = ref entity2.GetComponent<GameplayTags>();
+        entity2.AddComponent(new GameplayTagsComponent());
+        ref var tags2 = ref entity2.GetComponent<GameplayTagsComponent>();
         tags2.AddTag(GameplayTag.Request("Damage.Ice"));
 
         // tags1 和 tags2 共享 Damage 祖先 → 都有 Damage.* 子标签
@@ -141,15 +143,15 @@ public class GameplayTagsTests
     {
         var world = CreateWorld();
         var entity = world.Store.CreateEntity();
-        entity.AddComponent(new GameplayTags());
+        entity.AddComponent(new GameplayTagsComponent());
         entity.AddComponent(new HealthComponent { Value = 100f });
 
-        ref var tags = ref entity.GetComponent<GameplayTags>();
+        ref var tags = ref entity.GetComponent<GameplayTagsComponent>();
         tags.AddTag(GameplayTag.Request("StatusEffect.Stunned"));
 
-        var query = world.Store.Query<GameplayTags, HealthComponent>();
+        var query = world.Store.Query<GameplayTagsComponent, HealthComponent>();
         int count = 0;
-        query.ForEachEntity((ref GameplayTags gameplayTags, ref HealthComponent health, Entity _) =>
+        query.ForEachEntity((ref GameplayTagsComponent gameplayTags, ref HealthComponent health, Entity _) =>
         {
             count++;
             Assert.True(gameplayTags.Matches(GameplayTag.Request("StatusEffect.Stunned")));

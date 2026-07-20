@@ -1,9 +1,9 @@
 using Friflo.Engine.ECS;
 
-namespace Gameplay;
+namespace Gameplay.GameplayTags;
 
 /// <summary>附加到 Entity 的 GameplayTag 运行时集合。</summary>
-public struct GameplayTags : IComponent
+public struct GameplayTagsComponent : IComponent
 {
     internal GameplayTagSet tagSet;
 
@@ -17,7 +17,7 @@ public struct GameplayTags : IComponent
     public bool Matches(GameplayTag tag)
         => tagSet.HasAny(GameplayTagManager.GetExpandedSet(tag.id));
 
-    public bool MatchesAny(GameplayTags other)
+    public bool MatchesAny(GameplayTagsComponent other)
     {
         // 快速路径：直接位重叠（精确 Tag 匹配）
         if (tagSet.HasAny(other.tagSet))

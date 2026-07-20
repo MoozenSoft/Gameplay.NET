@@ -1,6 +1,6 @@
 using Friflo.Engine.ECS;
 
-namespace Gameplay;
+namespace Gameplay.GameplayTasks;
 
 public enum TaskState
 {

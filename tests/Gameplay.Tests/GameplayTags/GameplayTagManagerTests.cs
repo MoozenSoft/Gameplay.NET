@@ -1,7 +1,8 @@
 using System;
+using Gameplay.GameplayTags;
 using Xunit;
 
-namespace Gameplay.Tests;
+namespace Gameplay.Tests.GameplayTags;
 
 public class GameplayTagManagerTests
 {

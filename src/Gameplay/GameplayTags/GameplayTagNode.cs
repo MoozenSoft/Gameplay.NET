@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Gameplay;
+namespace Gameplay.GameplayTags;
 
 /// <summary>GameplayTag 层级树节点，仅供 GameplayTagManager 内部使用。</summary>
 internal sealed class GameplayTagNode

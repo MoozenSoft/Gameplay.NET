@@ -1,8 +1,10 @@
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
+using Gameplay;
+using Gameplay.GameplayTasks;
 using Xunit;
 
-namespace Gameplay.Tests;
+namespace Gameplay.Tests.GameplayTasks;
 
 public class GameplayTaskTests
 {

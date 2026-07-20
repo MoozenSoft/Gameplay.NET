@@ -1,6 +1,6 @@
 using System;
 
-namespace Gameplay;
+namespace Gameplay.GameplayTags;
 
 /// <summary>内部可扩展位集，用 long[] 存储任意数量的 Tag 位。</summary>
 internal struct GameplayTagSet

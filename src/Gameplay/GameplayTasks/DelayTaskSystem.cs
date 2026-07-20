@@ -1,7 +1,7 @@
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 
-namespace Gameplay;
+namespace Gameplay.GameplayTasks;
 
 /// <summary>
 /// 每帧推进 DelayTask。<br/>

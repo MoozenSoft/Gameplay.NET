@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Gameplay;
+namespace Gameplay.GameplayTags;
 
 /// <summary>GameplayTag 全局注册中心。启动时注册，运行时只读。</summary>
 public static class GameplayTagManager
