@@ -15,7 +15,7 @@ src/Gameplay/GameplayTasks/
 ├── TaskOwnerComponent.cs    # struct : IComponent，Task 拥有者引用
 ├── TaskStateComponent.cs    # struct : IComponent，Task 状态（Pending/Running/Done/Cancelled）
 ├── DelayTaskComponent.cs    # struct : IComponent，延时等待数据
-└── TaskSystem.cs            # class : QuerySystem，每帧推进 Task 状态
+├── DelayTaskSystem.cs       # class : QuerySystem，每帧推进 DelayTask
 ```
 
 ### 设计原则
@@ -81,9 +81,9 @@ public struct DelayTaskComponent : IComponent
 }
 ```
 
-## 5. TaskSystem
+## 5. DelayTaskSystem
 
-文件：`src/Gameplay/GameplayTasks/TaskSystem.cs`
+文件：`src/Gameplay/GameplayTasks/DelayTaskSystem.cs`
 
 ```csharp
 using Friflo.Engine.ECS;
@@ -91,11 +91,11 @@ using Friflo.Engine.ECS;
 namespace Gameplay;
 
 /// <summary>
-/// 每帧推进 Task 状态。<br/>
+/// 每帧推进 DelayTask。<br/>
 /// Pending → Running → (Elapsed >= Duration → Done)。
 /// 不处理 Done/Cancelled 的销毁，由外部决策。
 /// </summary>
-public class TaskSystem : QuerySystem<TaskStateComponent, DelayTaskComponent>
+public class DelayTaskSystem : QuerySystem<TaskStateComponent, DelayTaskComponent>
 {
     protected override void OnUpdate()
     {
@@ -125,7 +125,7 @@ public class TaskSystem : QuerySystem<TaskStateComponent, DelayTaskComponent>
 
 ```csharp
 var root = new SystemRoot(store) {
-    new TaskSystem(),
+    new DelayTaskSystem(),
 };
 root.Update(new UpdateTick(deltaTime, 0));
 ```
@@ -149,9 +149,19 @@ root.Update(new UpdateTick(deltaTime, 0));
   if (state.State == TaskState.Done) { entity.DeleteEntity(); }
 ```
 
+### 设计决策
+
+- **每种 Task 类型一个独立 System**：`DelayTaskSystem` query `DelayTaskComponent`，未来 `WaitEventTaskSystem` query `WaitEventTaskComponent`。Friflo Query 按 Component 签名匹配，不重叠。
+- **不设 `TaskType` 枚举**：YAGNI。Task 的 Component 签名本身就定义了类型。
+- **Pending → Running 和第一次累加分两帧**：`switch` 在同一帧只走一个分支，不会在变为 Running 后立即累加 Elapsed。
+- **Duration=0 合法**：下一帧直接 Done，不做运行时校验。
+- **`TaskOwner` 保留为数据占位**：v1 无消费者，留给 AbilityInstance 使用。
+
 ## 7. 测试计划
 
 文件：`tests/Gameplay.Tests/GameplayTasks/GameplayTaskTests.cs`
+
+每个测试独立创建 World + SystemRoot，不共享状态。
 
 | 测试 | 说明 |
 |------|------|

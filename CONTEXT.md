@@ -27,3 +27,15 @@ _Avoid_: AddTag, CreateTag
 **RequestTag**:
 只读查询已注册的 GameplayTag。不存在则返回 `GameplayTag.Invalid`。永不创建新 Tag。
 _Avoid_: GetTag, FindTag
+
+**GameplayTask**:
+GAS 的异步任务节点，对应 UE5 AbilityTask。每个 Task 是一个 Entity，挂 Component 承载状态和数据，由对应的 System 驱动推进。不以 class + Update() 实现。
+_Avoid_: AsyncTask, Coroutine, AbilityNode
+
+**DelayTask**:
+GameplayTask 的一个类型——延时等待。`DelayTaskSystem` 每帧累加 `Elapsed`，到达 `Duration` 后标记 `Done`。
+_Avoid_: WaitTask, TimerTask
+
+**TaskState**:
+Task 的执行阶段：`Pending`（等待开始）→ `Running`（执行中）→ `Done`（完成）或 `Cancelled`（取消）。System 不销毁 Done/Cancelled 的 Entity，由外部决策。
+_Avoid_: Status, Phase
