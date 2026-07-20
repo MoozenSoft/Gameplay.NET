@@ -97,7 +97,7 @@ dotnet run --project samples/Gameplay.Host/Gameplay.Host.csproj
 
 - 文档和注释使用**中文**，专业术语使用英文
 - C# 命名遵循 .NET 惯例（PascalCase 公开成员，camelCase 私有成员）
-- 使用文件范围的命名空间（比如：`namespace Gameplay;`，不加大括号缩进）
+- 使用文件范围的命名空间（比如：src/Gameplay/ 目录使用 `namespace Gameplay;`，src/Gameplay/GameplayTags 目录使用 `namespace Gameplay.GameplayTags;`, samples/Gameplay.Server 目录使用 `namespace Gameplay.Server;`, tests/Gameplay.Tests/GameplayTags 目录使用 `namespace Gameplay.Tests.GameplayTags;` 之后没多一级目录命名空间就多加一级, 不加大括号缩进）
 - 遵守 TDD（测试驱动开发）
 - 优先使用 0 GC 方案，但酌情权衡——热路径（每帧遍历大量 Entity 的 System）严格要求；冷路径（初始化、配置加载、RPC 处理）可放松，以可读性为先：
   - **struct 代替 class**：值类型栈分配，无 GC 压力；ECS Component 均为 struct
