@@ -43,15 +43,6 @@ src/Gameplay/GameplayAbilities/
 │   ├── IAbilityRequirement       # CanActivate 扩展点
 │   ├── IAbilityCommit            # Commit 扩展点
 │   └── IAbilityExecutor          # Execute 扩展点
-├── AbilityTask/                  # Ability 相关 Task 上下文
-│   ├── AbilityTaskContextComponent# 关联到哪个 ActiveAbility
-│   ├── AbilityTaskSystem         # Task 完成检测、Cancel 传播
-│   ├── WaitDelayTask             # 等待 N 秒
-│   ├── WaitGameplayEventTask     # 等待 GameplayEvent
-│   ├── WaitAttributeChangeTask   # 等待属性变化
-│   ├── WaitGameplayTagTask       # 等待 Tag 添加/移除
-│   ├── WaitAbilityCommitTask     # 等待 Commit
-│   └── WaitCancelTask            # 等待 Cancel
 ├── GameplayCue/                  # 表现系统
 │   ├── GameplayCueManager        # POCO，Static/Burst 消息通道
 │   ├── GameplayCueParameters     # Cue 参数
@@ -65,6 +56,16 @@ src/Gameplay/GameplayAbilities/
 │   ├── GameplayEventRegistry      # SG 生成的 Payload 元数据
 │   ├── GameplayEventHandlerRegistry # SG 生成的 Handler 注册表
 │   └── EventSystem                # 消费 Current → 匹配 ID → 分发 Handler
+├── AbilityTask/                  # Ability 相关 Task 上下文
+│   ├── AbilityTaskContextComponent# 关联到哪个 ActiveAbility
+│   ├── AbilityTaskSystem         # Task 完成检测、Cancel 传播
+│   ├── WaitDelayTask             # 等待 N 秒
+│   ├── WaitGameplayEventTask     # 等待 GameplayEvent
+│   ├── WaitAttributeChangeTask   # 等待属性变化
+│   ├── WaitGameplayTagAddedTask   # 等待 Tag 添加
+│   ├── WaitGameplayTagRemovedTask # 等待 Tag 移除
+│   ├── WaitAbilityCommitTask     # 等待 Commit
+│   └── WaitCancelTask            # 等待 Cancel
 ├── Prediction/                   # 预测系统
 │   ├── IPredictionService         # Begin / Confirm / Reject 接口
 │   ├── PredictionSystem           # Confirm/Reject 实现 + Rollback
@@ -73,21 +74,21 @@ src/Gameplay/GameplayAbilities/
 └── ...
 ```
 
-### 与现有模块的关系
+### 与现有模块 / 外部依赖的关系
 
-| 现有模块 | 依赖方式 |
-|----------|---------|
+| 模块 | 依赖方式 |
+|------|---------|
 | GameplayTags | 被所有子系统依赖（Tag 寻址、Tag 条件） |
 | GameplayTasks | AbilityTask 的底层通用异步框架，不修改 |
-| 状态同步 (Bubble) | ActiveGameplayEffect / ActiveAbility Entity 同步由 Bubble 统一处理 |
-| 预测 (Prediction) | 三层架构：GAS 管 PredictionKey + 生命周期 → 网络层管 RPC → Bubble 实现 IPredictionService |
+| 状态同步 (Bubble) | ActiveGameplayEffect / ActiveAbility Entity 同步由 Bubble 统一处理；Bubble 实现 IPredictionService |
+| Prediction（GAS 内部模块） | 定义 IPredictionService 接口 + PredictionKey 管理；网络层负责 RPC；Bubble 实现 Confirm/Reject |
 
 ### 编译剔除
 
 | 子系统 | Dedicated Server (`GP_SERVER`) |
 |--------|-------------------------------|
-| GameplayCue | 剔除 |
-| Client 预测 | 剔除 |
+| GameplayCue（CueManager + LoopingCue） | 剔除——DS 无表现层 |
+| PredictionSystem.ClientPredict() | 剔除——DS 无客户端预测，保留 Confirm/Reject 路径 |
 
 ---
 
@@ -182,6 +183,7 @@ SG 为每个 `[GameplayAttribute]` 分配唯一 `AttributeDirtyIndex`：
 public struct DirtyAttributeComponent : IComponent
 {
     public ulong DirtyBits;   // Bit<i> = Attribute<i> needs re-evaluation
+                              // 64 attributes per entity 覆盖所有实际场景；超过则 SG 编译报错
 }
 ```
 
@@ -231,18 +233,35 @@ AttributeSystem Tick（只处理 DirtyBits）
 GameplayEffect                    GameplayEffectSpec                ActiveGameplayEffect
 (静态定义，非 Entity)             (施放实例，非 Entity)              (运行时 Entity)
 ─────────────────────────────────────────────────────────────────────────────────
-静态配置字段见下方                  • 引用 GameplayEffect             一个 ActiveGameplayEffectComponent
-GameplayEffect 类定义               • Level                         — 所有字段合一
-                                   • Duration（已计算）
-                                   • Period（已计算）
-                                   • Modifiers[]（已计算 Magnitude）
-                                     - Snapshot: Spec 创建时计算
-                                     - RealTime: 每次执行时实时抓取
-                                   • SetByCallerMagnitudes
-                                   • Source/Target Snapshot Tags
-                                   • EffectContext
-                                   • DynamicAssetTags
+GameplayEffect 类（见下方）        GameplayEffectSpec 类（见上方）     ActiveGameplayEffectComponent
+• DurationPolicy                  • Definition 引用                 • Duration / StartWorldTime
+• Stacking 策略                   • Level / Duration / Period       • PeriodProgress / StackCount
+• Modifiers[]（配置）             • Modifiers[]（已计算 Magnitude）  • Handle / SourceEntity / TargetEntity
+• Tag 条件 / 副作用配置           • SetByCallerMagnitudes           • Definition 回引用
+• Immunity/Remove 查询            • CapturedSource/TargetTags       • IsInhibited / PredictionKey
+• CueDefinitions                  • EffectContext                   • 行为配置（Tag/Grant/Block/Cancel）
+                                  • DynamicAssetTags                • RealTimeModifierInfo[]
 ```
+
+### GameplayEffectSpec（施放实例，非 Entity）
+
+```csharp
+public class GameplayEffectSpec
+{
+    public GameplayEffect Definition;         // 静态定义引用
+    public float Level;                       // 施放等级
+    public float Duration;                    // 已计算的 Duration
+    public float Period;                      // 已计算的 Period
+    public FModifierSpec[] Modifiers;         // 已计算 Magnitude 的 Modifier 列表
+    public Dictionary<GameplayTag, float> SetByCallerMagnitudes; // SetByCaller 传入值
+    public GameplayTagContainer CapturedSourceTags;  // 施放时 Source 的 Tag Snapshot
+    public GameplayTagContainer CapturedTargetTags;  // 施放时 Target 的 Tag Snapshot
+    public GameplayTagContainer DynamicAssetTags;    // 运行时附加的 AssetTag
+    public GameplayEffectContext EffectContext;      // 施放上下文（Instigator 等）
+}
+```
+
+创建后不可变——Modifier 的 Magnitude 在构造时计算完成，期间不变（除 RealTime 策略外）。
 
 ### GameplayModifier（Attribute + ModOp + MagnitudeCalc + CapturePolicy）
 
@@ -256,7 +275,7 @@ public class GameplayEffect
     public EGameplayEffectStackingPeriodPolicy StackingPeriodPolicy;
     public EGameplayEffectStackingExpirationPolicy StackingExpirationPolicy;
     public float Period;
-    public EGameplayEffectPeriodInhibitionRemovedPolicy PeriodInhibitionPolicy;
+    public EGameplayEffectPeriodInhibitionRemovedPolicy InhibitionPolicy;
 
     // ── Modifiers ──
     public GameplayModifier[] Modifiers;              // Attribute + ModOp + MagnitudeCalc + CapturePolicy
@@ -275,10 +294,10 @@ public class GameplayEffect
     // ── 其他 ──
     public float ChanceToApply;
     public Func<...> CustomCanApply;
-    public FGameplayEffectQuery[] ImmunityQueries;
-    public FGameplayEffectQuery[] RemoveOtherEffectsQueries;
-    public FConditionalGameplayEffect[] OnApplicationEffects;
-    public FConditionalGameplayEffect[] OnCompleteEffects;
+    public GameplayEffectQuery[] ImmunityQueries;
+    public GameplayEffectQuery[] RemoveOtherEffectsQueries;
+    public ConditionalGameplayEffect[] OnApplicationEffects;
+    public ConditionalGameplayEffect[] OnCompleteEffects;
 
     // ── Cue ──
     public GameplayEffectCue[] CueDefinitions;
@@ -350,8 +369,13 @@ Spec 创建时:
 
 Source/Target 属性变化时:
   Aggregator.Evaluate() 重新计算 → 写 CurrentValue
-  AttributeSystem 检查是否有 ActiveGameplayEffect 依赖此属性（RealTime）
-    → 有 → 标记该 ActiveEffect 需要重新计算 Magnitude → 标记 Target Attribute Dirty
+  → AttributeSystem 查反向索引:
+      reverseIndex[(sourceEntity, attributeId)] → 受影响的 ActiveEffectHandle 列表
+  → 标记这些 ActiveEffect 的 RealTimeModifier 需要重新计算 Magnitude
+  → 标记 Target Entity 对应 Attribute Dirty
+
+// 反向索引（AttributeSystem 内部维护，Apply 时注册，Remove 时注销）:
+// Dictionary<(Entity sourceEntity, int attributeId), List<int>> activeEffectHandleIndex;
 ```
 
 ### ActiveGameplayEffectComponent（运行时 Entity，单一 Component）
@@ -362,8 +386,8 @@ Source/Target 属性变化时:
 public struct ActiveGameplayEffectComponent : IComponent
 {
     // ── 时间 ──
-    public float Duration;                       // 剩余时间（Infinite = -1）
-    public float StartWorldTime;                 // 开始时间戳
+    public float Duration;                       // 剩余时间（Infinite = -1），EffectSystem 每帧递减
+    public float StartWorldTime;                 // 开始时间戳——用于 GetTimeRemaining() 查询和 Server→Client 时间同步
 
     // ── 周期 ──
     public float Period;                         // 周期间隔
@@ -380,11 +404,12 @@ public struct ActiveGameplayEffectComponent : IComponent
     public int Handle;                           // 全局唯一 ID
     public Entity SourceEntity;                  // 施放者
     public Entity TargetEntity;                  // 目标（父 Entity）
+    public GameplayEffect Definition;            // 回引用静态定义（CanApply 免疫检查等需要）
 
     // ── 抑制与预测 ──
     public bool IsInhibited;                     // Tag 条件不满足时 = true
     public EGameplayEffectPeriodInhibitionRemovedPolicy InhibitionPolicy;
-    public FPredictionKey PredictionKey;
+    public PredictionKey PredictionKey;
 
     // ── 行为配置（从 GameplayEffect 静态定义拷贝，NULL/empty = 不适用）──
     public GameplayTagContainer ApplicationRequiredTags;
@@ -450,7 +475,7 @@ Apply(spec, target)             ← 入口
     │
     ├── 2. CanApply（纯检查，无副作用）
     │       ├── ApplicationRequiredTags
-    │       ├── Immunity: 遍历 Target ActiveGE 的 Definition.ImmunityQuery
+    │       ├── Immunity: 遍历 Target ActiveGE 的 Definition.ImmunityQueries
     │       │   → 任一匹配 spec → 返回 false
     │       ├── ChanceToApply
     │       └── CustomCanApply
@@ -459,20 +484,34 @@ Apply(spec, target)             ← 入口
     ├── 3. Create / Stack ActiveGameplayEffect Entity
     │       └── Stacking 检查 → 新建或更新 StackCount
     │
-    ├── 4. Apply 副作用:
-    │       ├── GrantedTags / GrantedAbilities / BlockAbilityTags / CancelAbilityTags
-    │       ├── for each Modifier → Aggregator.AddMod() → SetBit(Dirty)
-    │       ├── CueDefinitions
-    │       └── OnApplicationEffects（连锁 Apply 其他 GE）
-    │
-    └── End:
-            EffectSystem.OnRemove(handle, reason)
-                ├── Remove GrantedTags / GrantedAbilities
-                ├── Remove Mods from Aggregator → SetBit(Dirty)
-                ├── OnCompleteEffects（按 reason 区分 Normal/Premature）
-                └── Destroy Entity
+    └── 4. Apply 副作用:
+            ├── GrantedTags / GrantedAbilities / BlockedAbilityTags / CancelAbilityTags
+            ├── for each Modifier → Aggregator.AddMod() → SetBit(Dirty)
+            ├── CueDefinitions
+            └── OnApplicationEffects（连锁 Apply 其他 GE）
 
-enum EffectEndType { Normal, Premature }
+enum EffectEndType
+{
+    Normal,       // Duration 自然到期、StackCount 降为零
+    Premature,    // RemoveEffect() 主动移除 / RemoveOtherEffects 冲突 / RemovalTags 触发 / Cancel
+}
+```
+
+**Instant GE** 的行为：`DurationPolicy == Instant` 时，不创建 ActiveGameplayEffect Entity，Apply 只执行一次 Modifiers + Cue，然后立刻进入 RemoveEffect 逻辑（清理 GrantedTags 等瞬时副作用，不涉及 Duration Tick）。
+
+### RemoveEffect 流程（EffectSystem.Remove 入口 + Expiration 触发）
+
+```
+RemoveEffect(handle, reason)
+    │
+    ├── 按 reason 决定是否触发 OnCompleteEffects
+    │     - Normal: Duration 自然到期
+    │     - Premature: 被 RemoveEffect() 主动移除 / RemoveOtherEffects / RemovalTags 触发
+    │
+    ├── Remove GrantedTags / GrantedAbilities
+    ├── Remove Mods from Aggregator → SetBit(Dirty)
+    ├── OnCompleteEffects（链接触发其他 GE）
+    └── Destroy Entity
 ```
 
 **设计原则：** Immunity / RemoveOtherEffects / OnCompleteEffects 均为 GameplayEffect 静态定义的字段，不映射为 Runtime Component。
@@ -481,8 +520,8 @@ enum EffectEndType { Normal, Premature }
 
 - **CanApply**：`EffectSystem.CanApply(spec, target)` → bool，纯检查
 - **Apply**：`EffectSystem.Apply(spec, target)` → 创建 Entity 或 Stack，有副作用
+- **Remove**：`EffectSystem.RemoveEffect(handle, reason)` → 按 Handle 移除 Mod 并清理 → 可能触发 OnCompleteEffects
 - **查询**：`EffectSystem.GetActiveEffects(entity, query)` → 返回匹配的 Handle 列表
-- **Remove**：`EffectSystem.RemoveEffect(handle)` → 按 Handle 移除 Mod 并清理
 - **同步**：ActiveGameplayEffect Entity 的 Component 变更由 Bubble 层统一处理
 
 ---
@@ -495,7 +534,7 @@ enum EffectEndType { Normal, Premature }
 GameplayAbility                 AbilitySpec                     ActiveAbility
 (静态定义，非 Entity)           (实例数据，非 Entity)            (运行时 Entity)
 ────────────────────────────────────────────────────────────────────────────
-• AbilityTags                   • 引用 GameplayAbility          • StartTime
+• AssetTags                     • 引用 GameplayAbility          • StartTime
 • CancelAbilitiesWithTag        • Level                         • Handle
 • BlockAbilitiesWithTag         • InputID                       • PredictionKey
 • ActivationOwnedTags           • SourceObject                  • bIsActive
@@ -587,6 +626,22 @@ public struct AbilitySpec
 }
 ```
 
+### ActiveAbilityComponent（运行时 Entity，单一 Component）
+
+激活时创建子 Entity 挂此 Component，结束时销毁：
+
+```csharp
+public struct ActiveAbilityComponent : IComponent
+{
+    public float StartTime;                        // 激活时间戳
+    public int Handle;                             // 全局唯一 ID
+    public PredictionKey PredictionKey;           // 预测 Key
+    public bool IsActive;                          // 是否激活中
+    public Entity Owner;                           // 归属的 Owner Entity
+    public GameplayAbility Definition;             // 回引用静态定义
+}
+```
+
 ---
 
 ## 模块四：Activation Pipeline
@@ -663,6 +718,11 @@ AbilityActivationSystem (每帧 Tick)
 │     IAbilityExecutor            │  ← 内置: SpawnTaskExecutor (创建 Task Entity)
 │     .Execute(activeAbilityCtx)  │  ← 用户可扩展: CustomExecutor
 └─────────────────────────────────┘
+    │  ⚠️ Execute 失败 → 回滚 Commit:
+    │      ├── Remove Cooldown GE
+    │      ├── 退还 Cost Attribute
+    │      ├── 不移除 ActivationOwnedTags（ApplyCooldownCommit 已施加 → 回退）
+    │      └── 不创建 ActiveAbility Entity
     │
     │  框架根据 ActiveTasks 自动判断结束时机：
     │
@@ -673,6 +733,7 @@ AbilityActivationSystem (每帧 Tick)
   ActiveAbility Entity 销毁
     ├── 级联销毁 Task Entity（子 Entity 跟随）
     ├── 移除 ActivationOwnedTags
+    ├── 解除 BlockAbilitiesWithTag（归还阻止标记）
     ├── 移除 Looping Cue
     └── 触发 OnAbilityEnded Callback
 ```
