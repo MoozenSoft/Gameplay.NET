@@ -104,11 +104,12 @@ GameplayAttribute                  GameplayAttributeData              IAttribute
 (属性寻址句柄)                     (属性值容器，纯数据)               (标记接口)
 ─────────────────────────────────────────────────────────────────────────────────
 • internal int id                  • float BaseValue                  • 标记 struct 为 AttributeSet
-• internal Type SetType            • float CurrentValue               • 一个 Entity 可挂多个
-• internal int offset              └── 干净的值类型，无 Aggregator     • 游戏层 struct 实现
-• ref float GetValue(entity)
-• void SetValue(entity, value)
+• internal int SetTypeId            • float CurrentValue               • 一个 Entity 可挂多个
+• SG 生成强类型访问器              └── 干净的值类型，无 Aggregator     • 游戏层 struct 实现
+  例: GetHealth(entity) → ref float
 ```
+
+> **不用裸 offset：** Friflo 的 Archetype 搬移会改变 Component 内存布局，裸 offset 不稳定。SG 生成 Friflo 的 `entity.GetComponent<T>()` 或 `entity.Data<T>()` 访问器，零反射、编译期类型安全。
 
 ### GameplayAttributeData
 
@@ -263,6 +264,18 @@ public class GameplayEffectSpec
 
 创建后不可变——Modifier 的 Magnitude 在构造时计算完成，期间不变（除 RealTime 策略外）。
 
+### GameplayEffectRegistry（静态定义索引）
+
+所有 `GameplayEffect` 在启动时注册，分配 `DefinitionId`。运行时 Entity 只存 ID 通过 Registry 查表：
+
+```csharp
+public static class GameplayEffectRegistry
+{
+    public static int Register(GameplayEffect def);
+    public static GameplayEffect Get(int definitionId);
+}
+```
+
 ### GameplayModifier（Attribute + ModOp + MagnitudeCalc + CapturePolicy）
 
 ```csharp
@@ -339,9 +352,18 @@ public struct GameplayModifier
     public EGameplayModOp ModOp;
     public GameplayEffectModifierMagnitude MagnitudeCalc;
     public EAttributeCapturePolicy CapturePolicy;   // Snapshot / RealTime
+    public ModifierExecutionType ExecutionType;       // Persistent / ExecuteOnApply / ExecuteOnPeriod
 
     public GameplayTagRequirement SourceTagReqs;
     public GameplayTagRequirement TargetTagReqs;
+}
+
+/// <summary>Modifier 执行类型——避免 Period 重复累加。</summary>
+public enum ModifierExecutionType
+{
+    Persistent,         // Apply → 注册 Aggregator；Remove → 移除（Duration/Buff/Debuff）
+    ExecuteOnApply,     // Apply 时执行一次，不注册 Aggregator（Instant GE 专用）
+    ExecuteOnPeriod,    // 每次 Period 执行一次，不注册为持续 Modifier（DOT/HOT）
 }
 ```
 
@@ -404,7 +426,7 @@ public struct ActiveGameplayEffectComponent : IComponent
     public int Handle;                           // 全局唯一 ID
     public Entity SourceEntity;                  // 施放者
     public Entity TargetEntity;                  // 目标（父 Entity）
-    public GameplayEffect Definition;            // 回引用静态定义（CanApply 免疫检查等需要）
+    public int DefinitionId;                     // GameplayEffectRegistry 查表 key（避免托管引用 blittable 问题）
 
     // ── 抑制与预测 ──
     public bool IsInhibited;                     // Tag 条件不满足时 = true
@@ -429,7 +451,9 @@ public struct ActiveGameplayEffectComponent : IComponent
 
 ### EffectSystem
 
-单一 System，内部按职责分 private 方法。每帧遍历所有 `ActiveGameplayEffectComponent` Entity：
+单一 System，内部按职责分 private 方法。每帧遍历所有 `ActiveGameplayEffectComponent` Entity。
+
+> **结构变更规则：** System Tick 中不直接 CreateEntity / DestroyEntity。Apply 和 Remove 产生的 Entity 变更写入 `CommandBuffer`（待创建/待销毁列表），Tick 结束后在 `PostUpdate` 中批量执行。防止 Query 遍历期间结构修改破坏迭代器。
 
 ```
 1. CheckTagRequirements
@@ -475,7 +499,7 @@ Apply(spec, target)             ← 入口
     │
     ├── 2. CanApply（纯检查，无副作用）
     │       ├── ApplicationRequiredTags
-    │       ├── Immunity: 遍历 Target ActiveGE 的 Definition.ImmunityQueries
+    │       ├── Immunity: 遍历 Target ActiveGE → GameplayEffectRegistry.Get(comp.DefinitionId).ImmunityQueries
     │       │   → 任一匹配 spec → 返回 false
     │       ├── ChanceToApply
     │       └── CustomCanApply
@@ -515,6 +539,39 @@ RemoveEffect(handle, reason)
 ```
 
 **设计原则：** Immunity / RemoveOtherEffects / OnCompleteEffects 均为 GameplayEffect 静态定义的字段，不映射为 Runtime Component。
+
+### TagSource 引用计数
+
+GrantedTag 来自多个源（ActiveGE、ActiveAbility、外部代码），不能简单 `AddTag`/`RemoveTag`。每个来源必须独立计数：
+
+```csharp
+// GameplayTagsComponent 内部
+internal Dictionary<GameplayTag, int> tagRefCounts; // Tag → 授予该 Tag 的来源数
+
+public void AddTag(GameplayTag tag)
+{
+    tagSet.Set(tag.id);
+    if (tagRefCounts.TryGetValue(tag, out int count))
+        tagRefCounts[tag] = count + 1;
+    else
+        tagRefCounts[tag] = 1;
+}
+
+public void RemoveTag(GameplayTag tag)
+{
+    if (!tagRefCounts.TryGetValue(tag, out int count)) return;
+    count--;
+    if (count <= 0)
+    {
+        tagRefCounts.Remove(tag);
+        tagSet.Clear(tag.id);  // 所有来源都移除了才真正清位
+    }
+    else
+        tagRefCounts[tag] = count;
+}
+```
+
+ActiveGE/ActiveAbility 移除时只调用 `RemoveTag` → 只减少自己来源的计数 → 不影响其他源。
 
 ### 创建与查询
 
@@ -638,7 +695,13 @@ public struct ActiveAbilityComponent : IComponent
     public PredictionKey PredictionKey;           // 预测 Key
     public bool IsActive;                          // 是否激活中
     public Entity Owner;                           // 归属的 Owner Entity
-    public GameplayAbility Definition;             // 回引用静态定义
+    public int DefinitionId;                       // AbilityDefinitionRegistry 查表 key
+    public AbilityInstanceState State;             // Activating / Active / Ending / Cancelled / Completed
+}
+
+public enum AbilityInstanceState
+{
+    Activating, Active, Ending, Cancelled, Completed
 }
 ```
 
@@ -666,7 +729,7 @@ Network RPC                                         │
     └──────────────────────┬───────────────────────┘
                            ▼
                  AbilityActivationRequest  ← 唯一入口
-                 { Owner, AbilityTag, Target, Source }
+                 { Owner, SpecHandle, Target, Source }
                            │
                            ▼
                  AbilityActivationSystem
@@ -679,13 +742,17 @@ Network RPC                                         │
 public struct AbilityActivationRequest
 {
     public Entity Owner;
-    public GameplayTag AbilityTag;
+    public int SpecHandle;             // AbilityCollectionComponent 中的索引
     public Entity Target;
     public ActivationSource Source;   // Input / AI / GameplayEvent / Network
 }
 
 public enum ActivationSource { Input, AI, GameplayEvent, Network, TagTrigger }
 ```
+
+> **为什么用 SpecHandle 而非 GameplayTag？** 同 Owner 可能有多个相同 Tag 的 Ability（不同来源/Level）。`SpecHandle` 精确定位。**
+
+**核心原则：**
 
 **核心原则：**
 - `AbilityActivationRequest` = Command（"请执行 X"），当前 Tick 消费
@@ -1244,11 +1311,18 @@ public class GameplayAbilitiesFeature
     public GameplayAbilitiesFeature(EntityStore store, NetMode netMode)
     {
         CueManager = CreateCueManager(netMode);
-        store.AddSystem(new EffectSystem());
+
+        // 执行顺序很重要——按 Phase 注册（Friflo 按 AddSystem 顺序执行）
+        // Phase 1: Event 交换
+        store.AddSystem(new EventSystem());             // Pending → Current
+        // Phase 2: Ability 激活
         store.AddSystem(new AbilityActivationSystem());
+        // Phase 3: GE Apply / Remove
+        store.AddSystem(new EffectSystem(attrSys));     // Duration Tick + Period + Exec
+        // Phase 4: Attribute 重算
+        store.AddSystem(attrSys);                       // Dirty → Evaluate → CurrentValue
+        // Phase 5: Task 推进
         store.AddSystem(new AbilityTaskSystem());
-        store.AddSystem(new EventSystem());
-        // AttributeSystem 需要等 SG 生成的注册表就绪后添加
     }
 }
 ```
