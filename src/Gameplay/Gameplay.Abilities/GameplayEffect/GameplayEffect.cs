@@ -33,6 +33,9 @@ public class GameplayEffect
 
     // ── 其他 ──
     public float ChanceToApply = 1.0f;
-    // ImmunityQueries / RemoveOtherEffectsQueries / OnApplicationEffects / OnCompleteEffects
-    // CueDefinitions 在后续 Task 补充
+    public GameplayEffectQuery[] ImmunityQueries = System.Array.Empty<GameplayEffectQuery>();
+    public GameplayEffectQuery[] RemoveOtherEffectsQueries = System.Array.Empty<GameplayEffectQuery>();
+    public ConditionalGameplayEffect[] OnApplicationEffects = System.Array.Empty<ConditionalGameplayEffect>();
+    public ConditionalGameplayEffect[] OnCompleteEffects = System.Array.Empty<ConditionalGameplayEffect>();
+    public GameplayEffectCue[] CueDefinitions = System.Array.Empty<GameplayEffectCue>();
 }

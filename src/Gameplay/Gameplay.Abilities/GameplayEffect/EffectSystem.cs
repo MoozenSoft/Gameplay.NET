@@ -76,14 +76,47 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                 return false;
         }
 
-        // TODO: Immunity check (needs target ActiveEffects access)
+        // Immunity: 遍历 Target 已有 ActiveGE => 检查 ImmunityQueries
+        foreach (var child in target.ChildEntities)
+        {
+            if (child.TryGetComponent<ActiveGameplayEffectComponent>(out var activeGE))
+            {
+                if (handleToSpec.TryGetValue(activeGE.Handle, out var activeSpec))
+                {
+                    var activeDef = activeSpec.Definition;
+                    // activeDef 的 ImmunityQueries 匹配 incoming spec → 免疫
+                    foreach (var query in activeDef.ImmunityQueries)
+                    {
+                        if (query.Matches(spec))
+                            return false;
+                    }
+                }
+            }
+        }
 
         return true;
     }
 
     public int Apply(GameplayEffectSpec spec, Entity target)
     {
-        // 1. PreApply: RemoveOtherEffects (TODO)
+        // 1. PreApply: RemoveOtherEffects — incoming GE 的 RemoveOtherEffectsQueries
+        //    匹配 target 上已有的 ActiveGE → 移除冲突的
+        var ge = spec.Definition;
+        foreach (var removeQuery in ge.RemoveOtherEffectsQueries)
+        {
+            foreach (var child in target.ChildEntities)
+            {
+                if (child.TryGetComponent<ActiveGameplayEffectComponent>(out var activeGE))
+                {
+                    if (handleToSpec.TryGetValue(activeGE.Handle, out var existingSpec))
+                    {
+                        if (removeQuery.Matches(existingSpec))
+                            RemoveEffect(activeGE.Handle, EEffectEndType.Premature);
+                    }
+                }
+            }
+        }
+
         // 2. CanApply
         if (!CanApply(spec, target)) return -1;
 
@@ -144,7 +177,18 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             }
         }
 
-        // 7. OnApplicationEffects (TODO)
+        // 7. OnApplicationEffects: 链接触发其他 GE
+        if (ge.OnApplicationEffects.Length > 0)
+        {
+            foreach (var condEffect in ge.OnApplicationEffects)
+            {
+                if (condEffect.RequiredSourceTags.Count == 0) // 无条件触发
+                {
+                    var chainSpec = new GameplayEffectSpec(condEffect.Effect, spec.Level);
+                    Apply(chainSpec, target);
+                }
+            }
+        }
 
         return handle;
     }
@@ -154,7 +198,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         // Always remove mods from aggregator (works regardless of cache)
         attributeSystem.RemoveAggregatorModsByHandle(handle);
 
-        // Remove GrantedTags (only if we have cached spec + entity)
+        // Remove GrantedTags + trigger OnCompleteEffects (only if we have cached spec + entity)
         if (handleToSpec.TryGetValue(handle, out var spec))
         {
             if (spec.Definition.GrantedTags.Count > 0)
@@ -167,6 +211,24 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                     {
                         foreach (var tag in spec.Definition.GrantedTags)
                             tags.RemoveTag(tag);
+                    }
+                }
+            }
+
+            // OnCompleteEffects: 链接触发其他 GE
+            if (spec.Definition.OnCompleteEffects.Length > 0)
+            {
+                foreach (var condEffect in spec.Definition.OnCompleteEffects)
+                {
+                    // 检查条件：RequiredSourceTags 空或满足
+                    if (condEffect.RequiredSourceTags.Count == 0)
+                    {
+                        var chainSpec = new GameplayEffectSpec(condEffect.Effect, spec.Level);
+                        if (handleToEntity.TryGetValue(handle, out var entity))
+                        {
+                            var comp = entity.GetComponent<ActiveGameplayEffectComponent>();
+                            Apply(chainSpec, comp.TargetEntity);
+                        }
                     }
                 }
             }
