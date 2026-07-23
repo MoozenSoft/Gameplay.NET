@@ -10,7 +10,7 @@ using Xunit;
 public class GameplayAbilitiesFeatureTests
 {
     [Fact]
-    public void Constructor_RegistersSystems()
+    public void Constructor_RegistersAllSystems()
     {
         var world = new World(NetMode.Standalone);
         var feature = new GameplayAbilitiesFeature(world.Store, world.NetMode);
@@ -18,6 +18,12 @@ public class GameplayAbilitiesFeatureTests
         Assert.NotNull(feature.EffectSystem);
         Assert.NotNull(feature.AttributeSystem);
         Assert.NotNull(feature.SystemRoot);
+        Assert.NotNull(feature.EventBus);
+        Assert.NotNull(feature.EventSystem);
+        Assert.NotNull(feature.ActivationSystem);
+        Assert.NotNull(feature.AbilityTaskSystem);
+        Assert.NotNull(feature.PredictionSystem);
+        Assert.NotNull(feature.CueManager);
     }
 
     [Fact]

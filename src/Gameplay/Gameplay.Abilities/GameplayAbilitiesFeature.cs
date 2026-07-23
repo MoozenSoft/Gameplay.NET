@@ -4,25 +4,75 @@ using Friflo.Engine.ECS.Systems;
 namespace Gameplay.Abilities;
 
 /// <summary>
-/// GAS 子系统的注册入口。接收已有 EntityStore，挂上 AttributeSystem 和 EffectSystem。
-/// 不是 World 的包裹，只是 System 的注册入口。
+/// GAS 子系统的注册入口。将 Attribute、Effect、Ability、Event、Cue、Task、Prediction
+/// 全部 System 和 Manager 组织起来，挂到已有 EntityStore。
+/// 不是 World 的包裹，只是注册入口。
 /// </summary>
 public class GameplayAbilitiesFeature
 {
+    // ── Friflo QuerySystems（SystemRoot 管理）──
     public AttributeSystem AttributeSystem { get; }
     public EffectSystem EffectSystem { get; }
+    public AbilityTaskSystem AbilityTaskSystem { get; }
     public SystemRoot SystemRoot { get; }
+
+    // ── POCO Manager / System（外部调用）──
+    public GameplayEventBus EventBus { get; }
+    public EventSystem EventSystem { get; }
+    public AbilityActivationSystem ActivationSystem { get; }
+    public GameplayCueManager CueManager { get; }
+    public PredictionSystem PredictionSystem { get; }
 
     public GameplayAbilitiesFeature(EntityStore store, NetMode netMode)
     {
+        // ── 基础设施 ──
         AttributeSystem = new AttributeSystem();
         EffectSystem = new EffectSystem(AttributeSystem);
+
+        // ── 事件系统 ──
+        EventBus = new GameplayEventBus();
+        EventSystem = new EventSystem(EventBus);
+
+        // ── Ability 激活 ──
+        ActivationSystem = new AbilityActivationSystem(EffectSystem);
+
+        // ── 表现 + 预测 ──
+        CueManager = CreateCueManager(netMode);
+        PredictionSystem = new PredictionSystem();
+
+        // ── Task 系统 ──
+        AbilityTaskSystem = new AbilityTaskSystem(ActivationSystem);
+
+        // ── SystemRoot — 按 Phase 注册 Friflo QuerySystem ──
         SystemRoot = new SystemRoot(store)
         {
-            EffectSystem,       // Phase 1: GE Apply/Remove + Tick
-            AttributeSystem,    // Phase 2: Dirty → Evaluate
+            // Phase 1: AbilityTask 完成检测（优先于 Effect Tick）
+            AbilityTaskSystem,
+            // Phase 2: GE Duration/Period Tick + Apply/Remove
+            EffectSystem,
+            // Phase 3: Attribute Dirty → Evaluate → CurrentValue
+            AttributeSystem,
         };
     }
 
-    public void Update(float deltaTime) => SystemRoot.Update(new UpdateTick(deltaTime, 0));
+    /// <summary>
+    /// 每帧更新入口。先消费 Event，再执行 ECS SystemRoot。
+    /// </summary>
+    public void Update(float deltaTime)
+    {
+        // Phase 0: Event 交换 + 分发（在 SystemRoot 之前，确保本帧事件对 System 可见）
+        EventSystem.Tick();
+
+        // Phase 1-3: ECS System 执行
+        SystemRoot.Update(new UpdateTick(deltaTime, 0));
+    }
+
+    private static GameplayCueManager CreateCueManager(NetMode netMode)
+    {
+#if GP_SERVER
+        return null; // DS 无表现层
+#else
+        return new GameplayCueManager();
+#endif
+    }
 }
