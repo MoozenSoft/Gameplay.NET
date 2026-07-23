@@ -6,7 +6,7 @@ namespace Gameplay.Abilities;
 /// 通用无 GC struct 缓冲。
 /// 内部使用 T[] 存储，只重置计数不清内存，适用于热路径复用。
 /// </summary>
-public sealed class StructBuffer<T> where T : unmanaged
+public sealed class StructBuffer<T> where T : struct
 {
     private T[] buffer = Array.Empty<T>();
     private int count;
