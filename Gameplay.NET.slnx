@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="src/Gameplay.CodeGen/Gameplay.CodeGen.csproj" />
   <Project Path="src/Gameplay/Gameplay.csproj" />
   <Project Path="tests/Gameplay.Tests/Gameplay.Tests.csproj" />
 </Solution>
