@@ -18,7 +18,9 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Gameplay/Gameplay.csproj" />
-    <ProjectReference Include="../../src/Gameplay.CodeGen/Gameplay.CodeGen.csproj" />
+    <ProjectReference Include="../../src/Gameplay.CodeGen/Gameplay.CodeGen.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="true" />
   </ItemGroup>
 
 </Project>
