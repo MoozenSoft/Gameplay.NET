@@ -17,7 +17,7 @@ internal class AttributeAggregator
 
     public AttributeAggregator()
     {
-        int opCount = System.Enum.GetValues<EGameplayModOp>().Length;
+        int opCount = System.Enum.GetValues(typeof(EGameplayModOp)).Length;
         modBuckets = new List<ModEntry>[opCount];
         for (int i = 0; i < opCount; i++)
             modBuckets[i] = new List<ModEntry>();
