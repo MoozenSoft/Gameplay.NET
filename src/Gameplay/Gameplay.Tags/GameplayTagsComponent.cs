@@ -19,6 +19,8 @@ public struct GameplayTagsComponent : IComponent
     public bool Matches(GameplayTag tag)
         => tagSet.HasAny(GameplayTagManager.GetExpandedSet(tag.id));
 
+    public bool MatchesAnyTags(GameplayTagContainer container) => tagSet.HasAny(container.tagSet);
+
     public bool MatchesAny(GameplayTagsComponent other)
     {
         // 快速路径：直接位重叠（精确 Tag 匹配）
