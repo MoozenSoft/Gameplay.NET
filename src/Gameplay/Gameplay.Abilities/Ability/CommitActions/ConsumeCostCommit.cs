@@ -27,7 +27,10 @@ public class ConsumeCostCommit : IAbilityCommit
         float current = attributeSystem.GetCurrentValue(owner, attributeId);
         attributeSystem.SetAggregatorValue(owner, attributeId, current - amount);
 
-        if (owner.TryGetComponent<DirtyAttributeComponent>(out var dirty))
+        if (owner.HasComponent<DirtyAttributeComponent>())
+        {
+            ref var dirty = ref owner.GetComponent<DirtyAttributeComponent>();
             dirty.SetBit(attributeId);
+        }
     }
 }

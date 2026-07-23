@@ -160,11 +160,12 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         // 5. Apply Modifiers -> AttributeSystem
         foreach (var mod in spec.Modifiers)
         {
-            if (target.TryGetComponent<DirtyAttributeComponent>(out var dirty))
+            if (target.HasComponent<DirtyAttributeComponent>())
             {
                 attributeSystem.SetAggregatorValue(target, mod.AttributeId, baseValue: 0f);
                 attributeSystem.AddAggregatorMod(target, mod.AttributeId, handle,
                     mod.EvaluatedMagnitude, mod.ModOp);
+                ref var dirty = ref target.GetComponent<DirtyAttributeComponent>();
                 dirty.SetBit(mod.AttributeId);
             }
         }
