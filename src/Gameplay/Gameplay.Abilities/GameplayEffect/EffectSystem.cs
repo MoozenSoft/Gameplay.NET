@@ -99,9 +99,9 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
 
     public int Apply(GameplayEffectSpec spec, Entity target)
     {
-        // 1. PreApply: RemoveOtherEffects — incoming GE 的 RemoveOtherEffectsQueries
-        //    匹配 target 上已有的 ActiveGE → 移除冲突的
+        // 1. PreApply: RemoveOtherEffects — 先收集 handles，迭代完再移除，防止 ChildEntities 被修改
         var ge = spec.Definition;
+        var toRemove = new List<int>();
         foreach (var removeQuery in ge.RemoveOtherEffectsQueries)
         {
             foreach (var child in target.ChildEntities)
@@ -111,11 +111,13 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                     if (handleToSpec.TryGetValue(activeGE.Handle, out var existingSpec))
                     {
                         if (removeQuery.Matches(existingSpec))
-                            RemoveEffect(activeGE.Handle, EEffectEndType.Premature);
+                            toRemove.Add(activeGE.Handle);
                     }
                 }
             }
         }
+        foreach (var h in toRemove)
+            RemoveEffect(h, EEffectEndType.Premature);
 
         // 2. CanApply
         if (!CanApply(spec, target)) return -1;
@@ -182,7 +184,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         {
             foreach (var condEffect in ge.OnApplicationEffects)
             {
-                if (condEffect.RequiredSourceTags.Count == 0) // 无条件触发
+                if (condEffect.Effect != null && condEffect.RequiredSourceTags.Count == 0)
                 {
                     var chainSpec = new GameplayEffectSpec(condEffect.Effect, spec.Level);
                     Apply(chainSpec, target);
@@ -193,8 +195,13 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         return handle;
     }
 
+    // 重入保护：OnCompleteEffects 触发的 Apply → RemoveOtherEffects 不应再回到当前 handle
+    private readonly HashSet<int> removingHandles = new();
+
     public void RemoveEffect(int handle, EEffectEndType reason)
     {
+        if (!removingHandles.Add(handle)) return; // 防止递归
+
         // Always remove mods from aggregator (works regardless of cache)
         attributeSystem.RemoveAggregatorModsByHandle(handle);
 
@@ -220,8 +227,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             {
                 foreach (var condEffect in spec.Definition.OnCompleteEffects)
                 {
-                    // 检查条件：RequiredSourceTags 空或满足
-                    if (condEffect.RequiredSourceTags.Count == 0)
+                    if (condEffect.Effect != null && condEffect.RequiredSourceTags.Count == 0)
                     {
                         var chainSpec = new GameplayEffectSpec(condEffect.Effect, spec.Level);
                         if (handleToEntity.TryGetValue(handle, out var entity))
@@ -238,7 +244,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             handleToEntity.Remove(handle);
         }
 
-        // Entity destruction handled by OnRemoveEntityTags (Task 12)
+        removingHandles.Remove(handle);
     }
 
     private void HandleExpiration(ref ActiveGameplayEffectComponent comp, Entity entity)
