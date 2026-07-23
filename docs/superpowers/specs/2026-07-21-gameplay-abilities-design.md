@@ -2,7 +2,7 @@
 
 ## 概述
 
-GameplayAbilities 是 GAS（Gameplay Ability System）的核心模块，基于 ECS 架构，参考 UE5 GameplayAbilities 插件设计。所有代码放在 `src/Gameplay/GameplayAbilities/` 目录，命名空间 `Gameplay.GameplayAbilities`。
+GameplayAbilities 是 GAS（Gameplay Ability System）的核心模块，基于 ECS 架构，参考 UE5 GameplayAbilities 插件设计。所有代码放在 `src/Gameplay/Gameplay.Abilities/` 目录，命名空间 `Gameplay.Abilities`。
 
 ### 核心原则
 
@@ -16,7 +16,7 @@ GameplayAbilities 是 GAS（Gameplay Ability System）的核心模块，基于 E
 ## 模块总览
 
 ```
-src/Gameplay/GameplayAbilities/
+src/Gameplay/Gameplay.Abilities/
 ├── Attribute/                    # 属性系统
 │   ├── IAttributeSetComponent    # 标记接口，标记 struct 为 AttributeSet
 │   ├── GameplayAttribute         # 属性寻址句柄（Id + ComponentType + Offset）
@@ -1132,14 +1132,14 @@ Attribute 变化             → AttributeChange Event（可选）
 ### 分层关系
 
 ```
-GameplayTask（通用异步框架，src/Gameplay/GameplayTasks/，不修改）
+GameplayTask（通用异步框架，src/Gameplay/Gameplay.Tasks/，不修改）
 ├── TaskStateComponent          (Pending → Running → Done → Cancelled)
 ├── TaskOwnerComponent          (哪个 Entity 拥有这个 Task)
 ├── DelayTaskComponent          (延时示例)
 ├── DelayTaskSystem
 └── TaskSystem                  (通用推进)
 
-AbilityTask（GameplayTask 的使用者，src/Gameplay/GameplayAbilities/AbilityTask/）
+AbilityTask（GameplayTask 的使用者，src/Gameplay/Gameplay.Abilities/AbilityTask/）
 ├── AbilityTaskContextComponent  (关联到哪个 ActiveAbility + Handle)
 ├── AbilityTaskSystem            (Task 完成检测、Cancel 传播)
 ├── WaitDelayTask                (等待 N 秒)

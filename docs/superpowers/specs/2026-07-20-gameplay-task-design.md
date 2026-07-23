@@ -11,7 +11,7 @@
 ## 1. 整体架构
 
 ```
-src/Gameplay/GameplayTasks/
+src/Gameplay/Gameplay.Tasks/
 ├── TaskOwnerComponent.cs    # struct : IComponent，Task 拥有者引用
 ├── TaskStateComponent.cs    # struct : IComponent，Task 状态（Pending/Running/Done/Cancelled）
 ├── DelayTaskComponent.cs    # struct : IComponent，延时等待数据
@@ -26,7 +26,7 @@ src/Gameplay/GameplayTasks/
 
 ## 2. TaskOwnerComponent
 
-文件：`src/Gameplay/GameplayTasks/TaskOwnerComponent.cs`
+文件：`src/Gameplay/Gameplay.Tasks/TaskOwnerComponent.cs`
 
 ```csharp
 using Friflo.Engine.ECS;
@@ -42,7 +42,7 @@ public struct TaskOwnerComponent : IComponent
 
 ## 3. TaskStateComponent
 
-文件：`src/Gameplay/GameplayTasks/TaskStateComponent.cs`
+文件：`src/Gameplay/Gameplay.Tasks/TaskStateComponent.cs`
 
 ```csharp
 using Friflo.Engine.ECS;
@@ -66,7 +66,7 @@ public struct TaskStateComponent : IComponent
 
 ## 4. DelayTaskComponent
 
-文件：`src/Gameplay/GameplayTasks/DelayTaskComponent.cs`
+文件：`src/Gameplay/Gameplay.Tasks/DelayTaskComponent.cs`
 
 ```csharp
 using Friflo.Engine.ECS;
@@ -83,7 +83,7 @@ public struct DelayTaskComponent : IComponent
 
 ## 5. DelayTaskSystem
 
-文件：`src/Gameplay/GameplayTasks/DelayTaskSystem.cs`
+文件：`src/Gameplay/Gameplay.Tasks/DelayTaskSystem.cs`
 
 ```csharp
 using Friflo.Engine.ECS;
@@ -159,7 +159,7 @@ root.Update(new UpdateTick(deltaTime, 0));
 
 ## 7. 测试计划
 
-文件：`tests/Gameplay.Tests/GameplayTasks/GameplayTaskTests.cs`
+文件：`tests/Gameplay.Tests/Gameplay.Tests.Tasks/GameplayTaskTests.cs`
 
 每个测试独立创建 World + SystemRoot，不共享状态。
 

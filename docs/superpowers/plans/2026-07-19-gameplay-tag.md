@@ -23,8 +23,8 @@
 ### Task 1: GameplayTagSet — 可扩展位集
 
 **Files:**
-- Create: `src/Gameplay/GameplayTags/GameplayTagSet.cs`
-- Test: `tests/Gameplay.Tests/GameplayTags/GameplayTagSetTests.cs`
+- Create: `src/Gameplay/Gameplay.Tags/GameplayTagSet.cs`
+- Test: `tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagSetTests.cs`
 
 **Interfaces:**
 - Produces: `internal struct GameplayTagSet` with `Set(int)`, `Clear(int)`, `Has(int)`, `HasAny(ReadOnlySpan<long>)`, `HasAny(in GameplayTagSet)`, `Count`, `Bits`
@@ -32,7 +32,7 @@
 - [ ] **Step 1: 创建测试目录和测试文件**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayTags/GameplayTagSetTests.cs
+// tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagSetTests.cs
 using Xunit;
 
 namespace Gameplay.Tests;
@@ -156,7 +156,7 @@ public class GameplayTagSetTests
 - [ ] **Step 2: 创建 GameplayTags 源码目录**
 
 ```bash
-mkdir -p src/Gameplay/GameplayTags
+mkdir -p src/Gameplay/Gameplay.Tags
 ```
 
 - [ ] **Step 3: 运行测试确认失败**
@@ -169,7 +169,7 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj --filter "FullyQualifiedN
 - [ ] **Step 4: 实现 GameplayTagSet**
 
 ```csharp
-// src/Gameplay/GameplayTags/GameplayTagSet.cs
+// src/Gameplay/Gameplay.Tags/GameplayTagSet.cs
 using System;
 
 namespace Gameplay;
@@ -269,7 +269,7 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj --filter "FullyQualifiedN
 - [ ] **Step 6: 提交**
 
 ```bash
-git add src/Gameplay/GameplayTags/GameplayTagSet.cs tests/Gameplay.Tests/GameplayTags/GameplayTagSetTests.cs
+git add src/Gameplay/Gameplay.Tags/GameplayTagSet.cs tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagSetTests.cs
 git commit -m "feat: GameplayTagSet 可扩展位集"
 ```
 
@@ -278,7 +278,7 @@ git commit -m "feat: GameplayTagSet 可扩展位集"
 ### Task 2: GameplayTagNode — 层级树节点
 
 **Files:**
-- Create: `src/Gameplay/GameplayTags/GameplayTagNode.cs`
+- Create: `src/Gameplay/Gameplay.Tags/GameplayTagNode.cs`
 
 **Interfaces:**
 - Produces: `internal sealed class GameplayTagNode` with `Name`, `FullName`, `Id`, `Parent`, `Children`
@@ -286,7 +286,7 @@ git commit -m "feat: GameplayTagSet 可扩展位集"
 - [ ] **Step 1: 实现 GameplayTagNode（无独立测试，被 Manager 测试间接覆盖）**
 
 ```csharp
-// src/Gameplay/GameplayTags/GameplayTagNode.cs
+// src/Gameplay/Gameplay.Tags/GameplayTagNode.cs
 using System.Collections.Generic;
 
 namespace Gameplay;
@@ -321,7 +321,7 @@ dotnet build src/Gameplay/Gameplay.csproj
 - [ ] **Step 3: 提交**
 
 ```bash
-git add src/Gameplay/GameplayTags/GameplayTagNode.cs
+git add src/Gameplay/Gameplay.Tags/GameplayTagNode.cs
 git commit -m "feat: GameplayTagNode 层级树节点"
 ```
 
@@ -330,9 +330,9 @@ git commit -m "feat: GameplayTagNode 层级树节点"
 ### Task 3: GameplayTagManager + GameplayTag — 注册中心与句柄
 
 **Files:**
-- Create: `src/Gameplay/GameplayTags/GameplayTagManager.cs`
-- Create: `src/Gameplay/GameplayTags/GameplayTag.cs`
-- Test: `tests/Gameplay.Tests/GameplayTags/GameplayTagManagerTests.cs`
+- Create: `src/Gameplay/Gameplay.Tags/GameplayTagManager.cs`
+- Create: `src/Gameplay/Gameplay.Tags/GameplayTag.cs`
+- Test: `tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagManagerTests.cs`
 
 **Interfaces:**
 - Consumes: `GameplayTagSet`, `GameplayTagNode`
@@ -342,7 +342,7 @@ git commit -m "feat: GameplayTagNode 层级树节点"
 - [ ] **Step 1: 写 Manager 注册与查询测试（先写会编译失败的测试部分）**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayTags/GameplayTagManagerTests.cs
+// tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagManagerTests.cs
 using Xunit;
 
 namespace Gameplay.Tests;
@@ -464,7 +464,7 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj --filter "FullyQualifiedN
 - [ ] **Step 3: 实现 GameplayTag**
 
 ```csharp
-// src/Gameplay/GameplayTags/GameplayTag.cs
+// src/Gameplay/Gameplay.Tags/GameplayTag.cs
 using System;
 
 namespace Gameplay;
@@ -507,7 +507,7 @@ public readonly struct GameplayTag : IEquatable<GameplayTag>
 - [ ] **Step 4: 实现 GameplayTagManager**
 
 ```csharp
-// src/Gameplay/GameplayTags/GameplayTagManager.cs
+// src/Gameplay/Gameplay.Tags/GameplayTagManager.cs
 using System;
 using System.Collections.Generic;
 
@@ -691,7 +691,7 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj --filter "FullyQualifiedN
 - [ ] **Step 6: 提交**
 
 ```bash
-git add src/Gameplay/GameplayTags/GameplayTagManager.cs src/Gameplay/GameplayTags/GameplayTag.cs tests/Gameplay.Tests/GameplayTags/GameplayTagManagerTests.cs
+git add src/Gameplay/Gameplay.Tags/GameplayTagManager.cs src/Gameplay/Gameplay.Tags/GameplayTag.cs tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagManagerTests.cs
 git commit -m "feat: GameplayTagManager + GameplayTag — 注册与层级查询"
 ```
 
@@ -700,8 +700,8 @@ git commit -m "feat: GameplayTagManager + GameplayTag — 注册与层级查询"
 ### Task 4: GameplayTags — ECS Component
 
 **Files:**
-- Create: `src/Gameplay/GameplayTags/GameplayTags.cs`
-- Test: `tests/Gameplay.Tests/GameplayTags/GameplayTagsTests.cs`
+- Create: `src/Gameplay/Gameplay.Tags/GameplayTags.cs`
+- Test: `tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagsTests.cs`
 
 **Interfaces:**
 - Consumes: `GameplayTagSet`, `GameplayTag`, `GameplayTagManager`
@@ -710,7 +710,7 @@ git commit -m "feat: GameplayTagManager + GameplayTag — 注册与层级查询"
 - [ ] **Step 1: 写 GameplayTags Component 测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayTags/GameplayTagsTests.cs
+// tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagsTests.cs
 using Xunit;
 
 namespace Gameplay.Tests;
@@ -882,7 +882,7 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj --filter "FullyQualifiedN
 - [ ] **Step 3: 实现 GameplayTags Component**
 
 ```csharp
-// src/Gameplay/GameplayTags/GameplayTags.cs
+// src/Gameplay/Gameplay.Tags/GameplayTags.cs
 using Friflo.Engine.ECS;
 
 namespace Gameplay;
@@ -917,7 +917,7 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj --filter "FullyQualifiedN
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayTags/GameplayTags.cs tests/Gameplay.Tests/GameplayTags/GameplayTagsTests.cs
+git add src/Gameplay/Gameplay.Tags/GameplayTags.cs tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagsTests.cs
 git commit -m "feat: GameplayTags ECS Component"
 ```
 
@@ -926,7 +926,7 @@ git commit -m "feat: GameplayTags ECS Component"
 ### Task 5: 边界场景 & 全量回归
 
 **Files:**
-- Test: `tests/Gameplay.Tests/GameplayTags/GameplayTagEdgeCaseTests.cs`
+- Test: `tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagEdgeCaseTests.cs`
 
 **Interfaces:**
 - Consumes: all types from Tasks 1–4
@@ -934,7 +934,7 @@ git commit -m "feat: GameplayTags ECS Component"
 - [ ] **Step 1: 写边界测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayTags/GameplayTagEdgeCaseTests.cs
+// tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagEdgeCaseTests.cs
 using Xunit;
 
 namespace Gameplay.Tests;
@@ -1058,7 +1058,7 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj
 - [ ] **Step 4: 提交**
 
 ```bash
-git add tests/Gameplay.Tests/GameplayTags/GameplayTagEdgeCaseTests.cs
+git add tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagEdgeCaseTests.cs
 git commit -m "test: GameplayTag 边界场景测试"
 ```
 
@@ -1106,5 +1106,5 @@ git commit -m "build: 验证双 TFM 编译和测试通过"
 - [ ] `dotnet build` 两个 TFM 全部通过
 - [ ] 文件范围命名空间用于所有文件
 - [ ] 注释使用中文
-- [ ] `src/Gameplay/GameplayTags/` 下 5 个文件（无 GameplayTagQuery.cs）
-- [ ] `tests/Gameplay.Tests/GameplayTags/` 下 4 个测试文件
+- [ ] `src/Gameplay/Gameplay.Tags/` 下 5 个文件（无 GameplayTagQuery.cs）
+- [ ] `tests/Gameplay.Tests/Gameplay.Tests.Tags/` 下 4 个测试文件

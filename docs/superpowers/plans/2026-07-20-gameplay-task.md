@@ -23,8 +23,8 @@
 ### Task 1: 数据 Component（TaskOwner + TaskState）
 
 **Files:**
-- Create: `src/Gameplay/GameplayTasks/TaskOwnerComponent.cs`
-- Create: `src/Gameplay/GameplayTasks/TaskStateComponent.cs`
+- Create: `src/Gameplay/Gameplay.Tasks/TaskOwnerComponent.cs`
+- Create: `src/Gameplay/Gameplay.Tasks/TaskStateComponent.cs`
 
 **Interfaces:**
 - Produces: `public struct TaskOwnerComponent : IComponent` with `Entity Owner`
@@ -34,11 +34,11 @@
 - [ ] **Step 1: 创建源码目录和文件**
 
 ```bash
-mkdir -p src/Gameplay/GameplayTasks
+mkdir -p src/Gameplay/Gameplay.Tasks
 ```
 
 ```csharp
-// src/Gameplay/GameplayTasks/TaskOwnerComponent.cs
+// src/Gameplay/Gameplay.Tasks/TaskOwnerComponent.cs
 using Friflo.Engine.ECS;
 
 namespace Gameplay;
@@ -51,7 +51,7 @@ public struct TaskOwnerComponent : IComponent
 ```
 
 ```csharp
-// src/Gameplay/GameplayTasks/TaskStateComponent.cs
+// src/Gameplay/Gameplay.Tasks/TaskStateComponent.cs
 using Friflo.Engine.ECS;
 
 namespace Gameplay;
@@ -81,7 +81,7 @@ dotnet build src/Gameplay/Gameplay.csproj -f net10.0
 - [ ] **Step 3: 提交**
 
 ```bash
-git add src/Gameplay/GameplayTasks/TaskOwnerComponent.cs src/Gameplay/GameplayTasks/TaskStateComponent.cs
+git add src/Gameplay/Gameplay.Tasks/TaskOwnerComponent.cs src/Gameplay/Gameplay.Tasks/TaskStateComponent.cs
 git commit -m "feat: GameplayTask 数据 Component — TaskOwner + TaskState"
 ```
 
@@ -90,9 +90,9 @@ git commit -m "feat: GameplayTask 数据 Component — TaskOwner + TaskState"
 ### Task 2: DelayTaskComponent + DelayTaskSystem（TDD）
 
 **Files:**
-- Create: `src/Gameplay/GameplayTasks/DelayTaskComponent.cs`
-- Create: `src/Gameplay/GameplayTasks/DelayTaskSystem.cs`
-- Test: `tests/Gameplay.Tests/GameplayTasks/GameplayTaskTests.cs`
+- Create: `src/Gameplay/Gameplay.Tasks/DelayTaskComponent.cs`
+- Create: `src/Gameplay/Gameplay.Tasks/DelayTaskSystem.cs`
+- Test: `tests/Gameplay.Tests/Gameplay.Tests.Tasks/GameplayTaskTests.cs`
 
 **Interfaces:**
 - Consumes: `TaskStateComponent`, `TaskState`
@@ -104,11 +104,11 @@ git commit -m "feat: GameplayTask 数据 Component — TaskOwner + TaskState"
 创建测试目录：
 
 ```bash
-mkdir -p tests/Gameplay.Tests/GameplayTasks
+mkdir -p tests/Gameplay.Tests/Gameplay.Tests.Tasks
 ```
 
 ```csharp
-// tests/Gameplay.Tests/GameplayTasks/GameplayTaskTests.cs
+// tests/Gameplay.Tests/Gameplay.Tests.Tasks/GameplayTaskTests.cs
 using Friflo.Engine.ECS;
 using Xunit;
 
@@ -236,7 +236,7 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj --filter "FullyQualifiedN
 - [ ] **Step 3: 实现 DelayTaskComponent**
 
 ```csharp
-// src/Gameplay/GameplayTasks/DelayTaskComponent.cs
+// src/Gameplay/Gameplay.Tasks/DelayTaskComponent.cs
 using Friflo.Engine.ECS;
 
 namespace Gameplay;
@@ -252,7 +252,7 @@ public struct DelayTaskComponent : IComponent
 - [ ] **Step 4: 实现 DelayTaskSystem**
 
 ```csharp
-// src/Gameplay/GameplayTasks/DelayTaskSystem.cs
+// src/Gameplay/Gameplay.Tasks/DelayTaskSystem.cs
 using Friflo.Engine.ECS;
 
 namespace Gameplay;
@@ -305,7 +305,7 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj -f net10.0
 - [ ] **Step 7: 提交**
 
 ```bash
-git add src/Gameplay/GameplayTasks/DelayTaskComponent.cs src/Gameplay/GameplayTasks/DelayTaskSystem.cs tests/Gameplay.Tests/GameplayTasks/GameplayTaskTests.cs
+git add src/Gameplay/Gameplay.Tasks/DelayTaskComponent.cs src/Gameplay/Gameplay.Tasks/DelayTaskSystem.cs tests/Gameplay.Tests/Gameplay.Tests.Tasks/GameplayTaskTests.cs
 git commit -m "feat: DelayTaskComponent + DelayTaskSystem — 延时 Task 驱动"
 ```
 
@@ -342,5 +342,5 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj -f net10.0
 
 - [ ] 所有测试通过（48 tests）
 - [ ] `dotnet build` 两个 TFM 全部通过，0 warnings
-- [ ] `src/Gameplay/GameplayTasks/` 下 4 个文件
-- [ ] `tests/Gameplay.Tests/GameplayTasks/` 下 1 个文件
+- [ ] `src/Gameplay/Gameplay.Tasks/` 下 4 个文件
+- [ ] `tests/Gameplay.Tests/Gameplay.Tests.Tasks/` 下 1 个文件

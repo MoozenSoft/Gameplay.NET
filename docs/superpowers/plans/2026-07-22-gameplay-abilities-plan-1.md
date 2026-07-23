@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- 命名空间：源文件 `Gameplay.GameplayAbilities`，测试文件 `Gameplay.Tests.GameplayAbilities`，文件范围命名空间（`namespace X;` 不加括号缩进）
+- 命名空间：源文件 `Gameplay.Abilities`，测试文件 `Gameplay.Tests.GameplayAbilities`，文件范围命名空间（`namespace X;` 不加括号缩进）
 - 文档和注释用中文，专业术语用英文
 - TDD：先写测试 → 确认失败 → 写实现 → 确认通过 → 提交
 - 热路径 0 GC：ECS Component 用 struct；冷路径（初始化/配置）可放松
@@ -23,7 +23,7 @@
 ## 文件结构
 
 ```
-src/Gameplay/GameplayAbilities/
+src/Gameplay/Gameplay.Abilities/
 ├── Attribute/
 │   ├── GameplayAttributeData.cs           # 属性值容器（BaseValue + CurrentValue）
 │   ├── IAttributeSetComponent.cs          # 标记接口
@@ -44,7 +44,7 @@ src/Gameplay/GameplayAbilities/
 │   └── EffectSystem.cs                    # Tick / Apply / Remove
 └── GameplayAbilitiesFeature.cs            # 注册入口
 
-tests/Gameplay.Tests/GameplayAbilities/
+tests/Gameplay.Tests/Gameplay.Tests.Abilities/
 ├── Attribute/
 │   ├── GameplayAttributeDataTests.cs
 │   ├── DirtyAttributeComponentTests.cs
@@ -62,9 +62,9 @@ tests/Gameplay.Tests/GameplayAbilities/
 ### Task 1: GameplayAttributeData + IAttributeSetComponent
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/Attribute/GameplayAttributeData.cs`
-- Create: `src/Gameplay/GameplayAbilities/Attribute/IAttributeSetComponent.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/Attribute/GameplayAttributeDataTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Attribute/GameplayAttributeData.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Attribute/IAttributeSetComponent.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/GameplayAttributeDataTests.cs`
 
 **Interfaces:**
 - Produces: `GameplayAttributeData` struct (BaseValue, CurrentValue), `IAttributeSetComponent` interface
@@ -72,10 +72,10 @@ tests/Gameplay.Tests/GameplayAbilities/
 - [ ] **Step 1: 写 GameplayAttributeData 测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Attribute/GameplayAttributeDataTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/GameplayAttributeDataTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 
 public class GameplayAttributeDataTests
 {
@@ -106,8 +106,8 @@ Expected: FAIL — 类型不存在
 - [ ] **Step 3: 实现 GameplayAttributeData + IAttributeSetComponent**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Attribute/GameplayAttributeData.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/Attribute/GameplayAttributeData.cs
+namespace Gameplay.Abilities;
 
 /// <summary>属性值容器。纯数据，Aggregator 负责计算 CurrentValue。</summary>
 public struct GameplayAttributeData
@@ -121,10 +121,10 @@ public struct GameplayAttributeData
 ```
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Attribute/IAttributeSetComponent.cs
+// src/Gameplay/Gameplay.Abilities/Attribute/IAttributeSetComponent.cs
 using Friflo.Engine.ECS;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>标记 struct 为 AttributeSet——Entity 可挂多个实现此接口的 Component。</summary>
 public interface IAttributeSetComponent : IComponent { }
@@ -138,7 +138,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/Attribute/GameplayAttributeData.cs src/Gameplay/GameplayAbilities/Attribute/IAttributeSetComponent.cs tests/Gameplay.Tests/GameplayAbilities/Attribute/GameplayAttributeDataTests.cs
+git add src/Gameplay/Gameplay.Abilities/Attribute/GameplayAttributeData.cs src/Gameplay/Gameplay.Abilities/Attribute/IAttributeSetComponent.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/GameplayAttributeDataTests.cs
 git commit -m "feat: add GameplayAttributeData and IAttributeSetComponent
 
 - GameplayAttributeData: pure data container with BaseValue/CurrentValue
@@ -152,8 +152,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 2: GameplayEffect 枚举
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/GameplayEffect/Enums.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/EnumsTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayEffect/Enums.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/EnumsTests.cs`
 
 **Interfaces:**
 - Produces: 8 个枚举类型
@@ -161,10 +161,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写枚举存在性测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/EnumsTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/EnumsTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 
 public class EnumsTests
 {
@@ -197,8 +197,8 @@ Expected: FAIL
 - [ ] **Step 3: 实现所有枚举**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayEffect/Enums.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/GameplayEffect/Enums.cs
+namespace Gameplay.Abilities;
 
 /// <summary>GE 的持续时间策略。</summary>
 public enum EGameplayEffectDurationType
@@ -272,7 +272,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/GameplayEffect/Enums.cs tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/EnumsTests.cs
+git add src/Gameplay/Gameplay.Abilities/GameplayEffect/Enums.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/EnumsTests.cs
 git commit -m "feat: add GameplayEffect enums (DurationType, ModOp, Stacking, Capture, EndType)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -283,9 +283,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 3: GameplayModifier + GameplayEffectModifierMagnitude
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/GameplayEffect/GameplayModifier.cs`
-- Create: `src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectModifierMagnitude.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayModifierTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayModifier.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectModifierMagnitude.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayModifierTests.cs`
 
 **Interfaces:**
 - Produces: `GameplayModifier` struct, `GameplayEffectModifierMagnitude` class
@@ -293,10 +293,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayModifierTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayModifierTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 
 public class GameplayModifierTests
 {
@@ -336,8 +336,8 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectModifierMagnitude.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectModifierMagnitude.cs
+namespace Gameplay.Abilities;
 
 /// <summary>幅度计算方式。</summary>
 public enum EGameplayEffectMagnitudeCalculation
@@ -384,8 +384,8 @@ public class GameplayEffectModifierMagnitude
 ```
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayEffect/GameplayModifier.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayModifier.cs
+namespace Gameplay.Abilities;
 
 /// <summary>GameplayEffect 的单个 Modifier 定义——改哪个属性 + 怎么算 + 什么操作。</summary>
 public struct GameplayModifier
@@ -425,7 +425,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/GameplayEffect/GameplayModifier.cs src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectModifierMagnitude.cs tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayModifierTests.cs
+git add src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayModifier.cs src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectModifierMagnitude.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayModifierTests.cs
 git commit -m "feat: add GameplayModifier and GameplayEffectModifierMagnitude
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -436,8 +436,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 4: GameplayEffect 静态定义
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffect.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayEffectTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffect.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayEffectTests.cs`
 
 **Interfaces:**
 - Consumes: `GameplayModifier`, `GameplayEffectModifierMagnitude`, 枚举 (Task 2-3)
@@ -446,11 +446,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayEffectTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayEffectTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayTags;
-using Gameplay.GameplayAbilities;
+using Gameplay.Tags;
+using Gameplay.Abilities;
 
 public class GameplayEffectTests
 {
@@ -504,11 +504,11 @@ Expected: FAIL
 - [ ] **Step 3: 实现 GameplayEffect**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffect.cs
+// src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffect.cs
 using System.Collections.Generic;
-using Gameplay.GameplayTags;
+using Gameplay.Tags;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// GameplayEffect 静态定义（非 Entity）。策划/开发者配置的资产级数据。
@@ -552,7 +552,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffect.cs tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayEffectTests.cs
+git add src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffect.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayEffectTests.cs
 git commit -m "feat: add GameplayEffect static definition class
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -563,8 +563,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 5: GameplayEffectSpec
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectSpec.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayEffectSpecTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectSpec.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayEffectSpecTests.cs`
 
 **Interfaces:**
 - Consumes: `GameplayEffect` (Task 4), `GameplayModifier` (Task 3), `GameplayTag` (现有)
@@ -573,11 +573,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayEffectSpecTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayEffectSpecTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayTags;
-using Gameplay.GameplayAbilities;
+using Gameplay.Tags;
+using Gameplay.Abilities;
 
 public class GameplayEffectSpecTests
 {
@@ -631,11 +631,11 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectSpec.cs
+// src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectSpec.cs
 using System.Collections.Generic;
-using Gameplay.GameplayTags;
+using Gameplay.Tags;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>已计算 Magnitude 的单个 Modifier 条目。</summary>
 public struct FModifierSpec
@@ -695,7 +695,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectSpec.cs tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayEffectSpecTests.cs
+git add src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectSpec.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayEffectSpecTests.cs
 git commit -m "feat: add GameplayEffectSpec and GameplayEffectContext
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -706,8 +706,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 6: ActiveGameplayEffectComponent
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/GameplayEffect/ActiveGameplayEffectComponent.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/ActiveGameplayEffectComponentTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayEffect/ActiveGameplayEffectComponent.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/ActiveGameplayEffectComponentTests.cs`
 
 **Interfaces:**
 - Consumes: `GameplayEffect` (Task 4), 枚举 (Task 2)
@@ -716,10 +716,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/ActiveGameplayEffectComponentTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/ActiveGameplayEffectComponentTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 
 public class ActiveGameplayEffectComponentTests
 {
@@ -754,11 +754,11 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayEffect/ActiveGameplayEffectComponent.cs
+// src/Gameplay/Gameplay.Abilities/GameplayEffect/ActiveGameplayEffectComponent.cs
 using Friflo.Engine.ECS;
-using Gameplay.GameplayTags;
+using Gameplay.Tags;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// ActiveGameplayEffect 的运行时 Component（单一，所有字段合一）。
@@ -809,7 +809,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/GameplayEffect/ActiveGameplayEffectComponent.cs tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/ActiveGameplayEffectComponentTests.cs
+git add src/Gameplay/Gameplay.Abilities/GameplayEffect/ActiveGameplayEffectComponent.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/ActiveGameplayEffectComponentTests.cs
 git commit -m "feat: add ActiveGameplayEffectComponent (runtime IComponent)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -820,11 +820,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 7: AttributeAggregator + ModEntry + DirtyAttributeComponent
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/Attribute/AttributeAggregator.cs`
-- Create: `src/Gameplay/GameplayAbilities/Attribute/ModEntry.cs`
-- Create: `src/Gameplay/GameplayAbilities/Attribute/DirtyAttributeComponent.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/Attribute/AttributeAggregatorTests.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/Attribute/DirtyAttributeComponentTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Attribute/AttributeAggregator.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Attribute/ModEntry.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Attribute/DirtyAttributeComponent.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/AttributeAggregatorTests.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/DirtyAttributeComponentTests.cs`
 
 **Interfaces:**
 - Consumes: 枚举 (Task 2)
@@ -833,11 +833,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Attribute/AttributeAggregatorTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/AttributeAggregatorTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
+using Gameplay.Abilities;
 
 public class AttributeAggregatorTests
 {
@@ -906,10 +906,10 @@ public class AttributeAggregatorTests
 ```
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Attribute/DirtyAttributeComponentTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/DirtyAttributeComponentTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 
 public class DirtyAttributeComponentTests
 {
@@ -956,8 +956,8 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Attribute/ModEntry.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/Attribute/ModEntry.cs
+namespace Gameplay.Abilities;
 
 /// <summary>AttributeAggregator 中的单个 Mod 条目（internal，框架内部使用）。</summary>
 internal struct ModEntry
@@ -968,11 +968,11 @@ internal struct ModEntry
 ```
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Attribute/AttributeAggregator.cs
+// src/Gameplay/Gameplay.Abilities/Attribute/AttributeAggregator.cs
 using System.Collections.Generic;
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// 单个 GameplayAttribute 的运行时聚合器。
@@ -1046,10 +1046,10 @@ internal class AttributeAggregator
 ```
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Attribute/DirtyAttributeComponent.cs
+// src/Gameplay/Gameplay.Abilities/Attribute/DirtyAttributeComponent.cs
 using Friflo.Engine.ECS;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// Entity 上的属性脏标记。Bit&lt;i&gt; = Attribute&lt;i&gt; 需要重算。
@@ -1078,7 +1078,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/Attribute/ModEntry.cs src/Gameplay/GameplayAbilities/Attribute/AttributeAggregator.cs src/Gameplay/GameplayAbilities/Attribute/DirtyAttributeComponent.cs tests/Gameplay.Tests/GameplayAbilities/Attribute/AttributeAggregatorTests.cs tests/Gameplay.Tests/GameplayAbilities/Attribute/DirtyAttributeComponentTests.cs
+git add src/Gameplay/Gameplay.Abilities/Attribute/ModEntry.cs src/Gameplay/Gameplay.Abilities/Attribute/AttributeAggregator.cs src/Gameplay/Gameplay.Abilities/Attribute/DirtyAttributeComponent.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/AttributeAggregatorTests.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/DirtyAttributeComponentTests.cs
 git commit -m "feat: add AttributeAggregator, ModEntry, DirtyAttributeComponent
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -1089,8 +1089,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 8: AttributeSystem
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/Attribute/AttributeSystem.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/Attribute/AttributeSystemTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Attribute/AttributeSystem.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/AttributeSystemTests.cs`
 
 **Interfaces:**
 - Consumes: `AttributeAggregator`, `DirtyAttributeComponent` (Task 7), `ActiveGameplayEffectComponent` (Task 6)
@@ -1099,12 +1099,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Attribute/AttributeSystemTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/AttributeSystemTests.cs
+namespace Gameplay.Tests.Abilities;
 
 using Friflo.Engine.ECS;
-using Gameplay.GameplayAbilities;
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
+using Gameplay.Abilities;
 
 public class AttributeSystemTests
 {
@@ -1164,12 +1164,12 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Attribute/AttributeSystem.cs
+// src/Gameplay/Gameplay.Abilities/Attribute/AttributeSystem.cs
 using System.Collections.Generic;
 using Friflo.Engine.ECS;
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// 属性重算 System。只处理 DirtyBits 有标记的 Entity。
@@ -1282,7 +1282,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/Attribute/AttributeSystem.cs tests/Gameplay.Tests/GameplayAbilities/Attribute/AttributeSystemTests.cs
+git add src/Gameplay/Gameplay.Abilities/Attribute/AttributeSystem.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/AttributeSystemTests.cs
 git commit -m "feat: add AttributeSystem (dirty-driven attribute recalculation)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -1293,10 +1293,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 9: GameplayEffectQuery + ConditionalGameplayEffect + GameplayEffectCue
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectQuery.cs`
-- Create: `src/Gameplay/GameplayAbilities/GameplayEffect/ConditionalGameplayEffect.cs`
-- Create: `src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectCue.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayEffectQueryTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectQuery.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayEffect/ConditionalGameplayEffect.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectCue.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayEffectQueryTests.cs`
 
 **Interfaces:**
 - Consumes: `GameplayTag` (现有), `GameplayEffect` (Task 4)
@@ -1305,11 +1305,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayEffectQueryTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayEffectQueryTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayTags;
-using Gameplay.GameplayAbilities;
+using Gameplay.Tags;
+using Gameplay.Abilities;
 
 public class GameplayEffectQueryTests
 {
@@ -1356,10 +1356,10 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectQuery.cs
-using Gameplay.GameplayTags;
+// src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectQuery.cs
+using Gameplay.Tags;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>效果查询条件——用于 Immunity、RemoveOtherEffects、GetActiveEffects 等。</summary>
 public class GameplayEffectQuery
@@ -1389,8 +1389,8 @@ public class GameplayEffectQuery
 ```
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayEffect/ConditionalGameplayEffect.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/GameplayEffect/ConditionalGameplayEffect.cs
+namespace Gameplay.Abilities;
 
 /// <summary>条件触发的 GameplayEffect——用于 OnApplicationEffects 和 OnCompleteEffects。</summary>
 public struct ConditionalGameplayEffect
@@ -1401,10 +1401,10 @@ public struct ConditionalGameplayEffect
 ```
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectCue.cs
-using Gameplay.GameplayTags;
+// src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectCue.cs
+using Gameplay.Tags;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>GameplayEffect 关联的 Cue 定义。</summary>
 public struct GameplayEffectCue
@@ -1423,7 +1423,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectQuery.cs src/Gameplay/GameplayAbilities/GameplayEffect/ConditionalGameplayEffect.cs src/Gameplay/GameplayAbilities/GameplayEffect/GameplayEffectCue.cs tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/GameplayEffectQueryTests.cs
+git add src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectQuery.cs src/Gameplay/Gameplay.Abilities/GameplayEffect/ConditionalGameplayEffect.cs src/Gameplay/Gameplay.Abilities/GameplayEffect/GameplayEffectCue.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/GameplayEffectQueryTests.cs
 git commit -m "feat: add GameplayEffectQuery, ConditionalGameplayEffect, GameplayEffectCue
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -1434,8 +1434,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 10: EffectSystem (Tick + TagRequirements)
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/GameplayEffect/EffectSystem.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/EffectSystemTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayEffect/EffectSystem.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/EffectSystemTests.cs`
 
 **Interfaces:**
 - Consumes: `ActiveGameplayEffectComponent` (Task 6), `AttributeSystem` (Task 8)
@@ -1444,12 +1444,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写核心 Tick 测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/EffectSystemTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/EffectSystemTests.cs
+namespace Gameplay.Tests.Abilities;
 
 using Friflo.Engine.ECS;
-using Gameplay.GameplayAbilities;
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
+using Gameplay.Abilities;
 
 public class EffectSystemTests
 {
@@ -1534,7 +1534,7 @@ public class EffectSystemTests
         target.AddComponent(new DirtyAttributeComponent());
         attrSys.SetAggregatorValue(target, attributeId: 0, baseValue: 100f);
         attrSys.AddAggregatorMod(target, 0, handle: 1, magnitude: 10f,
-            Gameplay.GameplayAbilities.EGameplayModOp.Additive);
+            Gameplay.Abilities.EGameplayModOp.Additive);
 
         var effectSys = new EffectSystem(attrSys);
         store.AddSystem(effectSys);
@@ -1566,11 +1566,11 @@ Expected: FAIL
 - [ ] **Step 3: 实现 EffectSystem（核心 Tick）**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayEffect/EffectSystem.cs
+// src/Gameplay/Gameplay.Abilities/GameplayEffect/EffectSystem.cs
 using Friflo.Engine.ECS;
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// GameplayEffect 核心 System：Tick Duration / Period / TagRequirements / Expiration。
@@ -1667,7 +1667,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/GameplayEffect/EffectSystem.cs tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/EffectSystemTests.cs
+git add src/Gameplay/Gameplay.Abilities/GameplayEffect/EffectSystem.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/EffectSystemTests.cs
 git commit -m "feat: add EffectSystem core tick (duration, period, expiration)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -1678,7 +1678,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 11: EffectSystem.Apply + EffectSystem.Remove
 
 **Files:**
-- Modify: `src/Gameplay/GameplayAbilities/GameplayEffect/EffectSystem.cs`
+- Modify: `src/Gameplay/Gameplay.Abilities/GameplayEffect/EffectSystem.cs`
 
 **Interfaces:**
 - Consumes: `GameplayEffectSpec` (Task 5), `ActiveGameplayEffectComponent` (Task 6), `AttributeSystem` (Task 8)
@@ -1687,7 +1687,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写 Apply 测试**
 
 ```csharp
-// 追加到 tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/EffectSystemTests.cs
+// 追加到 tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/EffectSystemTests.cs
 
 [Fact]
 public void Apply_HasDuration_CreatesEntityWithComponent()
@@ -1882,7 +1882,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/GameplayEffect/EffectSystem.cs tests/Gameplay.Tests/GameplayAbilities/GameplayEffect/EffectSystemTests.cs
+git add src/Gameplay/Gameplay.Abilities/GameplayEffect/EffectSystem.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayEffect/EffectSystemTests.cs
 git commit -m "feat: add EffectSystem.Apply, CanApply, RemoveEffect
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -1893,8 +1893,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 12: GameplayAbilitiesFeature 注册入口
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/GameplayAbilitiesFeature.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/GameplayAbilitiesFeatureTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/GameplayAbilitiesFeature.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayAbilitiesFeatureTests.cs`
 
 **Interfaces:**
 - Consumes: `EffectSystem` (Task 10-11), `AttributeSystem` (Task 8)
@@ -1903,12 +1903,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/GameplayAbilitiesFeatureTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayAbilitiesFeatureTests.cs
+namespace Gameplay.Tests.Abilities;
 
 using Friflo.Engine.ECS;
 using Gameplay;
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 
 public class GameplayAbilitiesFeatureTests
 {
@@ -1932,12 +1932,12 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/GameplayAbilitiesFeature.cs
+// src/Gameplay/Gameplay.Abilities/GameplayAbilitiesFeature.cs
 using Friflo.Engine.ECS;
-using Gameplay.GameplayAbilities;
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
+using Gameplay.Abilities;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// GAS 子系统的注册入口。接收已有 EntityStore，挂上 AttributeSystem 和 EffectSystem。
@@ -1973,7 +1973,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/GameplayAbilitiesFeature.cs tests/Gameplay.Tests/GameplayAbilities/GameplayAbilitiesFeatureTests.cs
+git add src/Gameplay/Gameplay.Abilities/GameplayAbilitiesFeature.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/GameplayAbilitiesFeatureTests.cs
 git commit -m "feat: add GameplayAbilitiesFeature registration entry point
 
 Co-Authored-By: Claude <noreply@anthropic.com>"

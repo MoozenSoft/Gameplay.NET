@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- 命名空间：源码 `Gameplay.GameplayAbilities`，测试 `Gameplay.Tests.GameplayAbilities`，文件范围命名空间
+- 命名空间：源码 `Gameplay.Abilities`，测试 `Gameplay.Tests.GameplayAbilities`，文件范围命名空间
 - 文档和注释用中文，专业术语用英文
 - TDD：写测试 → 确认失败 → 写实现 → 确认通过 → 提交
 - Friflo System 模式: `QuerySystem<T>` + `Query.ForEachEntity((ref T, Entity) => {})`
@@ -36,7 +36,7 @@
 ## 文件结构
 
 ```
-src/Gameplay/GameplayAbilities/Ability/
+src/Gameplay/Gameplay.Abilities/Ability/
 ├── Enums.cs                              # Ability 相关枚举（NetPolicy, SecurityPolicy, TriggerSource 等）
 ├── GameplayAbility.cs                    # 静态定义（非 Entity）
 ├── AbilitySpec.cs                        # 授予实例数据（非 Entity），含 AbilitySpecHandle
@@ -54,7 +54,7 @@ src/Gameplay/GameplayAbilities/Ability/
     ├── ApplyEffectExecutor.cs            # 对 Target 施加 GE Spec
     └── SpawnTaskExecutor.cs              # 创建 Task Entity
 
-tests/Gameplay.Tests/GameplayAbilities/Ability/
+tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/
 ├── EnumsTests.cs
 ├── GameplayAbilityTests.cs
 ├── AbilitySpecTests.cs
@@ -70,8 +70,8 @@ tests/Gameplay.Tests/GameplayAbilities/Ability/
 ### Task 1: GameplayAbility 相关枚举
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/Ability/Enums.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/Ability/EnumsTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/Enums.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/EnumsTests.cs`
 
 **Interfaces:**
 - Produces: `EGameplayAbilityNetExecutionPolicy`, `EGameplayAbilityNetSecurityPolicy`, `EAbilityTriggerSource`, `EGrantedAbilityRemovePolicy`, `ActivationSource`, `AbilityInstanceState`
@@ -79,10 +79,10 @@ tests/Gameplay.Tests/GameplayAbilities/Ability/
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Ability/EnumsTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/EnumsTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 using Xunit;
 
 public class AbilityEnumsTests
@@ -123,10 +123,10 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/Enums.cs
+// src/Gameplay/Gameplay.Abilities/Ability/Enums.cs
 using System;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>Ability 网络执行策略。</summary>
 public enum EGameplayAbilityNetExecutionPolicy
@@ -191,7 +191,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/Ability/Enums.cs tests/Gameplay.Tests/GameplayAbilities/Ability/EnumsTests.cs
+git add src/Gameplay/Gameplay.Abilities/Ability/Enums.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/EnumsTests.cs
 git commit -m "feat: add Ability enums (NetPolicy, SecurityPolicy, TriggerSource, etc.)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -202,8 +202,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 2: GameplayAbility + AbilityTriggerData
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/Ability/GameplayAbility.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/Ability/GameplayAbilityTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/GameplayAbility.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/GameplayAbilityTests.cs`
 
 **Interfaces:**
 - Consumes: `GameplayEffect` (Plan 1), `GameplayTagContainer` (现有), 枚举 (Task 1)
@@ -212,10 +212,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Ability/GameplayAbilityTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/GameplayAbilityTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 using Xunit;
 
 public class GameplayAbilityTests
@@ -253,10 +253,10 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/GameplayAbility.cs
-using Gameplay.GameplayTags;
+// src/Gameplay/Gameplay.Abilities/Ability/GameplayAbility.cs
+using Gameplay.Tags;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// GameplayAbility 静态定义（非 Entity）。策划/开发者配置的资产级数据。
@@ -307,7 +307,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/Ability/GameplayAbility.cs tests/Gameplay.Tests/GameplayAbilities/Ability/GameplayAbilityTests.cs
+git add src/Gameplay/Gameplay.Abilities/Ability/GameplayAbility.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/GameplayAbilityTests.cs
 git commit -m "feat: add GameplayAbility static definition and AbilityTriggerData
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -318,9 +318,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 3: AbilitySpec + AbilityCollectionComponent
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/Ability/AbilitySpec.cs`
-- Create: `src/Gameplay/GameplayAbilities/Ability/AbilityCollectionComponent.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/Ability/AbilitySpecTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/AbilitySpec.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/AbilityCollectionComponent.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/AbilitySpecTests.cs`
 
 **Interfaces:**
 - Consumes: `GameplayAbility` (Task 2)
@@ -329,10 +329,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Ability/AbilitySpecTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/AbilitySpecTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 using Xunit;
 
 public class AbilitySpecTests
@@ -381,10 +381,10 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/AbilitySpec.cs
-using Gameplay.GameplayTags;
+// src/Gameplay/Gameplay.Abilities/Ability/AbilitySpec.cs
+using Gameplay.Tags;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>Ability 授予实例数据（非 Entity），存在 AbilityCollectionComponent 中。</summary>
 public struct AbilitySpec
@@ -412,7 +412,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/Ability/AbilitySpec.cs src/Gameplay/GameplayAbilities/Ability/AbilityCollectionComponent.cs tests/Gameplay.Tests/GameplayAbilities/Ability/AbilitySpecTests.cs
+git add src/Gameplay/Gameplay.Abilities/Ability/AbilitySpec.cs src/Gameplay/Gameplay.Abilities/Ability/AbilityCollectionComponent.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/AbilitySpecTests.cs
 git commit -m "feat: add AbilitySpec and AbilityCollectionComponent
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -423,8 +423,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 4: ActiveAbilityComponent
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/Ability/ActiveAbilityComponent.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/Ability/ActiveAbilityComponentTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/ActiveAbilityComponent.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/ActiveAbilityComponentTests.cs`
 
 **Interfaces:**
 - Consumes: 枚举 (Task 1)
@@ -433,10 +433,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Ability/ActiveAbilityComponentTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/ActiveAbilityComponentTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 using Xunit;
 
 public class ActiveAbilityComponentTests
@@ -472,10 +472,10 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/ActiveAbilityComponent.cs
+// src/Gameplay/Gameplay.Abilities/Ability/ActiveAbilityComponent.cs
 using Friflo.Engine.ECS;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// ActiveAbility 的运行时 Component。激活时创建子 Entity 挂此 Component，结束时销毁。
@@ -499,7 +499,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/Ability/ActiveAbilityComponent.cs tests/Gameplay.Tests/GameplayAbilities/Ability/ActiveAbilityComponentTests.cs
+git add src/Gameplay/Gameplay.Abilities/Ability/ActiveAbilityComponent.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/ActiveAbilityComponentTests.cs
 git commit -m "feat: add ActiveAbilityComponent (runtime IComponent)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -510,10 +510,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 5: IAbilityRequirement + IAbilityCommit + IAbilityExecutor
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/Ability/IAbilityRequirement.cs`
-- Create: `src/Gameplay/GameplayAbilities/Ability/IAbilityCommit.cs`
-- Create: `src/Gameplay/GameplayAbilities/Ability/IAbilityExecutor.cs`
-- Create: `src/Gameplay/GameplayAbilities/Ability/AbilityActivationRequest.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/IAbilityRequirement.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/IAbilityCommit.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/IAbilityExecutor.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationRequest.cs`
 
 **Interfaces:**
 - Produces: 三个扩展点接口 + `AbilityActivationRequest` struct
@@ -521,10 +521,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Ability/AbilityActivationRequestTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/AbilityActivationRequestTests.cs
+namespace Gameplay.Tests.Abilities;
 
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 using Xunit;
 
 public class AbilityActivationRequestTests
@@ -553,8 +553,8 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/AbilityActivationRequest.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationRequest.cs
+namespace Gameplay.Abilities;
 
 /// <summary>Ability 激活请求（POCO Command）。当前 Tick 消费。</summary>
 public struct AbilityActivationRequest
@@ -567,8 +567,8 @@ public struct AbilityActivationRequest
 ```
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/IAbilityRequirement.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/Ability/IAbilityRequirement.cs
+namespace Gameplay.Abilities;
 
 /// <summary>CanActivate 检查扩展点。返回 true = 通过。</summary>
 public interface IAbilityRequirement
@@ -578,8 +578,8 @@ public interface IAbilityRequirement
 ```
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/IAbilityCommit.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/Ability/IAbilityCommit.cs
+namespace Gameplay.Abilities;
 
 /// <summary>Commit 扩展点。Requirements 全部通过后执行，有副作用。</summary>
 public interface IAbilityCommit
@@ -589,8 +589,8 @@ public interface IAbilityCommit
 ```
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/IAbilityExecutor.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/Ability/IAbilityExecutor.cs
+namespace Gameplay.Abilities;
 
 /// <summary>Execute 扩展点。能力逻辑的实际执行。</summary>
 public interface IAbilityExecutor
@@ -607,7 +607,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/Ability/IAbilityRequirement.cs src/Gameplay/GameplayAbilities/Ability/IAbilityCommit.cs src/Gameplay/GameplayAbilities/Ability/IAbilityExecutor.cs src/Gameplay/GameplayAbilities/Ability/AbilityActivationRequest.cs tests/Gameplay.Tests/GameplayAbilities/Ability/AbilityActivationRequestTests.cs
+git add src/Gameplay/Gameplay.Abilities/Ability/IAbilityRequirement.cs src/Gameplay/Gameplay.Abilities/Ability/IAbilityCommit.cs src/Gameplay/Gameplay.Abilities/Ability/IAbilityExecutor.cs src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationRequest.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/AbilityActivationRequestTests.cs
 git commit -m "feat: add IAbilityRequirement, IAbilityCommit, IAbilityExecutor interfaces
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -618,9 +618,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 6: 内置 Commit Actions — ApplyCooldownCommit + TagRequirement
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/Ability/CommitActions/ApplyCooldownCommit.cs`
-- Create: `src/Gameplay/GameplayAbilities/Ability/CommitActions/TagRequirement.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/Ability/ApplyCooldownCommitTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/CommitActions/ApplyCooldownCommit.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/CommitActions/TagRequirement.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/ApplyCooldownCommitTests.cs`
 
 **Interfaces:**
 - Consumes: `IAbilityCommit` (Task 5), `EffectSystem.Apply` (Plan 1), `GameplayEffectSpec` (Plan 1)
@@ -629,11 +629,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Ability/ApplyCooldownCommitTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/ApplyCooldownCommitTests.cs
+namespace Gameplay.Tests.Abilities;
 
 using Friflo.Engine.ECS;
-using Gameplay.GameplayAbilities;
+using Gameplay.Abilities;
 using Xunit;
 
 public class ApplyCooldownCommitTests
@@ -700,8 +700,8 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/CommitActions/ApplyCooldownCommit.cs
-namespace Gameplay.GameplayAbilities;
+// src/Gameplay/Gameplay.Abilities/Ability/CommitActions/ApplyCooldownCommit.cs
+namespace Gameplay.Abilities;
 
 /// <summary>施加 Cooldown GameplayEffect 的 Commit。</summary>
 public class ApplyCooldownCommit : IAbilityCommit
@@ -723,10 +723,10 @@ public class ApplyCooldownCommit : IAbilityCommit
 ```
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/CommitActions/TagRequirement.cs
-using Gameplay.GameplayTags;
+// src/Gameplay/Gameplay.Abilities/Ability/CommitActions/TagRequirement.cs
+using Gameplay.Tags;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// Ability 激活 Tag 条件检查。
@@ -777,7 +777,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/Ability/CommitActions/ApplyCooldownCommit.cs src/Gameplay/GameplayAbilities/Ability/CommitActions/TagRequirement.cs tests/Gameplay.Tests/GameplayAbilities/Ability/ApplyCooldownCommitTests.cs
+git add src/Gameplay/Gameplay.Abilities/Ability/CommitActions/ApplyCooldownCommit.cs src/Gameplay/Gameplay.Abilities/Ability/CommitActions/TagRequirement.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/ApplyCooldownCommitTests.cs
 git commit -m "feat: add ApplyCooldownCommit and TagRequirement for Ability pipeline
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -788,8 +788,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 7: AbilityActivationSystem + Pipeline
 
 **Files:**
-- Create: `src/Gameplay/GameplayAbilities/Ability/AbilityActivationSystem.cs`
-- Create: `tests/Gameplay.Tests/GameplayAbilities/Ability/AbilityActivationSystemTests.cs`
+- Create: `src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationSystem.cs`
+- Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/AbilityActivationSystemTests.cs`
 
 **Interfaces:**
 - Consumes: `EffectSystem` (Plan 1), `IAbilityRequirement`/`IAbilityCommit`/`IAbilityExecutor` (Task 5), `AbilityCollectionComponent` (Task 3), `ActiveAbilityComponent` (Task 4)
@@ -798,12 +798,12 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// tests/Gameplay.Tests/GameplayAbilities/Ability/AbilityActivationSystemTests.cs
-namespace Gameplay.Tests.GameplayAbilities;
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/AbilityActivationSystemTests.cs
+namespace Gameplay.Tests.Abilities;
 
 using Friflo.Engine.ECS;
-using Gameplay.GameplayAbilities;
-using Gameplay.GameplayTags;
+using Gameplay.Abilities;
+using Gameplay.Tags;
 using Xunit;
 
 public class AbilityActivationSystemTests
@@ -904,10 +904,10 @@ Expected: FAIL
 - [ ] **Step 3: 实现**
 
 ```csharp
-// src/Gameplay/GameplayAbilities/Ability/AbilityActivationSystem.cs
-using Gameplay.GameplayTags;
+// src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationSystem.cs
+using Gameplay.Tags;
 
-namespace Gameplay.GameplayAbilities;
+namespace Gameplay.Abilities;
 
 /// <summary>
 /// Ability 激活流程 System（POCO，不继承 QuerySystem）。
@@ -1037,7 +1037,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayAbilities/Ability/AbilityActivationSystem.cs tests/Gameplay.Tests/GameplayAbilities/Ability/AbilityActivationSystemTests.cs
+git add src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationSystem.cs tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/AbilityActivationSystemTests.cs
 git commit -m "feat: add AbilityActivationSystem with Requirements→Commit→Execute pipeline
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
@@ -1048,8 +1048,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Task 8: TagSource 引用计数（GameplayTagsComponent 扩展）
 
 **Files:**
-- Modify: `src/Gameplay/GameplayTags/GameplayTagsComponent.cs`
-- **Modify:** `tests/Gameplay.Tests/GameplayTags/GameplayTagsTests.cs`（**追加**到文件末尾，保留已有测试）
+- Modify: `src/Gameplay/Gameplay.Tags/GameplayTagsComponent.cs`
+- **Modify:** `tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagsTests.cs`（**追加**到文件末尾，保留已有测试）
 
 **Interfaces:**
 - Consumes: 现有 `GameplayTagsComponent`, `GameplayTagSet`
@@ -1058,7 +1058,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 - [ ] **Step 1: 写测试**
 
 ```csharp
-// 追加到 tests/Gameplay.Tests/GameplayTags/GameplayTagsTests.cs
+// 追加到 tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagsTests.cs
 [Fact]
 public void TagSource_MultipleSources_TagPersists()
 {
@@ -1095,7 +1095,7 @@ Expected: PASS
 - [ ] **Step 5: 提交**
 
 ```bash
-git add src/Gameplay/GameplayTags/GameplayTagsComponent.cs tests/Gameplay.Tests/GameplayTags/GameplayTagsTests.cs
+git add src/Gameplay/Gameplay.Tags/GameplayTagsComponent.cs tests/Gameplay.Tests/Gameplay.Tests.Tags/GameplayTagsTests.cs
 git commit -m "feat: add TagSource reference counting to GameplayTagsComponent
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
