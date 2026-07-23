@@ -159,4 +159,25 @@ public class GameplayTagsTests
         });
         Assert.Equal(1, count);
     }
+
+    [Fact]
+    public void TagSource_MultipleSources_TagPersists()
+    {
+        // 确保 Tag 已注册
+        GameplayTagManager.RegisterTags("Test.MultiSource");
+
+        // 两个不同的"来源"独立 Add/Remove
+        var tag = GameplayTag.Request("Test.MultiSource");
+        var comp = new GameplayTagsComponent();
+
+        comp.AddTag(tag);  // Source 1
+        comp.AddTag(tag);  // Source 2
+        Assert.True(comp.HasTag(tag));
+
+        comp.RemoveTag(tag);  // Source 1 removed
+        Assert.True(comp.HasTag(tag)); // Still has Source 2
+
+        comp.RemoveTag(tag);  // Source 2 removed
+        Assert.False(comp.HasTag(tag)); // All sources gone
+    }
 }

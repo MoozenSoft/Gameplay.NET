@@ -1,16 +1,42 @@
+using System.Collections.Generic;
 using Friflo.Engine.ECS;
 
 namespace Gameplay.Tags;
 
-/// <summary>附加到 Entity 的 GameplayTag 运行时集合。</summary>
+/// <summary>附加到 Entity 的 GameplayTag 运行时集合，支持引用计数。</summary>
 public struct GameplayTagsComponent : IComponent
 {
     internal GameplayTagSet tagSet;
+    internal Dictionary<GameplayTag, int>? refCounts;
 
     public int Count => tagSet.Count;
 
-    public void AddTag(GameplayTag tag)    => tagSet.Set(tag.id);
-    public void RemoveTag(GameplayTag tag) => tagSet.Clear(tag.id);
+    /// <summary>添加 Tag，支持多个来源独立 Add/Remove。仅当引用计数从 0 变为 1 时设置位。</summary>
+    public void AddTag(GameplayTag tag)
+    {
+        refCounts ??= new Dictionary<GameplayTag, int>();
+        refCounts.TryGetValue(tag, out int count);
+        refCounts[tag] = count + 1;
+        if (count == 0)
+            tagSet.Set(tag.id);
+    }
+
+    /// <summary>移除 Tag。仅当引用计数降为 0 时清除位。</summary>
+    public void RemoveTag(GameplayTag tag)
+    {
+        if (refCounts == null || !refCounts.TryGetValue(tag, out int count) || count <= 0)
+            return;
+        int newCount = count - 1;
+        if (newCount == 0)
+        {
+            refCounts.Remove(tag);
+            tagSet.Clear(tag.id);
+        }
+        else
+        {
+            refCounts[tag] = newCount;
+        }
+    }
 
     public bool HasTag(GameplayTag tag)    => tagSet.Has(tag.id);
 
