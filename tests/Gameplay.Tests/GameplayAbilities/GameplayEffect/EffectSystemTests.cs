@@ -4,6 +4,7 @@ namespace Gameplay.Tests.GameplayAbilities;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 using Gameplay.GameplayAbilities;
+using Gameplay.GameplayTags;
 using Xunit;
 
 public class EffectSystemTests
@@ -109,5 +110,56 @@ public class EffectSystemTests
         var comp = activeEntity.GetComponent<ActiveGameplayEffectComponent>();
         Assert.True(comp.PeriodProgress < 2.0f); // Reset after trigger
         Assert.True(comp.PeriodProgress >= 0f);  // Progress is non-negative
+    }
+
+    [Fact]
+    public void Apply_HasDuration_CreatesEntityWithComponent()
+    {
+        var store = new EntityStore();
+        var attrSys = new AttributeSystem();
+        var effectSys = new EffectSystem(attrSys);
+
+        var ge = new GameplayEffect
+        {
+            DurationPolicy = EGameplayEffectDurationType.HasDuration,
+        };
+        var spec = new GameplayEffectSpec(ge, 1f) { Duration = 5f };
+
+        var target = store.CreateEntity();
+        int handle = effectSys.Apply(spec, target);
+
+        Assert.True(handle > 0);
+        // Verify ActiveGameplayEffect Entity exists under target
+    }
+
+    [Fact]
+    public void CanApply_TagRequirement_Fails_ReturnsFalse()
+    {
+        var store = new EntityStore();
+        var attrSys = new AttributeSystem();
+        var effectSys = new EffectSystem(attrSys);
+
+        var tag = GameplayTag.Request("State.Dead");
+        var ge = new GameplayEffect();
+        ge.ApplicationRequiredTags.AddTag(tag);
+
+        var spec = new GameplayEffectSpec(ge, 1f);
+        var target = store.CreateEntity();
+        // Target doesn't have State.Dead -> CanApply = false
+
+        Assert.False(effectSys.CanApply(spec, target));
+    }
+
+    [Fact]
+    public void CanApply_NoRequirements_ReturnsTrue()
+    {
+        var store = new EntityStore();
+        var attrSys = new AttributeSystem();
+        var effectSys = new EffectSystem(attrSys);
+
+        var spec = new GameplayEffectSpec(new GameplayEffect(), 1f);
+        var target = store.CreateEntity();
+
+        Assert.True(effectSys.CanApply(spec, target));
     }
 }

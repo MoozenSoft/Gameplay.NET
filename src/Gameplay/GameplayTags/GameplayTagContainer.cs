@@ -17,6 +17,12 @@ public class GameplayTagContainer : IEnumerable<GameplayTag>
 
     public bool HasAny(GameplayTagContainer other) => tagSet.HasAny(other.tagSet);
 
+    public bool HasTag(GameplayTag tag) => tagSet.Has(tag.id);
+
+    public void RemoveTag(GameplayTag tag) => tagSet.Clear(tag.id);
+
+    public bool HasAll(GameplayTagContainer required) => tagSet.HasAll(required.tagSet);
+
     // ── 枚举（支持 collection initializer + foreach）──
 
     public Enumerator GetEnumerator() => new Enumerator(this);

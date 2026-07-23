@@ -14,6 +14,8 @@ public struct GameplayTagsComponent : IComponent
 
     public bool HasTag(GameplayTag tag)    => tagSet.Has(tag.id);
 
+    public bool HasAll(GameplayTagContainer required) => tagSet.HasAll(required.tagSet);
+
     public bool Matches(GameplayTag tag)
         => tagSet.HasAny(GameplayTagManager.GetExpandedSet(tag.id));
 
