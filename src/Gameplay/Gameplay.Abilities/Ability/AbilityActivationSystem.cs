@@ -1,6 +1,7 @@
 // src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationSystem.cs
 using Friflo.Engine.ECS;
 using Gameplay.Tags;
+using Gameplay.Tasks;
 
 namespace Gameplay.Abilities;
 
@@ -110,6 +111,16 @@ public class AbilityActivationSystem
         {
             // 通过 AbilitySpec 查找 Definition → 移除对应 Tag
             // Plan 2 简化：不做反查
+        }
+
+        // 将 WaitCancel Task 标记为 Done
+        foreach (var child in activeEntity.ChildEntities)
+        {
+            if (child.HasComponent<WaitCancelComponent>() && child.HasComponent<TaskStateComponent>())
+            {
+                ref var taskState = ref child.GetComponent<TaskStateComponent>();
+                taskState.State = TaskState.Done;
+            }
         }
 
         activeEntity.DeleteEntity();

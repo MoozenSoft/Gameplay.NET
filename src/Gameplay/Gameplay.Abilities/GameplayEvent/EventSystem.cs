@@ -13,6 +13,9 @@ public class EventSystem
     private readonly Dictionary<ushort, List<IGameplayEventHandler>> staticHandlers = new();
     private readonly Dictionary<ushort, List<(int entityId, int handlerId)>> dynamicListeners = new();
 
+    /// <summary>动态 Listener 分发的回调钩子。在 InvokeDynamic 中调用，用于扩展处理逻辑。</summary>
+    public DynamicInvokeHandler? OnDynamicInvoke { get; set; }
+
     public EventSystem(GameplayEventBus bus)
     {
         this.bus = bus;
@@ -79,6 +82,9 @@ public class EventSystem
     /// <summary>动态 Handler 调用入口。子类可重写以实现具体的 Entity 上 Handler 调用逻辑。</summary>
     protected virtual void InvokeDynamic(in GameplayEventRecord record, int entityId, int handlerId)
     {
-        // Placeholder: 后续 Plan 实现 Entity 上 Component Handler 调用
+        OnDynamicInvoke?.Invoke(record, entityId, handlerId);
     }
 }
+
+/// <summary>动态 Listener 分发的委托签名。</summary>
+public delegate void DynamicInvokeHandler(in GameplayEventRecord record, int entityId, int handlerId);
