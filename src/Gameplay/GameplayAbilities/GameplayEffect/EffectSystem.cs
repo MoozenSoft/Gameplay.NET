@@ -72,7 +72,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         // ChanceToApply
         if (ge.ChanceToApply < 1.0f)
         {
-            if (System.Random.Shared.NextDouble() > ge.ChanceToApply)
+            if ((float)new System.Random().NextDouble() > ge.ChanceToApply)
                 return false;
         }
 
