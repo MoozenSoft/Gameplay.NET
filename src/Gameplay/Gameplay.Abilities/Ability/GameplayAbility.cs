@@ -42,17 +42,3 @@ public struct AbilityTriggerData
     public EAbilityTriggerSource TriggerSource;
 }
 
-/// <summary>Ability 激活前提条件接口。</summary>
-public interface IAbilityRequirement
-{
-}
-
-/// <summary>Ability 提交动作接口。</summary>
-public interface IAbilityCommit
-{
-}
-
-/// <summary>Ability 执行器接口。</summary>
-public interface IAbilityExecutor
-{
-}
