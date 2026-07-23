@@ -674,14 +674,14 @@ public class TagRequirementTests
     [Fact]
     public void Evaluate_ActivationBlocked_Fails()
     {
-        var blockedTag = Gameplay.GameplayTags.GameplayTag.Request("State.Dead");
+        var blockedTag = GameplayTag.Request("State.Dead");
         var ability = new GameplayAbility();
         ability.ActivationBlockedTags.AddTag(blockedTag);
 
         var store = new EntityStore();
         var owner = store.CreateEntity();
-        owner.AddComponent(new Gameplay.GameplayTags.GameplayTagsComponent());
-        owner.GetComponent<Gameplay.GameplayTags.GameplayTagsComponent>().AddTag(blockedTag);
+        owner.AddComponent(new GameplayTagsComponent());
+        owner.GetComponent<GameplayTagsComponent>().AddTag(blockedTag);
 
         var spec = new AbilitySpec { Ability = ability };
         var request = new AbilityActivationRequest { Owner = owner };
@@ -701,9 +701,6 @@ Expected: FAIL
 
 ```csharp
 // src/Gameplay/GameplayAbilities/Ability/CommitActions/ApplyCooldownCommit.cs
-using Gameplay.GameplayAbilities;
-using Gameplay.GameplayAbilities;
-
 namespace Gameplay.GameplayAbilities;
 
 /// <summary>施加 Cooldown GameplayEffect 的 Commit。</summary>
@@ -806,7 +803,7 @@ namespace Gameplay.Tests.GameplayAbilities;
 
 using Friflo.Engine.ECS;
 using Gameplay.GameplayAbilities;
-using Gameplay.GameplayAbilities;
+using Gameplay.GameplayTags;
 using Xunit;
 
 public class AbilityActivationSystemTests
@@ -850,14 +847,14 @@ public class AbilityActivationSystemTests
         var attrSys = new AttributeSystem();
         var effectSys = new EffectSystem(attrSys);
 
-        var blockedTag = Gameplay.GameplayTags.GameplayTag.Request("State.Stunned");
+        var blockedTag = GameplayTag.Request("State.Stunned");
         var ability = new GameplayAbility();
         ability.ActivationBlockedTags.AddTag(blockedTag);
 
         var sys = new AbilityActivationSystem(effectSys);
         var owner = store.CreateEntity();
-        owner.AddComponent(new Gameplay.GameplayTags.GameplayTagsComponent());
-        owner.GetComponent<Gameplay.GameplayTags.GameplayTagsComponent>().AddTag(blockedTag);
+        owner.AddComponent(new GameplayTagsComponent());
+        owner.GetComponent<GameplayTagsComponent>().AddTag(blockedTag);
         owner.AddComponent(new AbilityCollectionComponent
         {
             Specs = new[] { new AbilitySpec { Ability = ability, Handle = 0 } }
@@ -1052,7 +1049,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `src/Gameplay/GameplayTags/GameplayTagsComponent.cs`
-- Modify: `tests/Gameplay.Tests/GameplayTags/GameplayTagsTests.cs`（追加）
+- **Modify:** `tests/Gameplay.Tests/GameplayTags/GameplayTagsTests.cs`（**追加**到文件末尾，保留已有测试）
 
 **Interfaces:**
 - Consumes: 现有 `GameplayTagsComponent`, `GameplayTagSet`
