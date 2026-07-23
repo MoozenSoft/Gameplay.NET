@@ -696,10 +696,10 @@ public struct ActiveAbilityComponent : IComponent
     public bool IsActive;                          // 是否激活中
     public Entity Owner;                           // 归属的 Owner Entity
     public int DefinitionId;                       // AbilityDefinitionRegistry 查表 key
-    public AbilityInstanceState State;             // Activating / Active / Ending / Cancelled / Completed
+    public EAbilityInstanceState State;             // Activating / Active / Ending / Cancelled / Completed
 }
 
-public enum AbilityInstanceState
+public enum EAbilityInstanceState
 {
     Activating, Active, Ending, Cancelled, Completed
 }
@@ -744,10 +744,10 @@ public struct AbilityActivationRequest
     public Entity Owner;
     public int SpecHandle;             // AbilityCollectionComponent 中的索引
     public Entity Target;
-    public ActivationSource Source;   // Input / AI / GameplayEvent / Network
+    public EActivationSource Source;   // Input / AI / GameplayEvent / Network
 }
 
-public enum ActivationSource { Input, AI, GameplayEvent, Network, TagTrigger }
+public enum EActivationSource { Input, AI, GameplayEvent, Network, TagTrigger }
 ```
 
 > **为什么用 SpecHandle 而非 GameplayTag？** 同 Owner 可能有多个相同 Tag 的 Ability（不同来源/Level）。`SpecHandle` 精确定位。**

@@ -74,7 +74,7 @@ tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/
 - Create: `tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/EnumsTests.cs`
 
 **Interfaces:**
-- Produces: `EGameplayAbilityNetExecutionPolicy`, `EGameplayAbilityNetSecurityPolicy`, `EAbilityTriggerSource`, `EGrantedAbilityRemovePolicy`, `ActivationSource`, `AbilityInstanceState`
+- Produces: `EGameplayAbilityNetExecutionPolicy`, `EGameplayAbilityNetSecurityPolicy`, `EAbilityTriggerSource`, `EGrantedAbilityRemovePolicy`, `EActivationSource`, `EAbilityInstanceState`
 
 - [ ] **Step 1: 写测试**
 
@@ -106,11 +106,11 @@ public class AbilityEnumsTests
     }
 
     [Fact]
-    public void ActivationSource_HasExpectedValues()
+    public void EActivationSource_HasExpectedValues()
     {
-        var values = Enum.GetValues(typeof(ActivationSource));
-        Assert.Contains(ActivationSource.Input, values);
-        Assert.Contains(ActivationSource.GameplayEvent, values);
+        var values = Enum.GetValues(typeof(EActivationSource));
+        Assert.Contains(EActivationSource.Input, values);
+        Assert.Contains(EActivationSource.GameplayEvent, values);
     }
 }
 ```
@@ -163,7 +163,7 @@ public enum EGrantedAbilityRemovePolicy
 }
 
 /// <summary>Ability 激活请求来源。</summary>
-public enum ActivationSource
+public enum EActivationSource
 {
     Input,
     AI,
@@ -173,7 +173,7 @@ public enum ActivationSource
 }
 
 /// <summary>ActiveAbility 运行状态。</summary>
-public enum AbilityInstanceState
+public enum EAbilityInstanceState
 {
     Activating,    // 正在激活（Requirements 通过，Commit 执行中）
     Active,        // 激活中
@@ -445,7 +445,7 @@ public class ActiveAbilityComponentTests
     public void Default_State_IsActivating()
     {
         var comp = new ActiveAbilityComponent();
-        Assert.Equal(AbilityInstanceState.Activating, comp.State);
+        Assert.Equal(EAbilityInstanceState.Activating, comp.State);
     }
 
     [Fact]
@@ -487,7 +487,7 @@ public struct ActiveAbilityComponent : IComponent
     public int DefinitionId;                      // Ability 静态定义 Registry 查表 key
     public bool IsActive;                         // 是否激活中
     public Entity Owner;                          // 归属的 Owner Entity
-    public AbilityInstanceState State;            // 当前状态
+    public EAbilityInstanceState State;            // 当前状态
 }
 ```
 
@@ -533,7 +533,7 @@ public class AbilityActivationRequestTests
     public void Default_Source_IsInput()
     {
         var req = new AbilityActivationRequest();
-        Assert.Equal(ActivationSource.Input, req.Source);
+        Assert.Equal(EActivationSource.Input, req.Source);
     }
 
     [Fact]
@@ -562,7 +562,7 @@ public struct AbilityActivationRequest
     public Entity Owner;
     public int SpecHandle;
     public Entity Target;
-    public ActivationSource Source;
+    public EActivationSource Source;
 }
 ```
 
@@ -965,7 +965,7 @@ public class AbilityActivationSystem
             Handle = handle,
             IsActive = true,
             Owner = owner,
-            State = AbilityInstanceState.Active,
+            State = EAbilityInstanceState.Active,
         });
 
         // ── 4. Execute ──
@@ -1005,7 +1005,7 @@ public class AbilityActivationSystem
         if (!activeEntity.TryGetComponent<ActiveAbilityComponent>(out var comp))
             return;
 
-        comp.State = AbilityInstanceState.Cancelled;
+        comp.State = EAbilityInstanceState.Cancelled;
         comp.IsActive = false;
 
         var owner = comp.Owner;

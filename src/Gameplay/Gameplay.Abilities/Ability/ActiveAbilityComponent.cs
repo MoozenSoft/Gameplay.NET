@@ -12,5 +12,5 @@ public struct ActiveAbilityComponent : IComponent
     public int DefinitionId;                      // Ability 静态定义 Registry 查表 key
     public bool IsActive;                         // 是否激活中
     public Entity Owner;                          // 归属的 Owner Entity
-    public AbilityInstanceState State;            // 当前状态
+    public EAbilityInstanceState State;            // 当前状态
 }

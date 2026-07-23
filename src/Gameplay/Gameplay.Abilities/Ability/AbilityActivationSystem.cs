@@ -60,7 +60,7 @@ public class AbilityActivationSystem
             Handle = handle,
             IsActive = true,
             Owner = owner,
-            State = AbilityInstanceState.Active,
+            State = EAbilityInstanceState.Active,
         });
 
         // ── 4. Execute ──
@@ -100,7 +100,7 @@ public class AbilityActivationSystem
         if (!activeEntity.TryGetComponent<ActiveAbilityComponent>(out var comp))
             return;
 
-        comp.State = AbilityInstanceState.Cancelled;
+        comp.State = EAbilityInstanceState.Cancelled;
         comp.IsActive = false;
 
         var owner = comp.Owner;

@@ -38,7 +38,7 @@ public enum EGrantedAbilityRemovePolicy
 }
 
 /// <summary>Ability 激活请求来源。</summary>
-public enum ActivationSource
+public enum EActivationSource
 {
     Input,
     AI,
@@ -48,7 +48,7 @@ public enum ActivationSource
 }
 
 /// <summary>ActiveAbility 运行状态。</summary>
-public enum AbilityInstanceState
+public enum EAbilityInstanceState
 {
     Activating,    // 正在激活（Requirements 通过，Commit 执行中）
     Active,        // 激活中

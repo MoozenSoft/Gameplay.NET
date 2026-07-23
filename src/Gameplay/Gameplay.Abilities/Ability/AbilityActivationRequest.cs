@@ -8,5 +8,5 @@ public struct AbilityActivationRequest
     public Entity Owner;
     public int SpecHandle;
     public Entity Target;
-    public ActivationSource Source;
+    public EActivationSource Source;
 }

@@ -9,7 +9,7 @@ public class AbilityActivationRequestTests
     public void Default_Source_IsInput()
     {
         var req = new AbilityActivationRequest();
-        Assert.Equal(ActivationSource.Input, req.Source);
+        Assert.Equal(EActivationSource.Input, req.Source);
     }
 
     [Fact]

@@ -10,7 +10,7 @@ public class ActiveAbilityComponentTests
     public void Default_State_IsActivating()
     {
         var comp = new ActiveAbilityComponent();
-        Assert.Equal(AbilityInstanceState.Activating, comp.State);
+        Assert.Equal(EAbilityInstanceState.Activating, comp.State);
     }
 
     [Fact]

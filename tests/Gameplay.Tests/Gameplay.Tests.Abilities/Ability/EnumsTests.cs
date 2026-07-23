@@ -28,8 +28,8 @@ public class AbilityEnumsTests
     [Fact]
     public void ActivationSource_HasExpectedValues()
     {
-        var values = (ActivationSource[])Enum.GetValues(typeof(ActivationSource));
-        Assert.Contains(ActivationSource.Input, values);
-        Assert.Contains(ActivationSource.GameplayEvent, values);
+        var values = (EActivationSource[])Enum.GetValues(typeof(EActivationSource));
+        Assert.Contains(EActivationSource.Input, values);
+        Assert.Contains(EActivationSource.GameplayEvent, values);
     }
 }
