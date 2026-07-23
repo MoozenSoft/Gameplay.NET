@@ -17,7 +17,7 @@ public struct GameplayModifier
     public EAttributeCapturePolicy CapturePolicy;
 
     /// <summary>Modifier 执行类型：Persistent / ExecuteOnApply / ExecuteOnPeriod。</summary>
-    public ModifierExecutionType ExecutionType;
+    public EModifierExecutionType ExecutionType;
 
     // TagRequirements 在指定 source/target 时必须满足才生效（后续 EffectSystem 实现）
 }

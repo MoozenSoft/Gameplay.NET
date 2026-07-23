@@ -29,8 +29,8 @@ public class EnumsTests
     [Fact]
     public void ModifierExecutionType_HasExpectedValues()
     {
-        Assert.Equal(0, (int)ModifierExecutionType.Persistent);
-        Assert.Equal(1, (int)ModifierExecutionType.ExecuteOnApply);
-        Assert.Equal(2, (int)ModifierExecutionType.ExecuteOnPeriod);
+        Assert.Equal(0, (int)EModifierExecutionType.Persistent);
+        Assert.Equal(1, (int)EModifierExecutionType.ExecuteOnApply);
+        Assert.Equal(2, (int)EModifierExecutionType.ExecuteOnPeriod);
     }
 }

@@ -20,7 +20,7 @@ public enum EGameplayModOp
 }
 
 /// <summary>Modifier 执行时机。</summary>
-public enum ModifierExecutionType
+public enum EModifierExecutionType
 {
     Persistent,       // 持续生效（默认）
     ExecuteOnApply,   // 应用时执行一次
@@ -66,7 +66,7 @@ public enum EAttributeCapturePolicy
 }
 
 /// <summary>Effect 结束原因。</summary>
-public enum EffectEndType
+public enum EEffectEndType
 {
     Normal,       // Duration 自然到期 / StackCount 归零
     Premature,    // RemoveEffect() 主动移除 / RemoveOtherEffects / RemovalTags

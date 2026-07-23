@@ -149,7 +149,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         return handle;
     }
 
-    public void RemoveEffect(int handle, EffectEndType reason)
+    public void RemoveEffect(int handle, EEffectEndType reason)
     {
         // Always remove mods from aggregator (works regardless of cache)
         attributeSystem.RemoveAggregatorModsByHandle(handle);
@@ -187,7 +187,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             switch (comp.StackingExpirationPolicy)
             {
                 case EGameplayEffectStackingExpirationPolicy.ClearEntireStack:
-                    RemoveEffect(comp.Handle, EffectEndType.Normal);
+                    RemoveEffect(comp.Handle, EEffectEndType.Normal);
                     break;
                 case EGameplayEffectStackingExpirationPolicy.RemoveSingleStackAndRefreshDuration:
                     // Duration refreshed (set when this Stack was applied)
@@ -199,7 +199,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         }
         else
         {
-            RemoveEffect(comp.Handle, EffectEndType.Normal);
+            RemoveEffect(comp.Handle, EEffectEndType.Normal);
         }
     }
 
