@@ -352,14 +352,14 @@ public struct GameplayModifier
     public EGameplayModOp ModOp;
     public GameplayEffectModifierMagnitude MagnitudeCalc;
     public EAttributeCapturePolicy CapturePolicy;   // Snapshot / RealTime
-    public ModifierExecutionType ExecutionType;       // Persistent / ExecuteOnApply / ExecuteOnPeriod
+    public EModifierExecutionType ExecutionType;       // Persistent / ExecuteOnApply / ExecuteOnPeriod
 
     public GameplayTagRequirement SourceTagReqs;
     public GameplayTagRequirement TargetTagReqs;
 }
 
 /// <summary>Modifier 执行类型——避免 Period 重复累加。</summary>
-public enum ModifierExecutionType
+public enum EModifierExecutionType
 {
     Persistent,         // Apply → 注册 Aggregator；Remove → 移除（Duration/Buff/Debuff）
     ExecuteOnApply,     // Apply 时执行一次，不注册 Aggregator（Instant GE 专用）
@@ -514,7 +514,7 @@ Apply(spec, target)             ← 入口
             ├── CueDefinitions
             └── OnApplicationEffects（连锁 Apply 其他 GE）
 
-enum EffectEndType
+enum EEffectEndType
 {
     Normal,       // Duration 自然到期、StackCount 降为零
     Premature,    // RemoveEffect() 主动移除 / RemoveOtherEffects 冲突 / RemovalTags 触发 / Cancel

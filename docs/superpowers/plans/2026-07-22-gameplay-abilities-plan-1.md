@@ -257,7 +257,7 @@ public enum EAttributeCapturePolicy
 }
 
 /// <summary>Effect 结束原因。</summary>
-public enum EffectEndType
+public enum EEffectEndType
 {
     Normal,       // Duration 自然到期 / StackCount 归零
     Premature,    // RemoveEffect() 主动移除 / RemoveOtherEffects / RemovalTags
@@ -403,13 +403,13 @@ public struct GameplayModifier
     public EAttributeCapturePolicy CapturePolicy;
 
     /// <summary>Modifier 执行类型：Persistent / ExecuteOnApply / ExecuteOnPeriod。</summary>
-    public ModifierExecutionType ExecutionType;
+    public EModifierExecutionType ExecutionType;
 
     // TagRequirements 在指定 source/target 时必须满足才生效（后续 EffectSystem 实现）
 }
 
 /// <summary>Modifier 执行类型——避免 Period 重复累加 Persistent Modifier。</summary>
-public enum ModifierExecutionType
+public enum EModifierExecutionType
 {
     Persistent,         // Apply → 注册 Aggregator；Remove → 移除
     ExecuteOnApply,     // Apply 时执行一次，不注册（Instant GE）
@@ -1624,7 +1624,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             switch (comp.StackingExpirationPolicy)
             {
                 case EGameplayEffectStackingExpirationPolicy.ClearEntireStack:
-                    RemoveEffect(comp.Handle, EffectEndType.Normal);
+                    RemoveEffect(comp.Handle, EEffectEndType.Normal);
                     break;
                 case EGameplayEffectStackingExpirationPolicy.RemoveSingleStackAndRefreshDuration:
                     // comp.Duration refreshed (set when this Stack was applied)
@@ -1636,7 +1636,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         }
         else
         {
-            RemoveEffect(comp.Handle, EffectEndType.Normal);
+            RemoveEffect(comp.Handle, EEffectEndType.Normal);
         }
     }
 
@@ -1651,7 +1651,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
     private GameplayEffectSpec GetSpecFromHandle(int handle) => null; // Task 11 替换
 
     // ── Placeholder Remove ──
-    public void RemoveEffect(int handle, EffectEndType reason)
+    public void RemoveEffect(int handle, EEffectEndType reason)
     {
         attributeSystem.RemoveAggregatorModsByHandle(handle);
         // Entity 销毁 → Task 11 补充完整流程
@@ -1848,7 +1848,7 @@ public int Apply(GameplayEffectSpec spec, Entity target)
     return handle;
 }
 
-public void RemoveEffect(int handle, EffectEndType reason)
+public void RemoveEffect(int handle, EEffectEndType reason)
 {
     if (!handleToSpec.TryGetValue(handle, out var spec)) return;
 
