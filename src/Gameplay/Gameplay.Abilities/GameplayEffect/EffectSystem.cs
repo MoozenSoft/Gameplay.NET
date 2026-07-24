@@ -164,25 +164,21 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             {
                 if (mod.ExecutionType == EModifierExecutionType.Persistent)
                 {
-                    // 确保 Aggregator 存在（SetAggregatorValue 在无 aggregator 时创建）
                     if (!attributeSystem.HasAggregator(target, mod.AttributeId))
                         attributeSystem.SetAggregatorValue(target, mod.AttributeId, 0f);
                     attributeSystem.AddAggregatorMod(target, mod.AttributeId, handle,
                         mod.EvaluatedMagnitude, mod.ModOp);
+                    ref var dirty = ref target.GetComponent<DirtyAttributeComponent>();
+                    dirty.SetBit(mod.AttributeId);
                 }
                 else if (mod.ExecutionType == EModifierExecutionType.ExecuteOnApply)
                 {
                     float baseVal = attributeSystem.GetBaseValue(target, mod.AttributeId);
-                    float newBase = mod.ModOp switch
-                    {
-                        EGameplayModOp.Additive => baseVal + mod.EvaluatedMagnitude,
-                        EGameplayModOp.Override => mod.EvaluatedMagnitude,
-                        _ => baseVal + mod.EvaluatedMagnitude,
-                    };
+                    float newBase = ApplyModOp(baseVal, mod.ModOp, mod.EvaluatedMagnitude);
                     attributeSystem.SetAggregatorValue(target, mod.AttributeId, newBase);
+                    ref var dirty = ref target.GetComponent<DirtyAttributeComponent>();
+                    dirty.SetBit(mod.AttributeId);
                 }
-                ref var dirty = ref target.GetComponent<DirtyAttributeComponent>();
-                dirty.SetBit(mod.AttributeId);
             }
         }
 
@@ -307,21 +303,24 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                 continue;
 
             // 直接修改 Aggregator 的 BaseValue，不注册新 Mod
-            // 这样 Persistent Mods（Buff/Debuff）通过 Aggregator 公式自动叠加
             float baseVal = attributeSystem.GetBaseValue(target, mod.AttributeId);
-            float magnitude = mod.EvaluatedMagnitude;
-
-            float newBase = mod.ModOp switch
-            {
-                EGameplayModOp.Additive => baseVal + magnitude,
-                EGameplayModOp.Override => magnitude,
-                _ => baseVal + magnitude,
-            };
-
+            float newBase = ApplyModOp(baseVal, mod.ModOp, mod.EvaluatedMagnitude);
             attributeSystem.SetAggregatorValue(target, mod.AttributeId, newBase);
             dirty.SetBit(mod.AttributeId);
         }
     }
+
+    /// <summary>将单个 ModOp 应用到 BaseValue 上，用于 ExecuteOnApply / ExecuteOnPeriod。</summary>
+    private static float ApplyModOp(float baseValue, EGameplayModOp op, float magnitude)
+        => op switch
+        {
+            EGameplayModOp.Additive => baseValue + magnitude,
+            EGameplayModOp.Multiply => baseValue * magnitude,
+            EGameplayModOp.Divide => magnitude != 0f ? baseValue / magnitude : baseValue,
+            EGameplayModOp.Override => magnitude,
+            EGameplayModOp.FinalAdd => baseValue + magnitude, // FinalAdd 等价 Additive（作用于 Base）
+            _ => baseValue + magnitude,
+        };
 
     // ── Handle -> Spec 取回 ──
     private GameplayEffectSpec? GetSpecFromHandle(int handle)
