@@ -18,12 +18,12 @@ public class AttributeSystem : QuerySystem<DirtyAttributeComponent>
     // 反向索引（RealTime 用）：(sourceEntity.Id, sourceAttrId) → 受影响的 target Handle 列表
     private readonly Dictionary<(int entityId, int attrId), List<int>> realTimeReverseIndex = new();
 
-    // AttributeId → CurrentValue 写回委托（SG 生成或手动注册，per-instance）
-    private readonly Dictionary<int, Action<Entity, float>> currentValueWriters = new();
+    // AttributeId → GameplayAttribute 句柄（SG 生成的 RegisterAll 或手动注册）
+    private readonly Dictionary<int, GameplayAttribute> registeredAttributes = new();
 
-    /// <summary>注册 AttributeId 的 CurrentValue 写回委托。</summary>
-    public void RegisterCurrentValueWriter(int attributeId, Action<Entity, float> writer)
-        => currentValueWriters[attributeId] = writer;
+    /// <summary>注册 GameplayAttribute 句柄。SG 通过 RegisterAll 批量调用。</summary>
+    public void RegisterAttribute(GameplayAttribute attribute)
+        => registeredAttributes[attribute.Id] = attribute;
 
     protected override void OnUpdate()
     {
@@ -43,8 +43,8 @@ public class AttributeSystem : QuerySystem<DirtyAttributeComponent>
                     if (aggregators.TryGetValue(key, out var agg))
                     {
                         float result = agg.Evaluate();
-                        if (currentValueWriters.TryGetValue(attrId, out var writer))
-                            writer(entity, result);
+                        if (registeredAttributes.TryGetValue(attrId, out var attr))
+                            attr.WriteCurrentValue(entity, result);
                     }
                 }
                 bits >>= 1;
