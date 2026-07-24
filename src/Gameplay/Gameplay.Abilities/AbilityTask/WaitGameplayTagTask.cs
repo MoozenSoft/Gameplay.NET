@@ -30,33 +30,44 @@ public class WaitGameplayTagTaskSystem : QuerySystem<AbilityTaskContextComponent
         {
             if (state.State != TaskState.Pending && state.State != TaskState.Running) return;
 
+            // Pending→Running 在 guard 之前，防止 owner 无效时任务卡在 Pending
+            if (state.State == TaskState.Pending)
+            {
+                // WaitGameplayTagRemoved：如果 tag 本来就不在，立即 Done
+                if (entity.TryGetComponent<WaitGameplayTagRemovedComponent>(out var removed))
+                {
+                    var pendingOwner = GetOwner(ctx);
+                    if (!pendingOwner.IsNull && pendingOwner.TryGetComponent<GameplayTagsComponent>(out var t) && t.HasTag(removed.Tag))
+                    {
+                        removed.WasPresent = true;
+                        entity.GetComponent<WaitGameplayTagRemovedComponent>() = removed;
+                        state.State = TaskState.Running;
+                    }
+                    else
+                    {
+                        state.State = TaskState.Done; // Tag 不存在 → 已完成
+                    }
+                    return;
+                }
+                state.State = TaskState.Running;
+                return;
+            }
+
             var owner = GetOwner(ctx);
             if (owner.IsNull) return;
 
-            // WaitGameplayTagAdded
+            // WaitGameplayTagAdded: 检查 tag 是否已出现
             if (entity.TryGetComponent<WaitGameplayTagAddedComponent>(out var added))
             {
-                if (state.State == TaskState.Pending)
-                {
-                    state.State = TaskState.Running;
-                    return;
-                }
                 if (owner.TryGetComponent<GameplayTagsComponent>(out var tags) && tags.HasTag(added.Tag))
                     state.State = TaskState.Done;
             }
 
-            // WaitGameplayTagRemoved
-            if (entity.TryGetComponent<WaitGameplayTagRemovedComponent>(out var removed))
+            // WaitGameplayTagRemoved: 检查 tag 是否已被移除
+            if (entity.TryGetComponent<WaitGameplayTagRemovedComponent>(out var removedR))
             {
-                if (state.State == TaskState.Pending)
-                {
-                    removed.WasPresent = owner.TryGetComponent<GameplayTagsComponent>(out var t) && t.HasTag(removed.Tag);
-                    state.State = TaskState.Running;
-                    entity.GetComponent<WaitGameplayTagRemovedComponent>() = removed;
-                    return;
-                }
-                bool hasNow = owner.TryGetComponent<GameplayTagsComponent>(out var tagsNow) && tagsNow.HasTag(removed.Tag);
-                if (removed.WasPresent && !hasNow)
+                bool hasNow = owner.TryGetComponent<GameplayTagsComponent>(out var tagsNow) && tagsNow.HasTag(removedR.Tag);
+                if (removedR.WasPresent && !hasNow)
                     state.State = TaskState.Done;
             }
         });

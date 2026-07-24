@@ -35,6 +35,13 @@ public class WaitAttributeChangeTaskSystem : QuerySystem<WaitAttributeChangeComp
             if (state.State != TaskState.Pending && state.State != TaskState.Running)
                 return;
 
+            // Pending→Running 在 guard 之前，防止 owner 无效时卡在 Pending
+            if (state.State == TaskState.Pending)
+            {
+                state.State = TaskState.Running;
+                return;
+            }
+
             if (ctx.ActiveAbility.IsNull) return;
             if (!ctx.ActiveAbility.TryGetComponent<ActiveAbilityComponent>(out var activeComp))
                 return;
@@ -42,13 +49,6 @@ public class WaitAttributeChangeTaskSystem : QuerySystem<WaitAttributeChangeComp
             if (owner.IsNull) return;
 
             float current = attrSys.GetCurrentValue(owner, wait.AttributeId);
-
-            if (state.State == TaskState.Pending)
-            {
-                wait.LastValue = current;
-                state.State = TaskState.Running;
-                return;
-            }
 
             if (current != wait.LastValue)
             {
