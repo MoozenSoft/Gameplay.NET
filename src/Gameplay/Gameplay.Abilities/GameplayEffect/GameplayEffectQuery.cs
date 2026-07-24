@@ -7,7 +7,7 @@ public class GameplayEffectQuery
 {
     public GameplayTagContainer OwningTagQuery = new();
     public GameplayTagContainer EffectTagQuery = new();
-    public GameplayEffect Definition;
+    public GameplayEffect? Definition;
 
     public bool IsEmpty =>
         OwningTagQuery.Count == 0 && EffectTagQuery.Count == 0 && Definition == null;

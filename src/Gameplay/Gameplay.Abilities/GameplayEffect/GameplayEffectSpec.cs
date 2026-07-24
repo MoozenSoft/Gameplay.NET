@@ -28,7 +28,7 @@ public class GameplayEffectSpec
     public GameplayTagContainer CapturedSourceTags { get; } = new();
     public GameplayTagContainer CapturedTargetTags { get; } = new();
     public GameplayTagContainer DynamicAssetTags { get; } = new();
-    public GameplayEffectContext EffectContext { get; set; }
+    public GameplayEffectContext? EffectContext { get; set; }
 
     private Dictionary<GameplayTag, float> setByCallerMagnitudes = new();
 

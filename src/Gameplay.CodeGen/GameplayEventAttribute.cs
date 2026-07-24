@@ -6,5 +6,5 @@ namespace Gameplay.Abilities;
 [AttributeUsage(AttributeTargets.Struct)]
 public class GameplayEventAttribute : System.Attribute
 {
-    public string Tag { get; set; }
+    public string Tag { get; set; } = string.Empty;
 }
