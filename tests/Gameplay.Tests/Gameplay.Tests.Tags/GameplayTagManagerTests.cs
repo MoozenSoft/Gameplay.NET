@@ -49,6 +49,13 @@ public class GameplayTagManagerTests
     }
 
     [Fact]
+    public void RequestTag_ReturnsInvalid_WhenNotRegistered()
+    {
+        var tag = GameplayTag.Request("Not.Exists.Tag.For.Test");
+        Assert.False(tag.IsValid);
+    }
+
+    [Fact]
     public void Matches_ParentMatchesChild()
     {
         GameplayTagManager.RegisterTags("Damage", "Damage.Fire");

@@ -8,6 +8,16 @@ using Xunit;
 
 public class GameplayCueManagerTests
 {
+    static GameplayCueManagerTests()
+    {
+        GameplayTagManager.RegisterTags(
+            "GameplayCue.Static.Test", "GameplayCue.Burst.Test",
+            "GameplayCue.Static.Param", "GameplayCue.Conflict.Test",
+            "GameplayCue.Looping.Test", "GameplayCue.Looping.Remove",
+            "GameplayCue.Looping.Nonexistent", "GameplayCue.Looping.A",
+            "GameplayCue.Looping.B", "GameplayCue.Looping.Multi",
+            "GameplayCue.Static.NoTrack", "GameplayCue.Burst.NoTrack");
+    }
     [Fact]
     public void RegisterStatic_AddCue_InvokesHandler()
     {

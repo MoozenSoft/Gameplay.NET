@@ -89,15 +89,11 @@ public static class GameplayTagManager
         }
     }
 
-    /// <summary>获取 GameplayTag。不存在则自动注册。</summary>
+    /// <summary>获取已注册的 GameplayTag。只读，不存在则返回 Invalid。</summary>
     public static GameplayTag RequestTag(string tagName)
     {
         if (dirty) Build();
         if (nameToId.TryGetValue(tagName, out int id))
-            return new GameplayTag(id);
-        // 自动注册
-        RegisterTags(tagName);
-        if (nameToId.TryGetValue(tagName, out id))
             return new GameplayTag(id);
         return GameplayTag.Invalid;
     }

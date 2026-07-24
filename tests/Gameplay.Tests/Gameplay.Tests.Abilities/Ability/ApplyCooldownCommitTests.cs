@@ -27,6 +27,7 @@ public class ApplyCooldownCommitTests
 
 public class TagRequirementTests
 {
+    static TagRequirementTests() { GameplayTagManager.RegisterTags("State.Dead"); }
     [Fact]
     public void Evaluate_NoRequirements_ReturnsTrue()
     {

@@ -7,6 +7,7 @@ using Gameplay.Abilities;
 
 public class GameplayEffectSpecTests
 {
+    static GameplayEffectSpecTests() { GameplayTagManager.RegisterTags("SetByCaller.Damage"); }
     [Fact]
     public void Constructor_SetsDefinition()
     {

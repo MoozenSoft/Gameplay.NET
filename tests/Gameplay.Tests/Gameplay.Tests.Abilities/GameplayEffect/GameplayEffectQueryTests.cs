@@ -6,6 +6,7 @@ using Xunit;
 
 public class GameplayEffectQueryTests
 {
+    static GameplayEffectQueryTests() { GameplayTagManager.RegisterTags("Buff.Fire", "Buff.Ice"); }
     [Fact]
     public void MatchByDefinition_Matches()
     {

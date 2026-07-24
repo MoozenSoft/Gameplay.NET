@@ -9,6 +9,7 @@ using Xunit;
 
 public class EffectSystemTests
 {
+    static EffectSystemTests() { GameplayTagManager.RegisterTags("State.Dead"); }
     [Fact]
     public void TickDuration_DecrementsDuration()
     {
