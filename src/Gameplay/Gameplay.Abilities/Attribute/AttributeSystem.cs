@@ -1,4 +1,5 @@
 // src/Gameplay/GameplayAbilities/Attribute/AttributeSystem.cs
+using System;
 using System.Collections.Generic;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
@@ -17,6 +18,13 @@ public class AttributeSystem : QuerySystem<DirtyAttributeComponent>
     // 反向索引（RealTime 用）：(sourceEntity.Id, sourceAttrId) → 受影响的 target Handle 列表
     private readonly Dictionary<(int entityId, int attrId), List<int>> realTimeReverseIndex = new();
 
+    // AttributeId → CurrentValue 写回委托（SG 生成或手动注册，per-instance）
+    private readonly Dictionary<int, Action<Entity, float>> currentValueWriters = new();
+
+    /// <summary>注册 AttributeId 的 CurrentValue 写回委托。</summary>
+    public void RegisterCurrentValueWriter(int attributeId, Action<Entity, float> writer)
+        => currentValueWriters[attributeId] = writer;
+
     protected override void OnUpdate()
     {
         Query.ForEachEntity(
@@ -34,9 +42,9 @@ public class AttributeSystem : QuerySystem<DirtyAttributeComponent>
                     var key = (entity.Id, attrId);
                     if (aggregators.TryGetValue(key, out var agg))
                     {
-                        // Evaluate → 写入对应 AttributeSetComponent 的 CurrentValue
-                        // 注意：此处需要 SG 提供的 AttributeAccessTable 来写 CurrentValue
-                        agg.Evaluate();
+                        float result = agg.Evaluate();
+                        if (currentValueWriters.TryGetValue(attrId, out var writer))
+                            writer(entity, result);
                     }
                 }
                 bits >>= 1;
