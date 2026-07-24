@@ -162,7 +162,7 @@ public class GameplayAttributeGenerator : IIncrementalGenerator
         {
             int id = nextId++;
             sb.AppendLine($"    public static readonly Gameplay.Abilities.GameplayAttribute {fieldName}");
-            sb.AppendLine($"        = new(id: {id}, setType: typeof({structName}),");
+            sb.AppendLine($"        = new(id: {id},");
             sb.AppendLine($"              writeCurrentValue: (entity, value) =>");
             sb.AppendLine($"              {{");
             sb.AppendLine($"                  ref var data = ref entity.GetComponent<{structName}>().{fieldName};");

@@ -12,15 +12,11 @@ public readonly struct GameplayAttribute
     /// <summary>全局唯一 AttributeId（SG 分配）。</summary>
     public readonly int Id;
 
-    /// <summary>所属 AttributeSet 的 ComponentType（SG 记录）。</summary>
-    public readonly Type SetType;
-
     private readonly Action<Entity, float> writeCurrentValue;
 
-    internal GameplayAttribute(int id, Type setType, Action<Entity, float> writeCurrentValue)
+    internal GameplayAttribute(int id, Action<Entity, float> writeCurrentValue)
     {
         Id = id;
-        SetType = setType;
         this.writeCurrentValue = writeCurrentValue;
     }
 
