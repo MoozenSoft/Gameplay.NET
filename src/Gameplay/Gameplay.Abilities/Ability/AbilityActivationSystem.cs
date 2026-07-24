@@ -54,7 +54,7 @@ public class AbilityActivationSystem
         // ── 3. Create ActiveAbility Entity ──
         int handle = nextHandle++;
         var activeEntity = owner.Store.CreateEntity();
-        activeEntity.AddChild(owner);
+        owner.AddChild(activeEntity);
         activeEntity.AddComponent(new ActiveAbilityComponent
         {
             StartTime = 0f, // TBD: world time
@@ -82,14 +82,11 @@ public class AbilityActivationSystem
         }
 
         // 添加 ActivationOwnedTags
-        if (ability.ActivationOwnedTags.Count > 0)
+        if (ability.ActivationOwnedTags.Count > 0 && owner.HasComponent<GameplayTagsComponent>())
         {
-            if (owner.TryGetComponent<GameplayTagsComponent>(out var tags))
-            {
-                // 使用 TagSource ref counting（后续 Plan 完善）
-                foreach (var tag in ability.ActivationOwnedTags)
-                    tags.AddTag(tag);
-            }
+            ref var tags = ref owner.GetComponent<GameplayTagsComponent>();
+            foreach (var tag in ability.ActivationOwnedTags)
+                tags.AddTag(tag);
         }
 
         return true;

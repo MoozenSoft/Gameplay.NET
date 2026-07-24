@@ -25,6 +25,9 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         this.attributeSystem = attributeSystem;
     }
 
+    // 延迟 Apply 队列（OnCompleteEffects / OnApplicationEffects 产生的新 GE）
+    private readonly List<(GameplayEffectSpec spec, Entity target)> deferredApplies = new();
+
     protected override void OnUpdate()
     {
         float dt = Tick.deltaTime;
@@ -52,6 +55,14 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                 }
             }
         });
+
+        // 延迟 Apply（OnCompleteEffects 链接触发，避免 Query 内结构修改）
+        for (int i = 0; i < deferredApplies.Count; i++)
+        {
+            var (chainSpec, chainTarget) = deferredApplies[i];
+            Apply(chainSpec, chainTarget);
+        }
+        deferredApplies.Clear();
     }
 
     // ── Public API ──
@@ -119,14 +130,41 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         foreach (var h in toRemove)
             RemoveEffect(h, EEffectEndType.Premature);
 
-        // 2. CanApply
+        // 2. Stacking: 检查 target 上是否有同源 GE（同一个 Definition）
+        foreach (var child in target.ChildEntities)
+        {
+            if (child.TryGetComponent<ActiveGameplayEffectComponent>(out var existing))
+            {
+                if (handleToSpec.TryGetValue(existing.Handle, out var existingSpec) &&
+                    existingSpec.Definition == ge)
+                {
+                    // 同源 GE → Stack
+                    int newCount = existing.StackCount + spec.StackCount;
+                    if (newCount > existing.StackLimit) return -1;
+                    existing.StackCount = newCount;
+                    switch (existing.StackingDurationPolicy)
+                    {
+                        case EGameplayEffectStackingDurationPolicy.RefreshOnSuccessfulApplication:
+                            existing.Duration = spec.Duration; break;
+                        case EGameplayEffectStackingDurationPolicy.ExtendDuration:
+                            existing.Duration += spec.Duration; break;
+                    }
+                    if (existing.StackingPeriodPolicy == EGameplayEffectStackingPeriodPolicy.ResetOnSuccessfulApplication)
+                        existing.PeriodProgress = 0f;
+                    child.GetComponent<ActiveGameplayEffectComponent>() = existing;
+                    return existing.Handle;
+                }
+            }
+        }
+
+        // 3. CanApply
         if (!CanApply(spec, target)) return -1;
 
         int handle = nextHandle++;
 
         // 3. Create ActiveGameplayEffect Entity as child of target
         var entity = target.Store.CreateEntity();
-        entity.AddChild(target);
+        target.AddChild(entity);
 
         var comp = new ActiveGameplayEffectComponent
         {
@@ -183,13 +221,11 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         }
 
         // 6. Add GrantedTags to target
-        if (comp.GrantedTags.Count > 0)
+        if (comp.GrantedTags.Count > 0 && target.HasComponent<GameplayTagsComponent>())
         {
-            if (target.TryGetComponent<GameplayTagsComponent>(out var tags))
-            {
-                foreach (var tag in comp.GrantedTags)
-                    tags.AddTag(tag);
-            }
+            ref var tags = ref target.GetComponent<GameplayTagsComponent>();
+            foreach (var tag in comp.GrantedTags)
+                tags.AddTag(tag);
         }
 
         // 7. OnApplicationEffects: 链接触发其他 GE
@@ -197,7 +233,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         {
             foreach (var condEffect in ge.OnApplicationEffects)
             {
-                if (condEffect.Effect != null && condEffect.RequiredSourceTags.Count == 0)
+                if (condEffect.Effect != null && (condEffect.RequiredSourceTags?.Count ?? 0) == 0)
                 {
                     var chainSpec = new GameplayEffectSpec(condEffect.Effect, spec.Level);
                     Apply(chainSpec, target);
@@ -227,8 +263,9 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                 {
                     var comp = entity.GetComponent<ActiveGameplayEffectComponent>();
                     var target = comp.TargetEntity;
-                    if (target.TryGetComponent<GameplayTagsComponent>(out var tags))
+                    if (target.HasComponent<GameplayTagsComponent>())
                     {
+                        ref var tags = ref target.GetComponent<GameplayTagsComponent>();
                         foreach (var tag in spec.Definition.GrantedTags)
                             tags.RemoveTag(tag);
                     }
@@ -240,13 +277,13 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             {
                 foreach (var condEffect in spec.Definition.OnCompleteEffects)
                 {
-                    if (condEffect.Effect != null && condEffect.RequiredSourceTags.Count == 0)
+                    if (condEffect.Effect != null && (condEffect.RequiredSourceTags?.Count ?? 0) == 0)
                     {
                         var chainSpec = new GameplayEffectSpec(condEffect.Effect, spec.Level);
                         if (handleToEntity.TryGetValue(handle, out var entity))
                         {
                             var comp = entity.GetComponent<ActiveGameplayEffectComponent>();
-                            Apply(chainSpec, comp.TargetEntity);
+                            deferredApplies.Add((chainSpec, comp.TargetEntity));
                         }
                     }
                 }
@@ -321,6 +358,10 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             EGameplayModOp.FinalAdd => baseValue + magnitude, // FinalAdd 等价 Additive（作用于 Base）
             _ => baseValue + magnitude,
         };
+
+    /// <summary>按 Handle 查询 ActiveGE Entity。</summary>
+    public Entity GetEntityByHandle(int handle)
+        => handleToEntity.TryGetValue(handle, out var entity) ? entity : default;
 
     // ── Handle -> Spec 取回 ──
     private GameplayEffectSpec? GetSpecFromHandle(int handle)
