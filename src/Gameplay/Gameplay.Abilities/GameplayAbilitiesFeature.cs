@@ -14,6 +14,10 @@ public class GameplayAbilitiesFeature
     public AttributeSystem AttributeSystem { get; }
     public EffectSystem EffectSystem { get; }
     public AbilityTaskSystem AbilityTaskSystem { get; }
+    public WaitGameplayEventTaskSystem WaitEventTaskSystem { get; }
+    public WaitAttributeChangeTaskSystem WaitAttrTaskSystem { get; }
+    public WaitGameplayTagTaskSystem WaitTagTaskSystem { get; }
+    public WaitAbilityCommitTaskSystem WaitCommitTaskSystem { get; }
     public SystemRoot SystemRoot { get; }
 
     // ── POCO Manager / System（外部调用）──
@@ -42,17 +46,29 @@ public class GameplayAbilitiesFeature
 
         // ── Task 系统 ──
         AbilityTaskSystem = new AbilityTaskSystem(ActivationSystem);
+        WaitEventTaskSystem = new WaitGameplayEventTaskSystem(EventSystem, store);
+        WaitAttrTaskSystem = new WaitAttributeChangeTaskSystem(AttributeSystem);
+        WaitTagTaskSystem = new WaitGameplayTagTaskSystem();
+        WaitCommitTaskSystem = new WaitAbilityCommitTaskSystem();
 
         // ── SystemRoot — 按 Phase 注册 Friflo QuerySystem ──
         SystemRoot = new SystemRoot(store)
         {
-            // Phase 1: AbilityTask 完成检测（优先于 Effect Tick）
+            // Phase 1: 内置 Task 推进（Pending→Running + 条件检查）
+            WaitEventTaskSystem,
+            WaitAttrTaskSystem,
+            WaitTagTaskSystem,
+            WaitCommitTaskSystem,
+            // Phase 2: AbilityTask 完成检测（所有 Task Done → EndAbility）
             AbilityTaskSystem,
-            // Phase 2: GE Duration/Period Tick + Apply/Remove
+            // Phase 3: GE Duration/Period Tick + Apply/Remove
             EffectSystem,
-            // Phase 3: Attribute Dirty → Evaluate → CurrentValue
+            // Phase 4: Attribute Dirty → Evaluate → CurrentValue
             AttributeSystem,
         };
+        // WaitEventTaskSystem 在 Phase 1: 注册 Pending Task 为 EventSystem listener
+        // EventSystem.Tick() 在 Update() 开头 Phase 0: 消费本帧事件 → 通知 listener
+        // → 下一帧 WaitEventTaskSystem.OnUpdate 检测到 TaskState.Done
     }
 
     /// <summary>
