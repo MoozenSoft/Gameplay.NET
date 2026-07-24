@@ -14,6 +14,7 @@ public struct GameplayTagsComponent : IComponent
     /// <summary>添加 Tag，支持多个来源独立 Add/Remove。仅当引用计数从 0 变为 1 时设置位。</summary>
     public void AddTag(GameplayTag tag)
     {
+        if (!tag.IsValid) return;
         refCounts ??= new Dictionary<GameplayTag, int>();
         refCounts.TryGetValue(tag, out int count);
         refCounts[tag] = count + 1;
@@ -24,12 +25,14 @@ public struct GameplayTagsComponent : IComponent
     /// <summary>移除 Tag。仅当引用计数降为 0 时清除位。</summary>
     public void RemoveTag(GameplayTag tag)
     {
+        if (!tag.IsValid) return;
         if (refCounts == null || !refCounts.TryGetValue(tag, out int count) || count <= 0)
             return;
         int newCount = count - 1;
         if (newCount == 0)
         {
             refCounts.Remove(tag);
+            if (refCounts.Count == 0) refCounts = null; // 回收 Dictionary，下次 AddTag 重新分配
             tagSet.Clear(tag.id);
         }
         else
@@ -45,7 +48,16 @@ public struct GameplayTagsComponent : IComponent
     public bool Matches(GameplayTag tag)
         => tagSet.HasAny(GameplayTagManager.GetExpandedSet(tag.id));
 
-    public bool MatchesAnyTags(GameplayTagContainer container) => tagSet.HasAny(container.tagSet);
+    /// <summary>层级匹配：此 Entity 的 Tag 是否匹配 container 中任一 Tag（含子孙）。</summary>
+    public bool MatchesAnyTags(GameplayTagContainer container)
+    {
+        foreach (var tag in container)
+        {
+            if (tagSet.HasAny(GameplayTagManager.GetExpandedSet(tag.id)))
+                return true;
+        }
+        return false;
+    }
 
     public bool MatchesAny(GameplayTagsComponent other)
     {

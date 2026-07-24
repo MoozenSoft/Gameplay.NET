@@ -81,11 +81,16 @@ public class AbilityActivationSystem
             }
         }
 
-        // 添加 ActivationOwnedTags
-        if (ability.ActivationOwnedTags.Count > 0 && owner.HasComponent<GameplayTagsComponent>())
+        // 添加 ActivationOwnedTags + 存入 Component 供 CancelAbility 清理
+        var ownedTags = ability.ActivationOwnedTags;
+        if (ownedTags.Count > 0 && owner.HasComponent<GameplayTagsComponent>())
         {
+            var activeComp = activeEntity.GetComponent<ActiveAbilityComponent>();
+            activeComp.ActivationOwnedTags = ownedTags;
+            activeEntity.GetComponent<ActiveAbilityComponent>() = activeComp;
+
             ref var tags = ref owner.GetComponent<GameplayTagsComponent>();
-            foreach (var tag in ability.ActivationOwnedTags)
+            foreach (var tag in ownedTags)
                 tags.AddTag(tag);
         }
 
@@ -104,10 +109,12 @@ public class AbilityActivationSystem
         var owner = comp.Owner;
 
         // 移除 ActivationOwnedTags
-        if (!owner.IsNull)
+        if (!owner.IsNull && comp.ActivationOwnedTags != null
+            && owner.HasComponent<GameplayTagsComponent>())
         {
-            // 通过 AbilitySpec 查找 Definition → 移除对应 Tag
-            // Plan 2 简化：不做反查
+            ref var tags = ref owner.GetComponent<GameplayTagsComponent>();
+            foreach (var tag in comp.ActivationOwnedTags)
+                tags.RemoveTag(tag);
         }
 
         // 将 WaitCancel Task 标记为 Done

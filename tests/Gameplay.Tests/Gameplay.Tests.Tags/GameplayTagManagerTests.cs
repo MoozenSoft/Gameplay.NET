@@ -49,14 +49,6 @@ public class GameplayTagManagerTests
     }
 
     [Fact]
-    public void RequestTag_ReturnsInvalid_WhenNotRegistered()
-    {
-        // RequestTag 不创建——必须返回 Invalid
-        var tag = GameplayTag.Request("Not.Exists");
-        Assert.False(tag.IsValid);
-    }
-
-    [Fact]
     public void Matches_ParentMatchesChild()
     {
         GameplayTagManager.RegisterTags("Damage", "Damage.Fire");

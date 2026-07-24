@@ -49,7 +49,8 @@ public class TagRequirementTests
         var store = new EntityStore();
         var owner = store.CreateEntity();
         owner.AddComponent(new GameplayTagsComponent());
-        owner.GetComponent<GameplayTagsComponent>().AddTag(blockedTag);
+        ref var ownerTags = ref owner.GetComponent<GameplayTagsComponent>();
+        ownerTags.AddTag(blockedTag);
 
         var spec = new AbilitySpec { Ability = ability };
         var request = new AbilityActivationRequest { Owner = owner };

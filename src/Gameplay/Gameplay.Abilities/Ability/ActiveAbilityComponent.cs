@@ -13,4 +13,6 @@ public struct ActiveAbilityComponent : IComponent
     public bool IsActive;                         // 是否激活中
     public Entity Owner;                          // 归属的 Owner Entity
     public EAbilityInstanceState State;            // 当前状态
+    /// <summary>激活时添加到 Owner 的 Tag 列表——CancelAbility 时用于清理。</summary>
+    public Gameplay.Tags.GameplayTagContainer? ActivationOwnedTags;
 }

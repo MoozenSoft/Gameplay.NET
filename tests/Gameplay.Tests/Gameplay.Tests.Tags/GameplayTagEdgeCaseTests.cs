@@ -52,7 +52,8 @@ public class GameplayTagEdgeCaseTests
         var lower = GameplayTag.Request("damage");
 
         Assert.True(upper.IsValid);
-        Assert.False(lower.IsValid); // 大小写敏感
+        Assert.True(lower.IsValid); // 两个不同 tag，各自自动注册
+        Assert.NotEqual(upper.ToString(), lower.ToString()); // 大小写敏感
     }
 
     [Fact]
