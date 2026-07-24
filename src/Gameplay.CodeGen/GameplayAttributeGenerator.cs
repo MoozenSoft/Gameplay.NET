@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 
 namespace Gameplay.CodeGen;
@@ -120,11 +121,13 @@ public class GameplayAttributeGenerator : IIncrementalGenerator
             list.Add(field.FieldName);
         }
 
+        // 按 (Namespace, StructName) 排序，保证不同编译间 ID 分配确定
         int nextId = 1;
 
-        foreach (var kvp in groups)
+        foreach (var kvp in groups.OrderBy(g => g.Key.Item1).ThenBy(g => g.Key.Item2))
         {
-            var (ns, structName) = kvp.Key;
+            var ns = kvp.Key.Item1;
+            var structName = kvp.Key.Item2;
             var fieldNames = kvp.Value;
             var source = GeneratePartialStruct(ns, structName, fieldNames);
             var hintName = string.IsNullOrEmpty(ns)
@@ -161,6 +164,12 @@ public class GameplayAttributeGenerator : IIncrementalGenerator
         foreach (var fieldName in fieldNames)
         {
             int id = nextId++;
+            if (id > 63)
+            {
+                sb.AppendLine($"#error GameplayAttribute ID {id} exceeds 63-bit DirtyAttributeComponent limit. Reduce attribute count (current max: 64).");
+                sb.AppendLine();
+                continue;
+            }
             sb.AppendLine($"    public static readonly Gameplay.Abilities.GameplayAttribute {fieldName}");
             sb.AppendLine($"        = new(id: {id},");
             sb.AppendLine($"              writeCurrentValue: (entity, value) =>");
