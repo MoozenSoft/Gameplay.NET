@@ -5,6 +5,7 @@
     <RootNamespace>Gameplay.Tests</RootNamespace>
     <AssemblyName>Gameplay.Tests</AssemblyName>
     <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
