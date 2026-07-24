@@ -83,6 +83,17 @@ public class AttributeSystem : QuerySystem<DirtyAttributeComponent>
         return 0f;
     }
 
+    public bool HasAggregator(Entity entity, int attributeId)
+        => aggregators.ContainsKey(Key(entity, attributeId));
+
+    public float GetBaseValue(Entity entity, int attributeId)
+    {
+        var key = Key(entity, attributeId);
+        if (aggregators.TryGetValue(key, out var agg))
+            return agg.BaseValue;
+        return 0f;
+    }
+
     // ── RealTime 反向索引 ──
 
     public void RegisterRealTimeDependency(int sourceEntityId, int sourceAttrId, int targetHandle)

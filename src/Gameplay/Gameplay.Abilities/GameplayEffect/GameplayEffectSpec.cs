@@ -12,6 +12,7 @@ public struct FModifierSpec
     public EGameplayModOp ModOp;
     public float EvaluatedMagnitude;
     public EAttributeCapturePolicy CapturePolicy;
+    public EModifierExecutionType ExecutionType;
 }
 
 /// <summary>

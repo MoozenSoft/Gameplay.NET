@@ -157,14 +157,30 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         handleToSpec[handle] = spec;
         handleToEntity[handle] = entity;
 
-        // 5. Apply Modifiers -> AttributeSystem
+        // 5. Apply Modifiers -> AttributeSystem（仅 Persistent + ExecuteOnApply）
         foreach (var mod in spec.Modifiers)
         {
             if (target.HasComponent<DirtyAttributeComponent>())
             {
-                attributeSystem.SetAggregatorValue(target, mod.AttributeId, baseValue: 0f);
-                attributeSystem.AddAggregatorMod(target, mod.AttributeId, handle,
-                    mod.EvaluatedMagnitude, mod.ModOp);
+                if (mod.ExecutionType == EModifierExecutionType.Persistent)
+                {
+                    // 确保 Aggregator 存在（SetAggregatorValue 在无 aggregator 时创建）
+                    if (!attributeSystem.HasAggregator(target, mod.AttributeId))
+                        attributeSystem.SetAggregatorValue(target, mod.AttributeId, 0f);
+                    attributeSystem.AddAggregatorMod(target, mod.AttributeId, handle,
+                        mod.EvaluatedMagnitude, mod.ModOp);
+                }
+                else if (mod.ExecutionType == EModifierExecutionType.ExecuteOnApply)
+                {
+                    float baseVal = attributeSystem.GetBaseValue(target, mod.AttributeId);
+                    float newBase = mod.ModOp switch
+                    {
+                        EGameplayModOp.Additive => baseVal + mod.EvaluatedMagnitude,
+                        EGameplayModOp.Override => mod.EvaluatedMagnitude,
+                        _ => baseVal + mod.EvaluatedMagnitude,
+                    };
+                    attributeSystem.SetAggregatorValue(target, mod.AttributeId, newBase);
+                }
                 ref var dirty = ref target.GetComponent<DirtyAttributeComponent>();
                 dirty.SetBit(mod.AttributeId);
             }
@@ -272,9 +288,39 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         }
     }
 
+    /// <summary>
+    /// 周期性执行 Modifier：ExecuteOnPeriod 类型不注册 Aggregator，直接修改 BaseValue。
+    /// Persistent 类型已在 Apply 时注册，此处不重复（避免累加）。
+    /// </summary>
     private void ExecutePeriodicModifiers(ref ActiveGameplayEffectComponent comp)
     {
-        // Task 11 填充：遍历每个 Modifier -> Aggregator -> SetDirty
+        var spec = GetSpecFromHandle(comp.Handle);
+        if (spec == null) return;
+
+        var target = comp.TargetEntity;
+        if (!target.HasComponent<DirtyAttributeComponent>()) return;
+        ref var dirty = ref target.GetComponent<DirtyAttributeComponent>();
+
+        foreach (var mod in spec.Modifiers)
+        {
+            if (mod.ExecutionType != EModifierExecutionType.ExecuteOnPeriod)
+                continue;
+
+            // 直接修改 Aggregator 的 BaseValue，不注册新 Mod
+            // 这样 Persistent Mods（Buff/Debuff）通过 Aggregator 公式自动叠加
+            float baseVal = attributeSystem.GetBaseValue(target, mod.AttributeId);
+            float magnitude = mod.EvaluatedMagnitude;
+
+            float newBase = mod.ModOp switch
+            {
+                EGameplayModOp.Additive => baseVal + magnitude,
+                EGameplayModOp.Override => magnitude,
+                _ => baseVal + magnitude,
+            };
+
+            attributeSystem.SetAggregatorValue(target, mod.AttributeId, newBase);
+            dirty.SetBit(mod.AttributeId);
+        }
     }
 
     // ── Handle -> Spec 取回 ──

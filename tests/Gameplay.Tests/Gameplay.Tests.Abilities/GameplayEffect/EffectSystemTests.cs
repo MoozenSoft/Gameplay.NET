@@ -162,4 +162,59 @@ public class EffectSystemTests
 
         Assert.True(effectSys.CanApply(spec, target));
     }
+
+    [Fact]
+    public void Periodic_ExecuteOnPeriod_AppliesModifierEachPeriod()
+    {
+        var store = new EntityStore();
+        var attrSys = new AttributeSystem();
+        var effectSys = new EffectSystem(attrSys);
+        var root = new SystemRoot(store) { effectSys, attrSys };
+
+        var target = store.CreateEntity();
+        target.AddComponent(new DirtyAttributeComponent());
+        attrSys.SetAggregatorValue(target, 0, 100f);
+
+        var ge = new GameplayEffect
+        {
+            DurationPolicy = EGameplayEffectDurationType.HasDuration,
+            Period = 2.0f,
+            Modifiers =
+            {
+                new GameplayModifier
+                {
+                    AttributeId = 0,
+                    ModOp = EGameplayModOp.Additive,
+                    ExecutionType = EModifierExecutionType.ExecuteOnPeriod,
+                    MagnitudeCalc = GameplayEffectModifierMagnitude.CreateScalableFloat(1f, -10f),
+                }
+            }
+        };
+        var spec = new GameplayEffectSpec(ge, 1f)
+        {
+            Duration = 10f,
+            Period = 2.0f,
+        };
+        // 手动填充 Modifier 的 EvaluatedMagnitude（通常由 Spec 构造时计算）
+        spec.Modifiers.Add(new FModifierSpec
+        {
+            AttributeId = 0,
+            ModOp = EGameplayModOp.Additive,
+            EvaluatedMagnitude = -10f,
+            ExecutionType = EModifierExecutionType.ExecuteOnPeriod,
+        });
+
+        int handle = effectSys.Apply(spec, target);
+        Assert.True(handle > 0);
+
+        // Tick past first period
+        root.Update(new UpdateTick(2.5f, 0));
+        float afterFirst = attrSys.GetCurrentValue(target, 0);
+        Assert.Equal(90f, afterFirst, 0.001f); // 100 - 10
+
+        // Tick past second period
+        root.Update(new UpdateTick(2.5f, 0));
+        float afterSecond = attrSys.GetCurrentValue(target, 0);
+        Assert.Equal(80f, afterSecond, 0.001f); // 90 - 10
+    }
 }
