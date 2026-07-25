@@ -2,7 +2,7 @@
 
 ## ECS
 
-Gameplay.dll 基于 [Friflo.Engine.ECS](https://github.com/friflo/Friflo.Engine.ECS) 构建。
+Gameplay.dll 基于 [Friflo.Engine.ECS](https://github.com/friflo/Friflo.Engine.ECS) 构建。Friflo 源码在 `../Friflo.Engine.ECS/` 中，查阅 API 细节时直接看源码。
 
 **不是所有功能都进 ECS**。分界线：多 Entity 批量遍历 → Component + System；单例服务 / 消息路由 / 基础设施 → 普通对象（POCO）。
 
