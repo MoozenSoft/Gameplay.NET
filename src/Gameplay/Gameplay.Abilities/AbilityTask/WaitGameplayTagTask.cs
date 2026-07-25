@@ -34,13 +34,13 @@ public class WaitGameplayTagTaskSystem : QuerySystem<AbilityTaskContextComponent
             if (state.State == ETaskState.Pending)
             {
                 // WaitGameplayTagRemoved：如果 tag 本来就不在，立即 Done
-                if (entity.TryGetComponent<WaitGameplayTagRemovedComponent>(out var removed))
+                if (entity.HasComponent<WaitGameplayTagRemovedComponent>())
                 {
+                    ref var removed = ref entity.GetComponent<WaitGameplayTagRemovedComponent>();
                     var pendingOwner = GetOwner(ctx);
                     if (!pendingOwner.IsNull && pendingOwner.TryGetComponent<GameplayTagsComponent>(out var t) && t.HasTag(removed.Tag))
                     {
                         removed.WasPresent = true;
-                        entity.GetComponent<WaitGameplayTagRemovedComponent>() = removed;
                         state.State = ETaskState.Running;
                     }
                     else

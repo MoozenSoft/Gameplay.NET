@@ -134,8 +134,9 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         // 2. Stacking: 检查 target 上是否有同源 GE（同一个 Definition）
         foreach (var child in target.ChildEntities)
         {
-            if (child.TryGetComponent<ActiveGameplayEffectComponent>(out var existing))
+            if (child.HasComponent<ActiveGameplayEffectComponent>())
             {
+                ref var existing = ref child.GetComponent<ActiveGameplayEffectComponent>();
                 if (handleToSpec.TryGetValue(existing.Handle, out var existingSpec) &&
                     existingSpec.Definition == ge)
                 {
@@ -152,7 +153,6 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                     }
                     if (existing.StackingPeriodPolicy == EGameplayEffectStackingPeriodPolicy.ResetOnSuccessfulApplication)
                         existing.PeriodProgress = 0f;
-                    child.GetComponent<ActiveGameplayEffectComponent>() = existing;
                     return existing.Handle;
                 }
             }
