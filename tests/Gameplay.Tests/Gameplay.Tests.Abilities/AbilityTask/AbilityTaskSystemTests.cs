@@ -23,8 +23,8 @@ public class AbilityTaskSystemTests
         var store = new EntityStore();
         var attrSys = new AttributeSystem();
         var effectSys = new EffectSystem(attrSys);
-        var activationSys = new AbilityActivationSystem(effectSys);
-        var taskSys = new AbilityTaskSystem(activationSys);
+        var activationManager = new AbilityActivationManager(effectSys);
+        var taskSys = new AbilityTaskSystem(activationManager);
         var root = new SystemRoot(store) { taskSys };
 
         // ActiveAbility Entity
@@ -49,7 +49,7 @@ public class AbilityTaskSystemTests
         task2.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
-        activationSys.ProcessPendingDeletions();
+        activationManager.ProcessPendingDeletions();
 
         // ActiveAbility 应被 Cancel → DeleteEntity → 实体已不存在
         Assert.True(activeAbility.IsNull);
@@ -61,8 +61,8 @@ public class AbilityTaskSystemTests
         var store = new EntityStore();
         var attrSys = new AttributeSystem();
         var effectSys = new EffectSystem(attrSys);
-        var activationSys = new AbilityActivationSystem(effectSys);
-        var taskSys = new AbilityTaskSystem(activationSys);
+        var activationManager = new AbilityActivationManager(effectSys);
+        var taskSys = new AbilityTaskSystem(activationManager);
         var root = new SystemRoot(store) { taskSys };
 
         var activeAbility = store.CreateEntity();
@@ -100,8 +100,8 @@ public class AbilityTaskSystemTests
         var store = new EntityStore();
         var attrSys = new AttributeSystem();
         var effectSys = new EffectSystem(attrSys);
-        var activationSys = new AbilityActivationSystem(effectSys);
-        var taskSys = new AbilityTaskSystem(activationSys);
+        var activationManager = new AbilityActivationManager(effectSys);
+        var taskSys = new AbilityTaskSystem(activationManager);
         var root = new SystemRoot(store) { taskSys };
 
         var activeAbility = store.CreateEntity();
@@ -126,7 +126,7 @@ public class AbilityTaskSystemTests
         task2.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
-        activationSys.ProcessPendingDeletions();
+        activationManager.ProcessPendingDeletions();
 
         // 全部 Done/Cancelled → 应 Cancel → DeleteEntity
         Assert.True(activeAbility.IsNull);
@@ -138,8 +138,8 @@ public class AbilityTaskSystemTests
         var store = new EntityStore();
         var attrSys = new AttributeSystem();
         var effectSys = new EffectSystem(attrSys);
-        var activationSys = new AbilityActivationSystem(effectSys);
-        var taskSys = new AbilityTaskSystem(activationSys);
+        var activationManager = new AbilityActivationManager(effectSys);
+        var taskSys = new AbilityTaskSystem(activationManager);
         var root = new SystemRoot(store) { taskSys };
 
         var activeAbility = store.CreateEntity();
@@ -170,8 +170,8 @@ public class AbilityTaskSystemTests
         var store = new EntityStore();
         var attrSys = new AttributeSystem();
         var effectSys = new EffectSystem(attrSys);
-        var activationSys = new AbilityActivationSystem(effectSys);
-        var taskSys = new AbilityTaskSystem(activationSys);
+        var activationManager = new AbilityActivationManager(effectSys);
+        var taskSys = new AbilityTaskSystem(activationManager);
         var root = new SystemRoot(store) { taskSys };
 
         // 创建 ActiveAbility，但不创建任何 Task entity（无 AbilityTaskContextComponent）

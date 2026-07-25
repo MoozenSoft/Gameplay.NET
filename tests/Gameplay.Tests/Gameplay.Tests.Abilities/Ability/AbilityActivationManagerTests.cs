@@ -1,4 +1,4 @@
-// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/AbilityActivationSystemTests.cs
+// tests/Gameplay.Tests/Gameplay.Tests.Abilities/Ability/AbilityActivationManagerTests.cs
 namespace Gameplay.Tests.Abilities;
 
 using Friflo.Engine.ECS;
@@ -6,7 +6,7 @@ using Gameplay.Abilities;
 using Gameplay.Tags;
 using Xunit;
 
-public class AbilityActivationSystemTests
+public class AbilityActivationManagerTests
 {
     [Fact]
     public void TryActivate_NoAbilityCollection_ReturnsFalse()
@@ -14,12 +14,12 @@ public class AbilityActivationSystemTests
         var store = new EntityStore();
         var attrSys = new AttributeSystem();
         var effectSys = new EffectSystem(attrSys);
-        var sys = new AbilityActivationSystem(effectSys);
+        var activationManager = new AbilityActivationManager(effectSys);
 
         var owner = store.CreateEntity();
         var request = new AbilityActivationRequest { Owner = owner, SpecHandle = 0 };
 
-        Assert.False(sys.TryActivateAbility(request));
+        Assert.False(activationManager.TryActivateAbility(request));
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class AbilityActivationSystemTests
         var store = new EntityStore();
         var attrSys = new AttributeSystem();
         var effectSys = new EffectSystem(attrSys);
-        var sys = new AbilityActivationSystem(effectSys);
+        var activationManager = new AbilityActivationManager(effectSys);
 
         var owner = store.CreateEntity();
         owner.AddComponent(new AbilityCollectionComponent
@@ -37,7 +37,7 @@ public class AbilityActivationSystemTests
         });
         var request = new AbilityActivationRequest { Owner = owner, SpecHandle = 99 };
 
-        Assert.False(sys.TryActivateAbility(request));
+        Assert.False(activationManager.TryActivateAbility(request));
     }
 
     [Fact]
@@ -53,7 +53,7 @@ public class AbilityActivationSystemTests
         var ability = new GameplayAbility();
         ability.ActivationBlockedTags.AddTag(blockedTag);
 
-        var sys = new AbilityActivationSystem(effectSys);
+        var activationManager = new AbilityActivationManager(effectSys);
         var owner = store.CreateEntity();
         owner.AddComponent(new GameplayTagsComponent());
         owner.GetComponent<GameplayTagsComponent>().AddTag(blockedTag);
@@ -63,7 +63,7 @@ public class AbilityActivationSystemTests
         });
 
         var request = new AbilityActivationRequest { Owner = owner, SpecHandle = 0 };
-        Assert.False(sys.TryActivateAbility(request));
+        Assert.False(activationManager.TryActivateAbility(request));
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class AbilityActivationSystemTests
         var store = new EntityStore();
         var attrSys = new AttributeSystem();
         var effectSys = new EffectSystem(attrSys);
-        var sys = new AbilityActivationSystem(effectSys);
+        var activationManager = new AbilityActivationManager(effectSys);
 
         var ability = new GameplayAbility();
         var executor = new TestExecutor();
@@ -85,7 +85,7 @@ public class AbilityActivationSystemTests
         });
 
         var request = new AbilityActivationRequest { Owner = owner, SpecHandle = 0 };
-        Assert.True(sys.TryActivateAbility(request));
+        Assert.True(activationManager.TryActivateAbility(request));
         Assert.True(executor.WasCalled);
     }
 

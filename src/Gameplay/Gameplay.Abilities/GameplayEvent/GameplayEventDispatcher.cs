@@ -7,7 +7,7 @@ namespace Gameplay.Abilities;
 /// 事件消费系统。每帧 Tick 从 GameplayEventBus 取出待处理事件，
 /// 分发给静态 Handler（IGameplayEventHandler）和动态 Listener（Entity 上的 Handler）。
 /// </summary>
-public class EventSystem
+public class GameplayEventDispatcher
 {
     private readonly GameplayEventBus bus;
     private readonly Dictionary<ushort, List<IGameplayEventHandler>> staticHandlers = new();
@@ -16,7 +16,7 @@ public class EventSystem
     /// <summary>动态 Listener 分发的回调钩子。在 InvokeDynamic 中调用，用于扩展处理逻辑。</summary>
     public DynamicInvokeHandler? OnDynamicInvoke { get; set; }
 
-    public EventSystem(GameplayEventBus bus)
+    public GameplayEventDispatcher(GameplayEventBus bus)
     {
         this.bus = bus;
     }

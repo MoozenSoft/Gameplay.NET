@@ -1,4 +1,4 @@
-// src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationSystem.cs
+// src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationManager.cs
 using System.Collections.Generic;
 using Friflo.Engine.ECS;
 using Gameplay.Tags;
@@ -10,12 +10,12 @@ namespace Gameplay.Abilities;
 /// Ability 激活流程 System（POCO，不继承 QuerySystem）。
 /// 接收 AbilityActivationRequest → Requirements → Commit → Execute。
 /// </summary>
-public class AbilityActivationSystem
+public class AbilityActivationManager
 {
     private readonly EffectSystem effectSystem;
     private int nextHandle = 1;
 
-    public AbilityActivationSystem(EffectSystem effectSystem)
+    public AbilityActivationManager(EffectSystem effectSystem)
     {
         this.effectSystem = effectSystem;
     }

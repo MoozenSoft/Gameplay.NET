@@ -69,42 +69,42 @@ public class PredictionKeyTests
     }
 
     [Fact]
-    public void PredictionSystem_Confirm_DelegatesToService()
+    public void PredictionManager_Confirm_DelegatesToService()
     {
         var service = new TestPredictionService();
-        var system = new PredictionSystem();
-        system.SetService(service);
+        var predictionManager = new PredictionManager();
+        predictionManager.SetService(service);
 
         var key = service.Begin();
-        system.Confirm(key);
+        predictionManager.Confirm(key);
         Assert.True(service.LastConfirmed.Equals(key));
     }
 
     [Fact]
-    public void PredictionSystem_Reject_DelegatesToService()
+    public void PredictionManager_Reject_DelegatesToService()
     {
         var service = new TestPredictionService();
-        var system = new PredictionSystem();
-        system.SetService(service);
+        var predictionManager = new PredictionManager();
+        predictionManager.SetService(service);
 
         var key = service.Begin();
-        system.Reject(key);
+        predictionManager.Reject(key);
         Assert.True(service.LastRejected.Equals(key));
     }
 
     [Fact]
-    public void PredictionSystem_NoServiceSet_ConfirmDoesNotThrow()
+    public void PredictionManager_NoServiceSet_ConfirmDoesNotThrow()
     {
-        var system = new PredictionSystem();
-        var ex = Record.Exception(() => system.Confirm(new PredictionKey { Key = 1 }));
+        var predictionManager = new PredictionManager();
+        var ex = Record.Exception(() => predictionManager.Confirm(new PredictionKey { Key = 1 }));
         Assert.Null(ex);
     }
 
     [Fact]
-    public void PredictionSystem_NoServiceSet_RejectDoesNotThrow()
+    public void PredictionManager_NoServiceSet_RejectDoesNotThrow()
     {
-        var system = new PredictionSystem();
-        var ex = Record.Exception(() => system.Reject(new PredictionKey { Key = 1 }));
+        var predictionManager = new PredictionManager();
+        var ex = Record.Exception(() => predictionManager.Reject(new PredictionKey { Key = 1 }));
         Assert.Null(ex);
     }
 

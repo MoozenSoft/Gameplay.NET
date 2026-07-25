@@ -24,10 +24,10 @@ public class GameplayAbilitiesFeature
 
     // ── POCO Manager / System（外部调用）──
     public GameplayEventBus EventBus { get; }
-    public EventSystem EventSystem { get; }
-    public AbilityActivationSystem ActivationSystem { get; }
+    public GameplayEventDispatcher EventDispatcher { get; }
+    public AbilityActivationManager ActivationManager { get; }
     public GameplayCueManager CueManager { get; }
-    public PredictionSystem PredictionSystem { get; }
+    public PredictionManager PredictionManager { get; }
 
     public GameplayAbilitiesFeature(EntityStore store, NetMode netMode)
     {
@@ -37,18 +37,18 @@ public class GameplayAbilitiesFeature
 
         // ── 事件系统 ──
         EventBus = new GameplayEventBus();
-        EventSystem = new EventSystem(EventBus);
+        EventDispatcher = new GameplayEventDispatcher(EventBus);
 
         // ── Ability 激活 ──
-        ActivationSystem = new AbilityActivationSystem(EffectSystem);
+        ActivationManager = new AbilityActivationManager(EffectSystem);
 
         // ── 表现 + 预测 ──
         CueManager = CreateCueManager(netMode);
-        PredictionSystem = new PredictionSystem();
+        PredictionManager = new PredictionManager();
 
         // ── Task 系统 ──
-        AbilityTaskSystem = new AbilityTaskSystem(ActivationSystem);
-        WaitEventTaskSystem = new WaitGameplayEventTaskSystem(EventSystem, store);
+        AbilityTaskSystem = new AbilityTaskSystem(ActivationManager);
+        WaitEventTaskSystem = new WaitGameplayEventTaskSystem(EventDispatcher, store);
         WaitAttrTaskSystem = new WaitAttributeChangeTaskSystem(AttributeSystem);
         WaitTagTaskSystem = new WaitGameplayTagTaskSystem();
         WaitCommitTaskSystem = new WaitAbilityCommitTaskSystem();
@@ -70,8 +70,8 @@ public class GameplayAbilitiesFeature
             // Phase 4: Attribute Dirty → Evaluate → CurrentValue
             AttributeSystem,
         };
-        // WaitEventTaskSystem 在 Phase 1: 注册 Pending Task 为 EventSystem listener
-        // EventSystem.Tick() 在 Update() 开头 Phase 0: 消费本帧事件 → 通知 listener
+        // WaitEventTaskSystem 在 Phase 1: 注册 Pending Task 为 GameplayEventDispatcher listener
+        // GameplayEventDispatcher.Tick() 在 Update() 开头 Phase 0: 消费本帧事件 → 通知 listener
         // → 下一帧 WaitEventTaskSystem.OnUpdate 检测到 ETaskState.Done
     }
 
@@ -81,13 +81,13 @@ public class GameplayAbilitiesFeature
     public void Update(float deltaTime)
     {
         // Phase 0: Event 交换 + 分发（在 SystemRoot 之前，确保本帧事件对 System 可见）
-        EventSystem.Tick();
+        EventDispatcher.Tick();
 
         // Phase 1-3: ECS System 执行
         SystemRoot.Update(new UpdateTick(deltaTime, 0));
 
         // Phase 4: 延迟删除（Query 循环内不能 DeleteEntity）
-        ActivationSystem.ProcessPendingDeletions();
+        ActivationManager.ProcessPendingDeletions();
     }
 
     private static GameplayCueManager CreateCueManager(NetMode netMode)

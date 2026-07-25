@@ -11,11 +11,11 @@ namespace Gameplay.Abilities;
 /// </summary>
 public class AbilityTaskSystem : QuerySystem<TaskStateComponent, AbilityTaskContextComponent>
 {
-    private readonly AbilityActivationSystem activationSystem;
+    private readonly AbilityActivationManager activationManager;
 
-    public AbilityTaskSystem(AbilityActivationSystem sys)
+    public AbilityTaskSystem(AbilityActivationManager manager)
     {
-        activationSystem = sys;
+        activationManager = manager;
     }
 
     protected override void OnUpdate()
@@ -31,7 +31,7 @@ public class AbilityTaskSystem : QuerySystem<TaskStateComponent, AbilityTaskCont
 
                 // 检查 ActiveAbility 下所有 Task 是否都 Done/Cancelled
                 if (AllTasksDone(activeAbility))
-                    activationSystem.CancelAbility(activeAbility);
+                    activationManager.CancelAbility(activeAbility);
             }
         });
     }

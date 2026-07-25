@@ -27,7 +27,7 @@ public class WaitGameplayEventTaskTests
     {
         var store = new EntityStore();
         var bus = new GameplayEventBus();
-        var eventSystem = new EventSystem(bus);
+        var eventDispatcher = new GameplayEventDispatcher(bus);
         ushort eventId = 5;
 
         // Create task entity with WaitGameplayEventComponent
@@ -37,10 +37,10 @@ public class WaitGameplayEventTaskTests
         taskEntity.AddComponent(new WaitGameplayEventComponent { EventId = eventId });
 
         // Register as dynamic listener
-        eventSystem.RegisterDynamic(eventId, taskEntity, 0);
+        eventDispatcher.RegisterDynamic(eventId, taskEntity, 0);
 
-        // Set up the dynamic dispatch handler via EventSystem
-        eventSystem.OnDynamicInvoke = (in GameplayEventRecord record, int entityId, int handlerId) =>
+        // Set up the dynamic dispatch handler via GameplayEventDispatcher
+        eventDispatcher.OnDynamicInvoke = (in GameplayEventRecord record, int entityId, int handlerId) =>
         {
             if (entityId != taskEntity.Id) return;
             if (record.EventId != eventId) return;
@@ -55,7 +55,7 @@ public class WaitGameplayEventTaskTests
 
         // Enqueue matching event
         bus.Enqueue(new GameplayEventRecord { EventId = eventId, Magnitude = 10f });
-        eventSystem.Tick();
+        eventDispatcher.Tick();
 
         ref var state = ref taskEntity.GetComponent<TaskStateComponent>();
         Assert.Equal(ETaskState.Done, state.State);
@@ -66,7 +66,7 @@ public class WaitGameplayEventTaskTests
     {
         var store = new EntityStore();
         var bus = new GameplayEventBus();
-        var eventSystem = new EventSystem(bus);
+        var eventDispatcher = new GameplayEventDispatcher(bus);
         ushort eventId = 5;
 
         var taskEntity = store.CreateEntity();
@@ -74,9 +74,9 @@ public class WaitGameplayEventTaskTests
         taskEntity.AddComponent(new AbilityTaskContextComponent());
         taskEntity.AddComponent(new WaitGameplayEventComponent { EventId = eventId });
 
-        eventSystem.RegisterDynamic(eventId, taskEntity, 0);
+        eventDispatcher.RegisterDynamic(eventId, taskEntity, 0);
 
-        eventSystem.OnDynamicInvoke = (in GameplayEventRecord record, int entityId, int handlerId) =>
+        eventDispatcher.OnDynamicInvoke = (in GameplayEventRecord record, int entityId, int handlerId) =>
         {
             if (entityId != taskEntity.Id) return;
             if (record.EventId != eventId) return;
@@ -91,7 +91,7 @@ public class WaitGameplayEventTaskTests
 
         // Enqueue event with DIFFERENT EventId
         bus.Enqueue(new GameplayEventRecord { EventId = 99, Magnitude = 10f });
-        eventSystem.Tick();
+        eventDispatcher.Tick();
 
         ref var state = ref taskEntity.GetComponent<TaskStateComponent>();
         Assert.Equal(ETaskState.Pending, state.State);
@@ -102,7 +102,7 @@ public class WaitGameplayEventTaskTests
     {
         var store = new EntityStore();
         var bus = new GameplayEventBus();
-        var eventSystem = new EventSystem(bus);
+        var eventDispatcher = new GameplayEventDispatcher(bus);
         ushort eventId = 5;
 
         var taskEntity = store.CreateEntity();
@@ -110,18 +110,18 @@ public class WaitGameplayEventTaskTests
         taskEntity.AddComponent(new AbilityTaskContextComponent());
         taskEntity.AddComponent(new WaitGameplayEventComponent { EventId = eventId });
 
-        eventSystem.RegisterDynamic(eventId, taskEntity, 0);
-        eventSystem.UnregisterDynamic(eventId, taskEntity, 0);
+        eventDispatcher.RegisterDynamic(eventId, taskEntity, 0);
+        eventDispatcher.UnregisterDynamic(eventId, taskEntity, 0);
 
         bool wasInvoked = false;
-        eventSystem.OnDynamicInvoke = (in GameplayEventRecord _, int entityId, int _2) =>
+        eventDispatcher.OnDynamicInvoke = (in GameplayEventRecord _, int entityId, int _2) =>
         {
             if (entityId == taskEntity.Id)
                 wasInvoked = true;
         };
 
         bus.Enqueue(new GameplayEventRecord { EventId = eventId });
-        eventSystem.Tick();
+        eventDispatcher.Tick();
 
         Assert.False(wasInvoked);
     }

@@ -5,7 +5,7 @@ namespace Gameplay.Abilities;
 /// Confirm: 找到所有带该 PredictionKey 的 Entity → 标记 Confirmed。
 /// Reject: 销毁预测 Entity + Aggregator 回滚。
 /// </summary>
-public class PredictionSystem
+public class PredictionManager
 {
     private IPredictionService? service;
 

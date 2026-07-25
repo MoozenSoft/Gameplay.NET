@@ -3,18 +3,18 @@ namespace Gameplay.Tests.Abilities;
 using Gameplay.Abilities;
 using Xunit;
 
-public class EventSystemTests
+public class EventDispatcherTests
 {
     [Fact]
     public void Tick_DispatchesStaticHandler()
     {
         var bus = new GameplayEventBus();
-        var sys = new EventSystem(bus);
+        var eventDispatcher = new GameplayEventDispatcher(bus);
         var handler = new TestHandler();
-        sys.RegisterStatic(1, handler);
+        eventDispatcher.RegisterStatic(1, handler);
 
         bus.Enqueue(new GameplayEventRecord { EventId = 1, Magnitude = 42f });
-        sys.Tick();
+        eventDispatcher.Tick();
 
         Assert.Equal(42f, handler.LastMagnitude, 0.001f);
     }
@@ -23,14 +23,14 @@ public class EventSystemTests
     public void Tick_DispatchesMultipleStaticHandlers()
     {
         var bus = new GameplayEventBus();
-        var sys = new EventSystem(bus);
+        var eventDispatcher = new GameplayEventDispatcher(bus);
         var handler1 = new TestHandler();
         var handler2 = new TestHandler();
-        sys.RegisterStatic(1, handler1);
-        sys.RegisterStatic(1, handler2);
+        eventDispatcher.RegisterStatic(1, handler1);
+        eventDispatcher.RegisterStatic(1, handler2);
 
         bus.Enqueue(new GameplayEventRecord { EventId = 1, Magnitude = 10f });
-        sys.Tick();
+        eventDispatcher.Tick();
 
         Assert.Equal(10f, handler1.LastMagnitude, 0.001f);
         Assert.Equal(10f, handler2.LastMagnitude, 0.001f);
@@ -40,12 +40,12 @@ public class EventSystemTests
     public void Tick_OnlyDispatchesMatchingEventId()
     {
         var bus = new GameplayEventBus();
-        var sys = new EventSystem(bus);
+        var eventDispatcher = new GameplayEventDispatcher(bus);
         var handler = new TestHandler();
-        sys.RegisterStatic(2, handler);
+        eventDispatcher.RegisterStatic(2, handler);
 
         bus.Enqueue(new GameplayEventRecord { EventId = 1, Magnitude = 99f });
-        sys.Tick();
+        eventDispatcher.Tick();
 
         Assert.Equal(0f, handler.LastMagnitude, 0.001f);
     }
@@ -54,10 +54,10 @@ public class EventSystemTests
     public void Tick_ResetsFrameAfterDispatch()
     {
         var bus = new GameplayEventBus();
-        var sys = new EventSystem(bus);
+        var eventDispatcher = new GameplayEventDispatcher(bus);
 
         bus.Enqueue(new GameplayEventRecord { EventId = 1 });
-        sys.Tick();
+        eventDispatcher.Tick();
 
         // After Tick, the frame should be reset
         var frame = bus.Swap();
