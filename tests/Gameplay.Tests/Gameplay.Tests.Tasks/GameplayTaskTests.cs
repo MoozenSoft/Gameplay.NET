@@ -21,7 +21,7 @@ public class GameplayTaskTests
     {
         var entity = store.CreateEntity();
         entity.AddComponent(new TaskOwnerComponent { Owner = default });
-        entity.AddComponent(new TaskStateComponent { State = TaskState.Pending });
+        entity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
         entity.AddComponent(new DelayTaskComponent { Duration = duration, Elapsed = 0f });
         return entity;
     }
@@ -35,7 +35,7 @@ public class GameplayTaskTests
         root.Update(new UpdateTick(0.16f, 0));
 
         ref var state = ref entity.GetComponent<TaskStateComponent>();
-        Assert.Equal(TaskState.Running, state.State);
+        Assert.Equal(ETaskState.Running, state.State);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class GameplayTaskTests
         root.Update(new UpdateTick(0.16f, 0)); // Elapsed=0.32 → Done
 
         ref var state = ref entity.GetComponent<TaskStateComponent>();
-        Assert.Equal(TaskState.Done, state.State);
+        Assert.Equal(ETaskState.Done, state.State);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class GameplayTaskTests
         root.Update(new UpdateTick(0.16f, 0)); // 再做一次 Tick
 
         ref var state = ref entity.GetComponent<TaskStateComponent>();
-        Assert.Equal(TaskState.Done, state.State); // 仍为 Done
+        Assert.Equal(ETaskState.Done, state.State); // 仍为 Done
     }
 
     [Fact]
@@ -84,12 +84,12 @@ public class GameplayTaskTests
     {
         var (world, root) = Setup();
         var entity = CreateDelayTask(world.Store, 3f);
-        entity.GetComponent<TaskStateComponent>().State = TaskState.Cancelled;
+        entity.GetComponent<TaskStateComponent>().State = ETaskState.Cancelled;
 
         root.Update(new UpdateTick(0.16f, 0));
 
         ref var state = ref entity.GetComponent<TaskStateComponent>();
-        Assert.Equal(TaskState.Cancelled, state.State); // 未被 System 改变
+        Assert.Equal(ETaskState.Cancelled, state.State); // 未被 System 改变
     }
 
     [Fact]
@@ -113,6 +113,6 @@ public class GameplayTaskTests
         root.Update(new UpdateTick(0.16f, 0)); // Pending → Running（Elapsed=0, Elapsed>=0 true → Done）
 
         ref var state = ref entity.GetComponent<TaskStateComponent>();
-        Assert.Equal(TaskState.Done, state.State);
+        Assert.Equal(ETaskState.Done, state.State);
     }
 }

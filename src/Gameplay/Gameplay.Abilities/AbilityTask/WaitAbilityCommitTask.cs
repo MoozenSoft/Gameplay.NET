@@ -21,12 +21,12 @@ public class WaitAbilityCommitTaskSystem : QuerySystem<WaitAbilityCommitComponen
         Query.ForEachEntity((ref WaitAbilityCommitComponent wait, ref TaskStateComponent state,
             ref AbilityTaskContextComponent ctx, Entity entity) =>
         {
-            if (state.State != TaskState.Pending && state.State != TaskState.Running)
+            if (state.State != ETaskState.Pending && state.State != ETaskState.Running)
                 return;
 
-            if (state.State == TaskState.Pending)
+            if (state.State == ETaskState.Pending)
             {
-                state.State = TaskState.Running;
+                state.State = ETaskState.Running;
                 return;
             }
 
@@ -35,7 +35,7 @@ public class WaitAbilityCommitTaskSystem : QuerySystem<WaitAbilityCommitComponen
                 ctx.ActiveAbility.TryGetComponent<ActiveAbilityComponent>(out var activeComp))
             {
                 if (activeComp.State == EAbilityInstanceState.Active)
-                    state.State = TaskState.Done;
+                    state.State = ETaskState.Done;
             }
         });
     }

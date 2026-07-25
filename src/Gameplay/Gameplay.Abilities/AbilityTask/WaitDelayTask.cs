@@ -20,7 +20,7 @@ public static class WaitDelayTask
     public static Entity Create(EntityStore store, float duration, Entity activeAbility, int taskHandle = 0)
     {
         var entity = store.CreateEntity();
-        entity.AddComponent(new TaskStateComponent { State = TaskState.Pending });
+        entity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
         entity.AddComponent(new TaskOwnerComponent { Owner = default });
         entity.AddComponent(new DelayTaskComponent { Duration = duration, Elapsed = 0f });
         entity.AddComponent(new AbilityTaskContextComponent

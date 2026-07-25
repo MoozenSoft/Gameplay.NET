@@ -28,10 +28,10 @@ public class WaitGameplayTagTaskSystem : QuerySystem<AbilityTaskContextComponent
     {
         Query.ForEachEntity((ref AbilityTaskContextComponent ctx, ref TaskStateComponent state, Entity entity) =>
         {
-            if (state.State != TaskState.Pending && state.State != TaskState.Running) return;
+            if (state.State != ETaskState.Pending && state.State != ETaskState.Running) return;
 
             // Pending→Running 在 guard 之前，防止 owner 无效时任务卡在 Pending
-            if (state.State == TaskState.Pending)
+            if (state.State == ETaskState.Pending)
             {
                 // WaitGameplayTagRemoved：如果 tag 本来就不在，立即 Done
                 if (entity.TryGetComponent<WaitGameplayTagRemovedComponent>(out var removed))
@@ -41,15 +41,15 @@ public class WaitGameplayTagTaskSystem : QuerySystem<AbilityTaskContextComponent
                     {
                         removed.WasPresent = true;
                         entity.GetComponent<WaitGameplayTagRemovedComponent>() = removed;
-                        state.State = TaskState.Running;
+                        state.State = ETaskState.Running;
                     }
                     else
                     {
-                        state.State = TaskState.Done; // Tag 不存在 → 已完成
+                        state.State = ETaskState.Done; // Tag 不存在 → 已完成
                     }
                     return;
                 }
-                state.State = TaskState.Running;
+                state.State = ETaskState.Running;
                 return;
             }
 
@@ -60,7 +60,7 @@ public class WaitGameplayTagTaskSystem : QuerySystem<AbilityTaskContextComponent
             if (entity.TryGetComponent<WaitGameplayTagAddedComponent>(out var added))
             {
                 if (owner.TryGetComponent<GameplayTagsComponent>(out var tags) && tags.HasTag(added.Tag))
-                    state.State = TaskState.Done;
+                    state.State = ETaskState.Done;
             }
 
             // WaitGameplayTagRemoved: 检查 tag 是否已被移除
@@ -68,7 +68,7 @@ public class WaitGameplayTagTaskSystem : QuerySystem<AbilityTaskContextComponent
             {
                 bool hasNow = owner.TryGetComponent<GameplayTagsComponent>(out var tagsNow) && tagsNow.HasTag(removedR.Tag);
                 if (removedR.WasPresent && !hasNow)
-                    state.State = TaskState.Done;
+                    state.State = ETaskState.Done;
             }
         });
     }

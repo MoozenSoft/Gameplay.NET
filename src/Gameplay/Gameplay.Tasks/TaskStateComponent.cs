@@ -2,7 +2,7 @@ using Friflo.Engine.ECS;
 
 namespace Gameplay.Tasks;
 
-public enum TaskState
+public enum ETaskState
 {
     Pending,
     Running,
@@ -13,5 +13,5 @@ public enum TaskState
 /// <summary>Task 的运行状态。</summary>
 public struct TaskStateComponent : IComponent
 {
-    public TaskState State;
+    public ETaskState State;
 }

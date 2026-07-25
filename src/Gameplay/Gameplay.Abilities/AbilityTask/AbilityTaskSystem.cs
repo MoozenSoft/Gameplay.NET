@@ -22,7 +22,7 @@ public class AbilityTaskSystem : QuerySystem<TaskStateComponent, AbilityTaskCont
     {
         Query.ForEachEntity((ref TaskStateComponent state, ref AbilityTaskContextComponent ctx, Entity entity) =>
         {
-            if (state.State == TaskState.Done || state.State == TaskState.Cancelled)
+            if (state.State == ETaskState.Done || state.State == ETaskState.Cancelled)
             {
                 // 防止 CancelAbility 已删除 ActiveAbility 后重复访问
                 var activeAbility = ctx.ActiveAbility;
@@ -44,7 +44,7 @@ public class AbilityTaskSystem : QuerySystem<TaskStateComponent, AbilityTaskCont
         {
             if (child.TryGetComponent<TaskStateComponent>(out var ts))
             {
-                if (ts.State != TaskState.Done && ts.State != TaskState.Cancelled)
+                if (ts.State != ETaskState.Done && ts.State != ETaskState.Cancelled)
                     return false;
             }
         }

@@ -123,7 +123,7 @@ public class AbilityActivationSystem
             if (child.HasComponent<WaitCancelComponent>() && child.HasComponent<TaskStateComponent>())
             {
                 ref var taskState = ref child.GetComponent<TaskStateComponent>();
-                taskState.State = TaskState.Done;
+                taskState.State = ETaskState.Done;
             }
         }
 

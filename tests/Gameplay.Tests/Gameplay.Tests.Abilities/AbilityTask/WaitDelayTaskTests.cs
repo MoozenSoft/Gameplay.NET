@@ -12,7 +12,7 @@ public class WaitDelayTaskTests
     private static Entity CreateWaitDelayTask(EntityStore store, float duration, Entity activeAbility)
     {
         var entity = store.CreateEntity();
-        entity.AddComponent(new TaskStateComponent { State = TaskState.Pending });
+        entity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
         entity.AddComponent(new TaskOwnerComponent { Owner = default });
         entity.AddComponent(new DelayTaskComponent { Duration = duration, Elapsed = 0f });
         entity.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
@@ -60,7 +60,7 @@ public class WaitDelayTaskTests
         root.Update(new UpdateTick(0.16f, 0)); // Running → Elapsed=0.32 >= 0.3 → Done
 
         ref var state = ref taskEntity.GetComponent<TaskStateComponent>();
-        Assert.Equal(TaskState.Done, state.State);
+        Assert.Equal(ETaskState.Done, state.State);
     }
 
     [Fact]
@@ -86,6 +86,6 @@ public class WaitDelayTaskTests
         root.Update(new UpdateTick(0.16f, 0));
 
         ref var state = ref taskEntity.GetComponent<TaskStateComponent>();
-        Assert.Equal(TaskState.Done, state.State);
+        Assert.Equal(ETaskState.Done, state.State);
     }
 }

@@ -32,13 +32,13 @@ public class WaitAttributeChangeTaskSystem : QuerySystem<WaitAttributeChangeComp
         Query.ForEachEntity((ref WaitAttributeChangeComponent wait, ref TaskStateComponent state,
             ref AbilityTaskContextComponent ctx, Entity entity) =>
         {
-            if (state.State != TaskState.Pending && state.State != TaskState.Running)
+            if (state.State != ETaskState.Pending && state.State != ETaskState.Running)
                 return;
 
             // Pending→Running 在 guard 之前，防止 owner 无效时卡在 Pending
-            if (state.State == TaskState.Pending)
+            if (state.State == ETaskState.Pending)
             {
-                state.State = TaskState.Running;
+                state.State = ETaskState.Running;
                 return;
             }
 
@@ -54,7 +54,7 @@ public class WaitAttributeChangeTaskSystem : QuerySystem<WaitAttributeChangeComp
             {
                 wait.Count--;
                 if (wait.Count <= 0)
-                    state.State = TaskState.Done;
+                    state.State = ETaskState.Done;
                 else
                     wait.LastValue = current;
             }

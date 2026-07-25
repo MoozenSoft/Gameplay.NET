@@ -13,21 +13,21 @@ public class DelayTaskSystem : QuerySystem<TaskStateComponent, DelayTaskComponen
     protected override void OnUpdate()
     {
         Query.ForEachEntity(
-            (ref TaskStateComponent state, ref DelayTaskComponent delay, Entity entity) =>
+            (ref TaskStateComponent state, ref DelayTaskComponent delay, Entity _) =>
         {
             switch (state.State)
             {
-                case TaskState.Pending:
-                    state.State = TaskState.Running;
+                case ETaskState.Pending:
+                    state.State = ETaskState.Running;
                     // Duration=0 → Elapsed (0) >= Duration (0) → 立即 Done
                     if (delay.Elapsed >= delay.Duration)
-                        state.State = TaskState.Done;
+                        state.State = ETaskState.Done;
                     break;
 
-                case TaskState.Running:
+                case ETaskState.Running:
                     delay.Elapsed += Tick.deltaTime;
                     if (delay.Elapsed >= delay.Duration)
-                        state.State = TaskState.Done;
+                        state.State = ETaskState.Done;
                     break;
 
                 // Done / Cancelled → 不处理，等外部决策

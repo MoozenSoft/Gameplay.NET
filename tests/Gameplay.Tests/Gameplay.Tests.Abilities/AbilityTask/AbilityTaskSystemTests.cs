@@ -40,12 +40,12 @@ public class AbilityTaskSystemTests
         // 两个 Task 子 Entity，都标记为 Done
         var task1 = store.CreateEntity();
         activeAbility.AddChild(task1);
-        task1.AddComponent(new TaskStateComponent { State = TaskState.Done });
+        task1.AddComponent(new TaskStateComponent { State = ETaskState.Done });
         task1.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         var task2 = store.CreateEntity();
         activeAbility.AddChild(task2);
-        task2.AddComponent(new TaskStateComponent { State = TaskState.Done });
+        task2.AddComponent(new TaskStateComponent { State = ETaskState.Done });
         task2.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
@@ -76,13 +76,13 @@ public class AbilityTaskSystemTests
         // Task1: Done
         var task1 = store.CreateEntity();
         activeAbility.AddChild(task1);
-        task1.AddComponent(new TaskStateComponent { State = TaskState.Done });
+        task1.AddComponent(new TaskStateComponent { State = ETaskState.Done });
         task1.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         // Task2: 仍在 Running
         var task2 = store.CreateEntity();
         activeAbility.AddChild(task2);
-        task2.AddComponent(new TaskStateComponent { State = TaskState.Running });
+        task2.AddComponent(new TaskStateComponent { State = ETaskState.Running });
         task2.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
@@ -115,13 +115,13 @@ public class AbilityTaskSystemTests
         // Task1: Done
         var task1 = store.CreateEntity();
         activeAbility.AddChild(task1);
-        task1.AddComponent(new TaskStateComponent { State = TaskState.Done });
+        task1.AddComponent(new TaskStateComponent { State = ETaskState.Done });
         task1.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         // Task2: Cancelled
         var task2 = store.CreateEntity();
         activeAbility.AddChild(task2);
-        task2.AddComponent(new TaskStateComponent { State = TaskState.Cancelled });
+        task2.AddComponent(new TaskStateComponent { State = ETaskState.Cancelled });
         task2.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
@@ -152,7 +152,7 @@ public class AbilityTaskSystemTests
         // 唯一 Task: 仍在 Pending（Query 会匹配，但 state 不是 Done/Cancelled → 跳过）
         var task1 = store.CreateEntity();
         activeAbility.AddChild(task1);
-        task1.AddComponent(new TaskStateComponent { State = TaskState.Pending });
+        task1.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
         task1.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));

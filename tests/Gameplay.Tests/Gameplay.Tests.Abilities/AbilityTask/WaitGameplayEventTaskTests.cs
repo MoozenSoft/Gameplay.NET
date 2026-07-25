@@ -32,7 +32,7 @@ public class WaitGameplayEventTaskTests
 
         // Create task entity with WaitGameplayEventComponent
         var taskEntity = store.CreateEntity();
-        taskEntity.AddComponent(new TaskStateComponent { State = TaskState.Pending });
+        taskEntity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
         taskEntity.AddComponent(new AbilityTaskContextComponent());
         taskEntity.AddComponent(new WaitGameplayEventComponent { EventId = eventId });
 
@@ -49,7 +49,7 @@ public class WaitGameplayEventTaskTests
             if (entity.HasComponent<WaitGameplayEventComponent>())
             {
                 ref var state = ref entity.GetComponent<TaskStateComponent>();
-                state.State = TaskState.Done;
+                state.State = ETaskState.Done;
             }
         };
 
@@ -58,7 +58,7 @@ public class WaitGameplayEventTaskTests
         eventSystem.Tick();
 
         ref var state = ref taskEntity.GetComponent<TaskStateComponent>();
-        Assert.Equal(TaskState.Done, state.State);
+        Assert.Equal(ETaskState.Done, state.State);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class WaitGameplayEventTaskTests
         ushort eventId = 5;
 
         var taskEntity = store.CreateEntity();
-        taskEntity.AddComponent(new TaskStateComponent { State = TaskState.Pending });
+        taskEntity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
         taskEntity.AddComponent(new AbilityTaskContextComponent());
         taskEntity.AddComponent(new WaitGameplayEventComponent { EventId = eventId });
 
@@ -85,7 +85,7 @@ public class WaitGameplayEventTaskTests
             if (entity.HasComponent<WaitGameplayEventComponent>())
             {
                 ref var state = ref entity.GetComponent<TaskStateComponent>();
-                state.State = TaskState.Done;
+                state.State = ETaskState.Done;
             }
         };
 
@@ -94,7 +94,7 @@ public class WaitGameplayEventTaskTests
         eventSystem.Tick();
 
         ref var state = ref taskEntity.GetComponent<TaskStateComponent>();
-        Assert.Equal(TaskState.Pending, state.State);
+        Assert.Equal(ETaskState.Pending, state.State);
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class WaitGameplayEventTaskTests
         ushort eventId = 5;
 
         var taskEntity = store.CreateEntity();
-        taskEntity.AddComponent(new TaskStateComponent { State = TaskState.Pending });
+        taskEntity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
         taskEntity.AddComponent(new AbilityTaskContextComponent());
         taskEntity.AddComponent(new WaitGameplayEventComponent { EventId = eventId });
 

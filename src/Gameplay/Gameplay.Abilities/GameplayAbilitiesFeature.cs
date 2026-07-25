@@ -68,7 +68,7 @@ public class GameplayAbilitiesFeature
         };
         // WaitEventTaskSystem 在 Phase 1: 注册 Pending Task 为 EventSystem listener
         // EventSystem.Tick() 在 Update() 开头 Phase 0: 消费本帧事件 → 通知 listener
-        // → 下一帧 WaitEventTaskSystem.OnUpdate 检测到 TaskState.Done
+        // → 下一帧 WaitEventTaskSystem.OnUpdate 检测到 ETaskState.Done
     }
 
     /// <summary>
