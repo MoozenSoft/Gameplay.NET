@@ -101,20 +101,21 @@ public class AbilityActivationSystem
     /// <summary>取消 Ability。</summary>
     public void CancelAbility(Entity activeEntity)
     {
-        if (!activeEntity.TryGetComponent<ActiveAbilityComponent>(out var comp))
+        if (!activeEntity.HasComponent<ActiveAbilityComponent>())
             return;
-
+        ref var comp = ref activeEntity.GetComponent<ActiveAbilityComponent>();
         comp.State = EAbilityInstanceState.Cancelled;
         comp.IsActive = false;
 
         var owner = comp.Owner;
+        var ownedTags = comp.ActivationOwnedTags;
 
         // 移除 ActivationOwnedTags
-        if (!owner.IsNull && comp.ActivationOwnedTags != null
+        if (!owner.IsNull && ownedTags != null
             && owner.HasComponent<GameplayTagsComponent>())
         {
             ref var tags = ref owner.GetComponent<GameplayTagsComponent>();
-            foreach (var tag in comp.ActivationOwnedTags)
+            foreach (var tag in ownedTags)
                 tags.RemoveTag(tag);
         }
 

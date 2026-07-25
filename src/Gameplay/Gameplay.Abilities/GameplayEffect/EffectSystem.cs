@@ -260,7 +260,8 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         {
             if (spec.Definition.GrantedTags.Count > 0)
             {
-                if (handleToEntity.TryGetValue(handle, out var entity))
+                if (handleToEntity.TryGetValue(handle, out var entity)
+                    && entity.HasComponent<ActiveGameplayEffectComponent>())
                 {
                     var comp = entity.GetComponent<ActiveGameplayEffectComponent>();
                     var target = comp.TargetEntity;
@@ -281,7 +282,8 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                     if (condEffect.Effect != null && (condEffect.RequiredSourceTags?.Count ?? 0) == 0)
                     {
                         var chainSpec = new GameplayEffectSpec(condEffect.Effect, spec.Level);
-                        if (handleToEntity.TryGetValue(handle, out var entity))
+                        if (handleToEntity.TryGetValue(handle, out var entity)
+                            && entity.HasComponent<ActiveGameplayEffectComponent>())
                         {
                             var comp = entity.GetComponent<ActiveGameplayEffectComponent>();
                             deferredApplies.Add((chainSpec, comp.TargetEntity));

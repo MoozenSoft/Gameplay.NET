@@ -54,19 +54,25 @@ public class WaitGameplayTagTaskSystem : QuerySystem<AbilityTaskContextComponent
             }
 
             var owner = GetOwner(ctx);
-            if (owner.IsNull) return;
+            if (owner.IsNull || !owner.HasComponent<GameplayTagsComponent>())
+            {
+                state.State = ETaskState.Done;
+                return;
+            }
 
             // WaitGameplayTagAdded: 检查 tag 是否已出现
             if (entity.TryGetComponent<WaitGameplayTagAddedComponent>(out var added))
             {
-                if (owner.TryGetComponent<GameplayTagsComponent>(out var tags) && tags.HasTag(added.Tag))
+                ref var tags = ref owner.GetComponent<GameplayTagsComponent>();
+                if (tags.HasTag(added.Tag))
                     state.State = ETaskState.Done;
             }
 
             // WaitGameplayTagRemoved: 检查 tag 是否已被移除
             if (entity.TryGetComponent<WaitGameplayTagRemovedComponent>(out var removedR))
             {
-                bool hasNow = owner.TryGetComponent<GameplayTagsComponent>(out var tagsNow) && tagsNow.HasTag(removedR.Tag);
+                ref var tagsNow = ref owner.GetComponent<GameplayTagsComponent>();
+                bool hasNow = tagsNow.HasTag(removedR.Tag);
                 if (removedR.WasPresent && !hasNow)
                     state.State = ETaskState.Done;
             }

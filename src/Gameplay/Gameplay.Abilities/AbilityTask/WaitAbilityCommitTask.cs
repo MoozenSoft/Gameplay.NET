@@ -31,9 +31,14 @@ public class WaitAbilityCommitTaskSystem : QuerySystem<WaitAbilityCommitComponen
             }
 
             // 检查 ActiveAbility 的 State：Active = Commit 完成
-            if (!ctx.ActiveAbility.IsNull &&
-                ctx.ActiveAbility.TryGetComponent<ActiveAbilityComponent>(out var activeComp))
+            // ActiveAbility 已销毁 → 无条件 Done
+            if (ctx.ActiveAbility.IsNull || !ctx.ActiveAbility.HasComponent<ActiveAbilityComponent>())
             {
+                state.State = ETaskState.Done;
+            }
+            else
+            {
+                ref var activeComp = ref ctx.ActiveAbility.GetComponent<ActiveAbilityComponent>();
                 if (activeComp.State == EAbilityInstanceState.Active)
                     state.State = ETaskState.Done;
             }

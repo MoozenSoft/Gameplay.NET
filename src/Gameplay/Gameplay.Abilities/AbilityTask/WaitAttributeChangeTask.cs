@@ -42,11 +42,15 @@ public class WaitAttributeChangeTaskSystem : QuerySystem<WaitAttributeChangeComp
                 return;
             }
 
-            if (ctx.ActiveAbility.IsNull) return;
-            if (!ctx.ActiveAbility.TryGetComponent<ActiveAbilityComponent>(out var activeComp))
+            // ActiveAbility 已销毁 → 无条件 Done
+            if (ctx.ActiveAbility.IsNull || !ctx.ActiveAbility.HasComponent<ActiveAbilityComponent>())
+            {
+                state.State = ETaskState.Done;
                 return;
+            }
+            ref var activeComp = ref ctx.ActiveAbility.GetComponent<ActiveAbilityComponent>();
             var owner = activeComp.Owner;
-            if (owner.IsNull) return;
+            if (owner.IsNull) { state.State = ETaskState.Done; return; }
 
             float current = attrSys.GetCurrentValue(owner, wait.AttributeId);
 
