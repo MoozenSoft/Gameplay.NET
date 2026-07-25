@@ -7,7 +7,7 @@ namespace Gameplay.Abilities;
 
 /// <summary>
 /// WaitGameplayEvent Task Component —— 存储等待的 EventId。<br/>
-/// 当 EventSystem 分发匹配的 GameplayEvent 时，ETaskState 自动设为 Done。
+/// 当 EventSystem 分发匹配的 GameplayEvent 时，TaskState 自动设为 Done。
 /// </summary>
 public struct WaitGameplayEventComponent : IComponent
 {
@@ -18,7 +18,7 @@ public struct WaitGameplayEventComponent : IComponent
 /// <summary>
 /// WaitGameplayEvent Task System —— 管理 Task 的注册和事件分发。<br/>
 /// 1. 为 Pending Task 注册 EventSystem 动态 Listener。<br/>
-/// 2. 通过 OnDynamicInvoke 回调，在匹配事件到达时将 ETaskState 设为 Done。
+/// 2. 通过 OnDynamicInvoke 回调，在匹配事件到达时将 TaskState 设为 Done。
 /// </summary>
 public class WaitGameplayEventTaskSystem : QuerySystem<WaitGameplayEventComponent, TaskStateComponent>
 {
@@ -49,12 +49,16 @@ public class WaitGameplayEventTaskSystem : QuerySystem<WaitGameplayEventComponen
                 eventSystem.RegisterDynamic(wait.EventId, entity, 0);
                 state.State = ETaskState.Running;
             }
+            else if (state.State == ETaskState.Done || state.State == ETaskState.Cancelled)
+            {
+                eventSystem.UnregisterDynamic(wait.EventId, entity, 0);
+            }
         });
     }
 
     /// <summary>
     /// EventSystem 动态分发回调。
-    /// 当事件 ID 匹配 WaitGameplayEventComponent.EventId 时，将 ETaskState 设为 Done。
+    /// 当事件 ID 匹配 WaitGameplayEventComponent.EventId 时，将 TaskState 设为 Done。
     /// </summary>
     private void HandleDynamicInvoke(in GameplayEventRecord record, int entityId, int handlerId)
     {

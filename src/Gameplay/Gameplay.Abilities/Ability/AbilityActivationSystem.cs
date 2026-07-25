@@ -1,4 +1,5 @@
 // src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationSystem.cs
+using System.Collections.Generic;
 using Friflo.Engine.ECS;
 using Gameplay.Tags;
 using Gameplay.Tasks;
@@ -117,7 +118,7 @@ public class AbilityActivationSystem
                 tags.RemoveTag(tag);
         }
 
-        // 将 WaitCancel Task 标记为 Done
+        // 将 WaitCancel Task 标记为 Done + 入队延迟删除（Query 内不能 DeleteEntity）
         foreach (var child in activeEntity.ChildEntities)
         {
             if (child.HasComponent<WaitCancelComponent>() && child.HasComponent<TaskStateComponent>())
@@ -126,8 +127,23 @@ public class AbilityActivationSystem
                 taskState.State = ETaskState.Done;
             }
         }
+        pendingDeletions.Add(activeEntity);
+    }
 
-        activeEntity.DeleteEntity();
+    // 延迟删除队列（防止 Query 循环内 StructuralChangeException）
+    private readonly List<Entity> pendingDeletions = new();
+
+    /// <summary>处理延迟删除队列。需在 SystemRoot.Update 之后调用。</summary>
+    public void ProcessPendingDeletions()
+    {
+        foreach (var entity in pendingDeletions)
+        {
+            if (entity.IsNull) continue;
+            foreach (var child in entity.ChildEntities)
+                child.DeleteEntity();
+            entity.DeleteEntity();
+        }
+        pendingDeletions.Clear();
     }
 
     private void RollbackCommit(ref Entity activeEntity, Entity owner, AbilitySpec spec)

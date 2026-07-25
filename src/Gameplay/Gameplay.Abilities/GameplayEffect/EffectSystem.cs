@@ -27,6 +27,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
 
     // 延迟 Apply 队列（OnCompleteEffects / OnApplicationEffects 产生的新 GE）
     private readonly List<(GameplayEffectSpec spec, Entity target)> deferredApplies = new();
+    private static readonly System.Random sharedRandom = new();
 
     protected override void OnUpdate()
     {
@@ -83,7 +84,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         // ChanceToApply
         if (ge.ChanceToApply < 1.0f)
         {
-            if ((float)new System.Random().NextDouble() > ge.ChanceToApply)
+            if ((float)sharedRandom.NextDouble() > ge.ChanceToApply)
                 return false;
         }
 
@@ -289,6 +290,14 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                 }
             }
 
+            // 销毁 Entity
+            if (handleToEntity.TryGetValue(handle, out var effectEntity))
+            {
+                // 级联删除子 Entity（如 OnCompleteEffects 链产生的子 GE）
+                foreach (var child in effectEntity.ChildEntities)
+                    child.DeleteEntity();
+                effectEntity.DeleteEntity();
+            }
             // Remove from Handle caches
             handleToSpec.Remove(handle);
             handleToEntity.Remove(handle);
@@ -302,18 +311,18 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         if (comp.StackCount > 1)
         {
             comp.StackCount--;
+            var spec = GetSpecFromHandle(comp.Handle);
             switch (comp.StackingExpirationPolicy)
             {
                 case EGameplayEffectStackingExpirationPolicy.ClearEntireStack:
                     RemoveEffect(comp.Handle, EEffectEndType.Normal);
                     break;
                 case EGameplayEffectStackingExpirationPolicy.RemoveSingleStackAndRefreshDuration:
-                    // Duration refreshed (set when this Stack was applied)
-                    break;
                 case EGameplayEffectStackingExpirationPolicy.RefreshDuration:
-                    // Duration stays, manual management
+                    comp.Duration = spec?.Duration ?? comp.Duration; // 刷新 Duration
                     break;
             }
+            entity.GetComponent<ActiveGameplayEffectComponent>() = comp;
         }
         else
         {

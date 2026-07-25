@@ -1,5 +1,6 @@
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
+using Gameplay.Tasks;
 
 namespace Gameplay.Abilities;
 
@@ -18,6 +19,7 @@ public class GameplayAbilitiesFeature
     public WaitAttributeChangeTaskSystem WaitAttrTaskSystem { get; }
     public WaitGameplayTagTaskSystem WaitTagTaskSystem { get; }
     public WaitAbilityCommitTaskSystem WaitCommitTaskSystem { get; }
+    public DelayTaskSystem DelayTaskSystem { get; }
     public SystemRoot SystemRoot { get; }
 
     // ── POCO Manager / System（外部调用）──
@@ -50,11 +52,13 @@ public class GameplayAbilitiesFeature
         WaitAttrTaskSystem = new WaitAttributeChangeTaskSystem(AttributeSystem);
         WaitTagTaskSystem = new WaitGameplayTagTaskSystem();
         WaitCommitTaskSystem = new WaitAbilityCommitTaskSystem();
+        DelayTaskSystem = new DelayTaskSystem();
 
         // ── SystemRoot — 按 Phase 注册 Friflo QuerySystem ──
         SystemRoot = new SystemRoot(store)
         {
             // Phase 1: 内置 Task 推进（Pending→Running + 条件检查）
+            DelayTaskSystem,          // DelayTask 计时（共享——WaitDelayTask 复用）
             WaitEventTaskSystem,
             WaitAttrTaskSystem,
             WaitTagTaskSystem,
@@ -81,6 +85,9 @@ public class GameplayAbilitiesFeature
 
         // Phase 1-3: ECS System 执行
         SystemRoot.Update(new UpdateTick(deltaTime, 0));
+
+        // Phase 4: 延迟删除（Query 循环内不能 DeleteEntity）
+        ActivationSystem.ProcessPendingDeletions();
     }
 
     private static GameplayCueManager CreateCueManager(NetMode netMode)

@@ -28,6 +28,7 @@ public static class WaitDelayTask
             ActiveAbility = activeAbility,
             TaskHandle = taskHandle,
         });
+        activeAbility.AddChild(entity);
         return entity;
     }
 }

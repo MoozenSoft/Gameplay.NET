@@ -25,7 +25,9 @@ public class ConsumeCostCommit : IAbilityCommit
     {
         // 直接读 CurrentValue → 减去 → 写回 → 标记 Dirty
         float current = attributeSystem.GetCurrentValue(owner, attributeId);
-        attributeSystem.SetAggregatorValue(owner, attributeId, current - amount);
+        float newValue = current - amount;
+        if (newValue < 0) newValue = 0;
+        attributeSystem.SetAggregatorValue(owner, attributeId, newValue);
 
         if (owner.HasComponent<DirtyAttributeComponent>())
         {

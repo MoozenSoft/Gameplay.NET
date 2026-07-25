@@ -49,6 +49,7 @@ public class AbilityTaskSystemTests
         task2.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
+        activationSys.ProcessPendingDeletions();
 
         // ActiveAbility 应被 Cancel → DeleteEntity → 实体已不存在
         Assert.True(activeAbility.IsNull);
@@ -125,6 +126,7 @@ public class AbilityTaskSystemTests
         task2.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
+        activationSys.ProcessPendingDeletions();
 
         // 全部 Done/Cancelled → 应 Cancel → DeleteEntity
         Assert.True(activeAbility.IsNull);
