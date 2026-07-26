@@ -109,6 +109,9 @@ dotnet run --project samples/Gameplay.Host/Gameplay.Host.csproj
   // ❌ 禁止：TryGetComponent(out var) + 修改（值拷贝陷阱）
   ```（如 `EGameplayModOp`、`EEffectEndType`、`EActivationSource`）
 - 使用文件范围的命名空间（比如：src/Gameplay/ 目录使用 `namespace Gameplay;`，src/Gameplay/Gameplay.Tags 目录使用 `namespace Gameplay.Tags;`，src/Gameplay/Gameplay.Abilities 目录使用 `namespace Gameplay.Abilities;`，src/Gameplay/Gameplay.Tasks 目录使用 `namespace Gameplay.Tasks;`，tests/Gameplay.Tests/Gameplay.Tests.Tags 目录使用 `namespace Gameplay.Tests.Tags;`，不加大括号缩进）
+- **数据驱动（Data-Driven）**：行为由数据定义，逻辑与数据分离。两层含义：① ECS 层——Entity 行为由挂载的 Component 组合决定，不靠类继承；Component 为纯数据 struct（无行为方法），System 持有全部逻辑。② 配置层——玩法数值（血量、伤害、冷却时间等）不进代码，走静态数据配置（如 JSON、数据表）；代码只定义数据结构和消费方式，具体值由策划/配置决定。判断"能不能做某事" = 查数据而非写死条件。
+- **事件驱动（Event-Driven）**：跨系统通信走事件总线，避免直接耦合。生产方 `GameplayEventBus.Enqueue(in record)` —— 写进去就不管谁来消费；消费方注册 `IGameplayEventHandler` 或动态 Listener，由 `GameplayEventDispatcher.Tick()` 统一分发。适合伤害/治疗/拾取等需要多方响应的场景，添加新消费者无需改动生产者。
+- **命令模式（Command Pattern）**：将请求/操作封装为接口对象，统一执行流程。如 `IAbilityRequirement.Evaluate()`（条件检查，纯函数无副作用）、`IAbilityCommit.Execute()`（副作用提交，可回滚）、`IAbilityExecutor.Execute()`（执行体）、`IGameplayEventHandler.Handle()`（事件处理）。接口约束让同类操作可串联组合、入队延迟执行、失败时回滚。
 - 遵守 TDD（测试驱动开发）
 - 优先使用 0 GC 方案，但酌情权衡——热路径（每帧遍历大量 Entity 的 System）严格要求；冷路径（初始化、配置加载、RPC 处理）可放松，以可读性为先：
   - **struct 代替 class**：值类型栈分配，无 GC 压力；ECS Component 均为 struct
