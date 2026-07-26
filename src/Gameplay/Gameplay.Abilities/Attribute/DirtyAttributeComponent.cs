@@ -4,7 +4,7 @@ using Friflo.Engine.ECS;
 namespace Gameplay.Abilities;
 
 /// <summary>
-/// Entity 上的属性脏标记。Bit&lt;i&gt; = Attribute&lt;i&gt; 需要重算。
+/// Entity 上的属性脏标记。DirtyBits 第 i 位为 1 表示第 i 个 Attribute 需要重算。
 /// SG 编译期保证 AttributeId 不超过 64。
 /// </summary>
 public struct DirtyAttributeComponent : IComponent
