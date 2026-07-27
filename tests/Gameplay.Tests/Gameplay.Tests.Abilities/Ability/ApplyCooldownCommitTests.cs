@@ -11,8 +11,8 @@ public class ApplyCooldownCommitTests
     public void Execute_NoCooldownEffect_Skips()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var commit = new ApplyCooldownCommit(effectSys);
         var owner = store.CreateEntity();
 

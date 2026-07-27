@@ -19,8 +19,8 @@ public class EffectSystemIntegrationTests
     public void Stacking_SameEffectTwice_IncreasesStackCount()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         var ge = new GameplayEffect
         {
@@ -29,7 +29,6 @@ public class EffectSystemIntegrationTests
             StackingDurationPolicy = EGameplayEffectStackingDurationPolicy.NeverRefresh,
         };
         var target = store.CreateEntity();
-        target.AddComponent(new DirtyAttributeComponent());
 
         int handle = effectSys.Apply(new GameplayEffectSpec(ge, 1f) { Duration = 10f, StackCount = 1 }, target);
         Assert.True(handle > 0);
@@ -47,8 +46,8 @@ public class EffectSystemIntegrationTests
     public void Stacking_ExceedsLimit_Rejects()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         var ge = new GameplayEffect
         {
@@ -56,7 +55,6 @@ public class EffectSystemIntegrationTests
             StackLimit = 1,
         };
         var target = store.CreateEntity();
-        target.AddComponent(new DirtyAttributeComponent());
 
         int h1 = effectSys.Apply(new GameplayEffectSpec(ge, 1f) { Duration = 10f }, target);
         Assert.True(h1 > 0);
@@ -72,8 +70,8 @@ public class EffectSystemIntegrationTests
     public void Immunity_BlocksApplication()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         // Step 1: Apply a GE that grants immunity to "Buff.Fire"
         var immunityGE = new GameplayEffect
@@ -86,8 +84,7 @@ public class EffectSystemIntegrationTests
             },
         };
         var target = store.CreateEntity();
-        target.AddComponent(new DirtyAttributeComponent());
-        int h = effectSys.Apply(new GameplayEffectSpec(immunityGE, 1f) { Duration = 10f }, target);
+int h = effectSys.Apply(new GameplayEffectSpec(immunityGE, 1f) { Duration = 10f }, target);
         Assert.True(h > 0);
 
         // Step 2: Try to apply "Buff.Fire" GE
@@ -105,8 +102,8 @@ public class EffectSystemIntegrationTests
     public void CanApply_RespectsChanceToApply()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         var ge = new GameplayEffect
         {
@@ -124,8 +121,8 @@ public class EffectSystemIntegrationTests
     public void RemoveOtherEffects_RemovesConflictingEffect()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         // Step 1: Apply "Freeze" GE
         var freezeGE = new GameplayEffect
@@ -134,8 +131,7 @@ public class EffectSystemIntegrationTests
             GrantedTags = new() { GameplayTag.Request("State.Frozen") },
         };
         var target = store.CreateEntity();
-        target.AddComponent(new DirtyAttributeComponent());
-        var freezeSpec = new GameplayEffectSpec(freezeGE, 1f) { Duration = -1f };
+var freezeSpec = new GameplayEffectSpec(freezeGE, 1f) { Duration = -1f };
         int freezeHandle = effectSys.Apply(freezeSpec, target);
         Assert.True(freezeHandle > 0);
 
@@ -163,8 +159,8 @@ public class EffectSystemIntegrationTests
     public void OnApplicationEffects_ChainsAdditionalGE()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         // GE_B: the chained effect (grants "Buff.Shield" tag)
         var shieldGE = new GameplayEffect
@@ -184,8 +180,7 @@ public class EffectSystemIntegrationTests
         };
 
         var target = store.CreateEntity();
-        target.AddComponent(new DirtyAttributeComponent());
-        target.AddComponent(new Gameplay.Tags.GameplayTagsComponent());
+target.AddComponent(new Gameplay.Tags.GameplayTagsComponent());
 
         int handle = effectSys.Apply(new GameplayEffectSpec(mainGE, 1f) { Duration = 10f }, target);
         Assert.True(handle > 0);
@@ -201,8 +196,8 @@ public class EffectSystemIntegrationTests
     public void OnCompleteEffects_TriggersOnRemove()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         var chainGE = new GameplayEffect
         {
@@ -220,14 +215,13 @@ public class EffectSystemIntegrationTests
         };
 
         var target = store.CreateEntity();
-        target.AddComponent(new DirtyAttributeComponent());
-        target.AddComponent(new Gameplay.Tags.GameplayTagsComponent());
+target.AddComponent(new Gameplay.Tags.GameplayTagsComponent());
 
         int handle = effectSys.Apply(new GameplayEffectSpec(mainGE, 1f) { Duration = 0.5f }, target);
         Assert.True(handle > 0);
 
         // Run EffectSystem to expire the main GE
-        var root = new SystemRoot(store) { effectSys, attrSys };
+        var root = new SystemRoot(store) { effectSys };
         root.Update(new UpdateTick(1f, 0));
 
         // Target now has "Buff.After" tag from OnCompleteEffects

@@ -12,7 +12,7 @@ namespace Gameplay.Abilities;
 public class GameplayAbilitiesFeature
 {
     // ── Friflo QuerySystems（SystemRoot 管理）──
-    public AttributeSystem AttributeSystem { get; }
+    public AttributeAggregatorManager AttributeAggregatorManager { get; }
     public EffectSystem EffectSystem { get; }
     public AbilityTaskSystem AbilityTaskSystem { get; }
     public WaitGameplayEventTaskSystem WaitEventTaskSystem { get; }
@@ -32,8 +32,8 @@ public class GameplayAbilitiesFeature
     public GameplayAbilitiesFeature(EntityStore store, NetMode netMode)
     {
         // ── 基础设施 ──
-        AttributeSystem = new AttributeSystem();
-        EffectSystem = new EffectSystem(AttributeSystem);
+        AttributeAggregatorManager = new AttributeAggregatorManager();
+        EffectSystem = new EffectSystem(AttributeAggregatorManager);
 
         // ── 事件系统 ──
         EventBus = new GameplayEventBus();
@@ -49,7 +49,7 @@ public class GameplayAbilitiesFeature
         // ── Task 系统 ──
         AbilityTaskSystem = new AbilityTaskSystem(ActivationManager);
         WaitEventTaskSystem = new WaitGameplayEventTaskSystem(EventDispatcher, store);
-        WaitAttrTaskSystem = new WaitAttributeChangeTaskSystem(AttributeSystem);
+        WaitAttrTaskSystem = new WaitAttributeChangeTaskSystem(AttributeAggregatorManager);
         WaitTagTaskSystem = new WaitGameplayTagTaskSystem();
         WaitCommitTaskSystem = new WaitAbilityCommitTaskSystem();
         DelayTaskSystem = new DelayTaskSystem();
@@ -67,8 +67,6 @@ public class GameplayAbilitiesFeature
             AbilityTaskSystem,
             // Phase 3: GE Duration/Period Tick + Apply/Remove
             EffectSystem,
-            // Phase 4: Attribute Dirty → Evaluate → CurrentValue
-            AttributeSystem,
         };
         // WaitEventTaskSystem 在 Phase 1: 注册 Pending Task 为 GameplayEventDispatcher listener
         // GameplayEventDispatcher.Tick() 在 Update() 开头 Phase 0: 消费本帧事件 → 通知 listener
@@ -83,10 +81,13 @@ public class GameplayAbilitiesFeature
         // Phase 0: Event 交换 + 分发（在 SystemRoot 之前，确保本帧事件对 System 可见）
         EventDispatcher.Tick();
 
-        // Phase 1-3: ECS System 执行
+        // Phase 1-3: ECS System 执行（Task + Effect）
         SystemRoot.Update(new UpdateTick(deltaTime, 0));
 
-        // Phase 4: 延迟删除（Query 循环内不能 DeleteEntity）
+        // Phase 4: Attribute 固定阶段 Flush（统一 Evaluate + 写回 CurrentValue）
+        AttributeAggregatorManager.Flush();
+
+        // Phase 5: 延迟删除（Query 循环内不能 DeleteEntity）
         ActivationManager.ProcessPendingDeletions();
     }
 

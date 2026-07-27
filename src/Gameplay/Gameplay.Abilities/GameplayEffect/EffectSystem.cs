@@ -12,7 +12,7 @@ namespace Gameplay.Abilities;
 /// </summary>
 public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
 {
-    private readonly AttributeSystem attributeSystem;
+    private readonly AttributeAggregatorManager attributeManager;
     private int nextHandle = 1;
 
     // Handle -> Spec 缓存（Apply 时存储，Remove 时取回）
@@ -20,9 +20,9 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
     // Handle -> Entity 懒查询（Remove 时需要 Entity 来移除 Tags）
     private readonly Dictionary<int, Entity> handleToEntity = new();
 
-    public EffectSystem(AttributeSystem attributeSystem)
+    public EffectSystem(AttributeAggregatorManager attributeManager)
     {
-        this.attributeSystem = attributeSystem;
+        this.attributeManager = attributeManager;
     }
 
     // 延迟 Apply 队列（OnCompleteEffects / OnApplicationEffects 产生的新 GE）
@@ -196,28 +196,21 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         handleToSpec[handle] = spec;
         handleToEntity[handle] = entity;
 
-        // 5. Apply Modifiers -> AttributeSystem（仅 Persistent + ExecuteOnApply）
+        // 5. Apply Modifiers -> AttributeAggregatorManager（仅 Persistent + ExecuteOnApply）
         foreach (var mod in spec.Modifiers)
         {
-            if (target.HasComponent<DirtyAttributeComponent>())
+            if (mod.ExecutionType == EModifierExecutionType.Persistent)
             {
-                if (mod.ExecutionType == EModifierExecutionType.Persistent)
-                {
-                    if (!attributeSystem.HasAggregator(target, mod.AttributeId))
-                        attributeSystem.SetAggregatorValue(target, mod.AttributeId, 0f);
-                    attributeSystem.AddAggregatorMod(target, mod.AttributeId, handle,
-                        mod.EvaluatedMagnitude, mod.ModOp);
-                    ref var dirty = ref target.GetComponent<DirtyAttributeComponent>();
-                    dirty.SetBit(mod.AttributeId);
-                }
-                else if (mod.ExecutionType == EModifierExecutionType.ExecuteOnApply)
-                {
-                    float baseVal = attributeSystem.GetBaseValue(target, mod.AttributeId);
-                    float newBase = ApplyModOp(baseVal, mod.ModOp, mod.EvaluatedMagnitude);
-                    attributeSystem.SetAggregatorValue(target, mod.AttributeId, newBase);
-                    ref var dirty = ref target.GetComponent<DirtyAttributeComponent>();
-                    dirty.SetBit(mod.AttributeId);
-                }
+                if (!attributeManager.HasAggregator(target, mod.Attribute))
+                    attributeManager.SetAggregatorValue(target, mod.Attribute, 0f);
+                attributeManager.AddAggregatorMod(target, mod.Attribute, handle,
+                    mod.EvaluatedMagnitude, mod.ModOp);
+            }
+            else if (mod.ExecutionType == EModifierExecutionType.ExecuteOnApply)
+            {
+                float baseVal = attributeManager.GetBaseValue(target, mod.Attribute);
+                float newBase = ApplyModOp(baseVal, mod.ModOp, mod.EvaluatedMagnitude);
+                attributeManager.SetAggregatorValue(target, mod.Attribute, newBase);
             }
         }
 
@@ -253,7 +246,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         if (!removingHandles.Add(handle)) return; // 防止递归
 
         // Always remove mods from aggregator (works regardless of cache)
-        attributeSystem.RemoveAggregatorModsByHandle(handle);
+        attributeManager.RemoveAggregatorModsByHandle(handle);
 
         // Remove GrantedTags + trigger OnCompleteEffects (only if we have cached spec + entity)
         if (handleToSpec.TryGetValue(handle, out var spec))
@@ -342,8 +335,6 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         if (spec == null) return;
 
         var target = comp.TargetEntity;
-        if (!target.HasComponent<DirtyAttributeComponent>()) return;
-        ref var dirty = ref target.GetComponent<DirtyAttributeComponent>();
 
         foreach (var mod in spec.Modifiers)
         {
@@ -351,10 +342,9 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                 continue;
 
             // 直接修改 Aggregator 的 BaseValue，不注册新 Mod
-            float baseVal = attributeSystem.GetBaseValue(target, mod.AttributeId);
+            float baseVal = attributeManager.GetBaseValue(target, mod.Attribute);
             float newBase = ApplyModOp(baseVal, mod.ModOp, mod.EvaluatedMagnitude);
-            attributeSystem.SetAggregatorValue(target, mod.AttributeId, newBase);
-            dirty.SetBit(mod.AttributeId);
+            attributeManager.SetAggregatorValue(target, mod.Attribute, newBase);
         }
     }
 

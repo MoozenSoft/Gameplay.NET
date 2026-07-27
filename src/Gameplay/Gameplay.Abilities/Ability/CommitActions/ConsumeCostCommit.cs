@@ -8,31 +8,22 @@ namespace Gameplay.Abilities;
 /// </summary>
 public class ConsumeCostCommit : IAbilityCommit
 {
-    private readonly AttributeSystem attributeSystem;
+    private readonly AttributeAggregatorManager mgr;
     private readonly int attributeId;
     private readonly float amount; // 正数 = 消耗
 
-    /// <param name="attr">要消耗的 GameplayAttribute 句柄（当前用 attributeId）。</param>
-    /// <param name="cost">消耗量（正数）。</param>
-    public ConsumeCostCommit(AttributeSystem attrSys, int attributeId, float cost)
+    public ConsumeCostCommit(AttributeAggregatorManager mgr, int attributeId, float cost)
     {
-        attributeSystem = attrSys;
+        this.mgr = mgr;
         this.attributeId = attributeId;
         amount = cost;
     }
 
     public void Execute(Entity owner, AbilitySpec spec, in AbilityActivationRequest request)
     {
-        // 直接读 CurrentValue → 减去 → 写回 → 标记 Dirty
-        float current = attributeSystem.GetCurrentValue(owner, attributeId);
+        float current = mgr.GetCurrentValue(owner, attributeId);
         float newValue = current - amount;
         if (newValue < 0) newValue = 0;
-        attributeSystem.SetAggregatorValue(owner, attributeId, newValue);
-
-        if (owner.HasComponent<DirtyAttributeComponent>())
-        {
-            ref var dirty = ref owner.GetComponent<DirtyAttributeComponent>();
-            dirty.SetBit(attributeId);
-        }
+        mgr.SetAggregatorValue(owner, attributeId, newValue);
     }
 }

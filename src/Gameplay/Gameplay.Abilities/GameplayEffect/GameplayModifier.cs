@@ -4,8 +4,8 @@ namespace Gameplay.Abilities;
 /// <summary>GameplayEffect 的单个 Modifier 定义——改哪个属性 + 怎么算 + 什么操作。</summary>
 public struct GameplayModifier
 {
-    /// <summary>修改的目标属性（SG 生成的 GameplayAttribute 句柄）。</summary>
-    public int AttributeId;
+    /// <summary>修改的目标属性。</summary>
+    public GameplayAttributeHandle Attribute;
 
     /// <summary>运算类型。</summary>
     public EGameplayModOp ModOp;

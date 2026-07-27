@@ -14,8 +14,8 @@ public class EffectSystemTests
     public void TickDuration_DecrementsDuration()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var root = new SystemRoot(store) { effectSys };
 
         var target = store.CreateEntity();
@@ -38,14 +38,14 @@ public class EffectSystemTests
     public void TickDuration_Expires_TriggersRemoveEffect()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var root = new SystemRoot(store) { effectSys };
 
         var target = store.CreateEntity();
         // 预设 aggregator，验证 RemoveEffect 会清理 mod
-        attrSys.SetAggregatorValue(target, attributeId: 0, baseValue: 100f);
-        attrSys.AddAggregatorMod(target, 0, handle: 1, magnitude: 10f,
+        mgr.SetAggregatorValue(target, 0, 100f);
+        mgr.AddAggregatorMod(target, 0, geHandle: 1, magnitude: 10f,
             EGameplayModOp.Additive);
 
         var activeEntity = store.CreateEntity();
@@ -60,7 +60,7 @@ public class EffectSystemTests
         root.Update(new UpdateTick(1.0f, 0)); // 过期
 
         // RemoveEffect 清理了 mod，只剩 baseValue
-        float val = attrSys.GetCurrentValue(target, attributeId: 0);
+        float val = mgr.GetCurrentValue(target, attributeId: 0);
         Assert.Equal(100f, val);
     }
 
@@ -68,8 +68,8 @@ public class EffectSystemTests
     public void Infinite_Duration_NotDecremented()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var root = new SystemRoot(store) { effectSys };
 
         var target = store.CreateEntity();
@@ -91,8 +91,8 @@ public class EffectSystemTests
     public void Periodic_Tick_AdvancesPeriodProgress()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var root = new SystemRoot(store) { effectSys };
 
         var target = store.CreateEntity();
@@ -117,8 +117,8 @@ public class EffectSystemTests
     public void Apply_HasDuration_CreatesEntityWithComponent()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         var ge = new GameplayEffect
         {
@@ -137,8 +137,8 @@ public class EffectSystemTests
     public void CanApply_TagRequirement_Fails_ReturnsFalse()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         var tag = GameplayTag.Request("State.Dead");
         var ge = new GameplayEffect();
@@ -155,8 +155,8 @@ public class EffectSystemTests
     public void CanApply_NoRequirements_ReturnsTrue()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         var spec = new GameplayEffectSpec(new GameplayEffect(), 1f);
         var target = store.CreateEntity();
@@ -168,13 +168,12 @@ public class EffectSystemTests
     public void Periodic_ExecuteOnPeriod_AppliesModifierEachPeriod()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
-        var root = new SystemRoot(store) { effectSys, attrSys };
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
+        var root = new SystemRoot(store) { effectSys };
 
         var target = store.CreateEntity();
-        target.AddComponent(new DirtyAttributeComponent());
-        attrSys.SetAggregatorValue(target, 0, 100f);
+mgr.SetAggregatorValue(target, 0, 100f);
 
         var ge = new GameplayEffect
         {
@@ -184,7 +183,7 @@ public class EffectSystemTests
             {
                 new GameplayModifier
                 {
-                    AttributeId = 0,
+                    Attribute = new GameplayAttributeHandle(0),
                     ModOp = EGameplayModOp.Additive,
                     ExecutionType = EModifierExecutionType.ExecuteOnPeriod,
                     MagnitudeCalc = GameplayEffectModifierMagnitude.CreateScalableFloat(1f, -10f),
@@ -199,7 +198,7 @@ public class EffectSystemTests
         // 手动填充 Modifier 的 EvaluatedMagnitude（通常由 Spec 构造时计算）
         spec.Modifiers.Add(new FModifierSpec
         {
-            AttributeId = 0,
+            Attribute = new GameplayAttributeHandle(0),
             ModOp = EGameplayModOp.Additive,
             EvaluatedMagnitude = -10f,
             ExecutionType = EModifierExecutionType.ExecuteOnPeriod,
@@ -210,12 +209,12 @@ public class EffectSystemTests
 
         // Tick past first period
         root.Update(new UpdateTick(2.5f, 0));
-        float afterFirst = attrSys.GetCurrentValue(target, 0);
+        float afterFirst = mgr.GetCurrentValue(target, 0);
         Assert.Equal(90f, afterFirst, 0.001f); // 100 - 10
 
         // Tick past second period
         root.Update(new UpdateTick(2.5f, 0));
-        float afterSecond = attrSys.GetCurrentValue(target, 0);
+        float afterSecond = mgr.GetCurrentValue(target, 0);
         Assert.Equal(80f, afterSecond, 0.001f); // 90 - 10
     }
 }

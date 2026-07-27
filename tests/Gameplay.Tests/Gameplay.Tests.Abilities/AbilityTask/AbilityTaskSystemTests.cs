@@ -21,8 +21,8 @@ public class AbilityTaskSystemTests
     public void AllTasksDone_CancelsActiveAbility()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var activationManager = new AbilityActivationManager(effectSys);
         var taskSys = new AbilityTaskSystem(activationManager);
         var root = new SystemRoot(store) { taskSys };
@@ -59,8 +59,8 @@ public class AbilityTaskSystemTests
     public void SomeTasksPending_DoesNotCancelActiveAbility()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var activationManager = new AbilityActivationManager(effectSys);
         var taskSys = new AbilityTaskSystem(activationManager);
         var root = new SystemRoot(store) { taskSys };
@@ -98,8 +98,8 @@ public class AbilityTaskSystemTests
     public void MixedDoneAndCancelled_CancelsActiveAbility()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var activationManager = new AbilityActivationManager(effectSys);
         var taskSys = new AbilityTaskSystem(activationManager);
         var root = new SystemRoot(store) { taskSys };
@@ -136,8 +136,8 @@ public class AbilityTaskSystemTests
     public void PendingState_DoesNotTriggerCancel()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var activationManager = new AbilityActivationManager(effectSys);
         var taskSys = new AbilityTaskSystem(activationManager);
         var root = new SystemRoot(store) { taskSys };
@@ -168,8 +168,8 @@ public class AbilityTaskSystemTests
     public void NoTaskContextEntities_SystemDoesNothing()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var activationManager = new AbilityActivationManager(effectSys);
         var taskSys = new AbilityTaskSystem(activationManager);
         var root = new SystemRoot(store) { taskSys };

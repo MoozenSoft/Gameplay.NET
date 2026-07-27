@@ -7,8 +7,8 @@ namespace Gameplay.Abilities;
 /// <summary>等待指定 GameplayAttribute 的 CurrentValue 发生变化的 Task Component。</summary>
 public struct WaitAttributeChangeComponent : IComponent
 {
-    /// <summary>监听的 AttributeId。</summary>
-    public int AttributeId;
+    /// <summary>监听的属性。</summary>
+    public GameplayAttributeHandle Attribute;
     /// <summary>注册时的快照值，用于比较变化。</summary>
     public float LastValue;
     /// <summary>等待次数（>0 表示等待多少次变化）。</summary>
@@ -17,14 +17,15 @@ public struct WaitAttributeChangeComponent : IComponent
 
 /// <summary>
 /// WaitAttributeChange Task System —— 每帧检查 Owner Entity 的属性值，变化时 Task Done。
+/// 读取的是上一帧 Phase 4 Flush 后的已结算值，具有确定性。
 /// </summary>
 public class WaitAttributeChangeTaskSystem : QuerySystem<WaitAttributeChangeComponent, TaskStateComponent, AbilityTaskContextComponent>
 {
-    private readonly AttributeSystem attrSys;
+    private readonly AttributeAggregatorManager mgr;
 
-    public WaitAttributeChangeTaskSystem(AttributeSystem attrSys)
+    public WaitAttributeChangeTaskSystem(AttributeAggregatorManager mgr)
     {
-        this.attrSys = attrSys;
+        this.mgr = mgr;
     }
 
     protected override void OnUpdate()
@@ -52,7 +53,7 @@ public class WaitAttributeChangeTaskSystem : QuerySystem<WaitAttributeChangeComp
             var owner = activeComp.Owner;
             if (owner.IsNull) { state.State = ETaskState.Done; return; }
 
-            float current = attrSys.GetCurrentValue(owner, wait.AttributeId);
+            float current = mgr.GetCurrentValue(owner, wait.Attribute);
 
             if (current != wait.LastValue)
             {

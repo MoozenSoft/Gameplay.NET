@@ -12,8 +12,8 @@ public class AbilityActivationManagerTests
     public void TryActivate_NoAbilityCollection_ReturnsFalse()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var activationManager = new AbilityActivationManager(effectSys);
 
         var owner = store.CreateEntity();
@@ -26,8 +26,8 @@ public class AbilityActivationManagerTests
     public void TryActivate_InvalidSpecHandle_ReturnsFalse()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var activationManager = new AbilityActivationManager(effectSys);
 
         var owner = store.CreateEntity();
@@ -46,8 +46,8 @@ public class AbilityActivationManagerTests
         GameplayTagManager.RegisterTags("State.Stunned");
 
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
 
         var blockedTag = GameplayTag.Request("State.Stunned");
         var ability = new GameplayAbility();
@@ -70,8 +70,8 @@ public class AbilityActivationManagerTests
     public void TryActivate_Success_CreatesActiveAbilityEntity()
     {
         var store = new EntityStore();
-        var attrSys = new AttributeSystem();
-        var effectSys = new EffectSystem(attrSys);
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
         var activationManager = new AbilityActivationManager(effectSys);
 
         var ability = new GameplayAbility();

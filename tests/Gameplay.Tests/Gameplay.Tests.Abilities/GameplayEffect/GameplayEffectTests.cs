@@ -40,7 +40,7 @@ public class GameplayEffectTests
         var ge = new GameplayEffect();
         ge.Modifiers.Add(new GameplayModifier
         {
-            AttributeId = 1,
+            Attribute = new GameplayAttributeHandle(1),
             ModOp = EGameplayModOp.Additive,
             MagnitudeCalc = GameplayEffectModifierMagnitude.CreateScalableFloat(1f, 10f),
         });

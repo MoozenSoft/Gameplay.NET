@@ -143,7 +143,7 @@ public class GameplayAttributeGenerator : IIncrementalGenerator
         }
     }
 
-    /// <summary>生成 GameplayAttribute 句柄 + RegisterAll。</summary>
+    /// <summary>生成 GameplayAttribute 句柄（带 reader/writer 委托）+ RegisterAll。</summary>
     private static string GenerateHandles(string ns, string structName,
         List<string> fieldNames, ref int nextId)
     {
@@ -164,15 +164,21 @@ public class GameplayAttributeGenerator : IIncrementalGenerator
         foreach (var fieldName in fieldNames)
         {
             int id = nextId++;
-            if (id > 63)
-            {
-                sb.AppendLine($"#error GameplayAttribute ID {id} exceeds 63-bit DirtyAttributeComponent limit. Reduce attribute count (current max: 64).");
-                sb.AppendLine();
-                continue;
-            }
             sb.AppendLine($"    public static readonly Gameplay.Abilities.GameplayAttribute {fieldName}");
             sb.AppendLine($"        = new(id: {id},");
-            sb.AppendLine($"              writeCurrentValue: (entity, value) =>");
+            sb.AppendLine($"              tryReadBaseValue: (Entity entity, out float value) =>");
+            sb.AppendLine($"              {{");
+            sb.AppendLine($"                  ref var data = ref entity.GetComponent<{structName}>().{fieldName};");
+            sb.AppendLine($"                  value = data.BaseValue;");
+            sb.AppendLine($"                  return true;");
+            sb.AppendLine($"              }},");
+            sb.AppendLine($"              tryReadCurrentValue: (Entity entity, out float value) =>");
+            sb.AppendLine($"              {{");
+            sb.AppendLine($"                  ref var data = ref entity.GetComponent<{structName}>().{fieldName};");
+            sb.AppendLine($"                  value = data.CurrentValue;");
+            sb.AppendLine($"                  return true;");
+            sb.AppendLine($"              }},");
+            sb.AppendLine($"              writeCurrentValue: (Entity entity, float value) =>");
             sb.AppendLine($"              {{");
             sb.AppendLine($"                  ref var data = ref entity.GetComponent<{structName}>().{fieldName};");
             sb.AppendLine($"                  data.CurrentValue = value;");
@@ -180,10 +186,10 @@ public class GameplayAttributeGenerator : IIncrementalGenerator
             sb.AppendLine();
         }
 
-        sb.AppendLine($"    public static void RegisterAll(Gameplay.Abilities.AttributeSystem sys)");
+        sb.AppendLine($"    public static void RegisterAll(Gameplay.Abilities.AttributeAggregatorManager mgr)");
         sb.AppendLine($"    {{");
         foreach (var fieldName in fieldNames)
-            sb.AppendLine($"        sys.RegisterAttribute({fieldName});");
+            sb.AppendLine($"        mgr.RegisterAttribute({fieldName});");
         sb.AppendLine($"    }}");
         sb.AppendLine("}");
 

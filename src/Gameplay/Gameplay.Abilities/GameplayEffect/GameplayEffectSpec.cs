@@ -8,7 +8,7 @@ namespace Gameplay.Abilities;
 /// <summary>已计算 Magnitude 的单个 Modifier 条目。</summary>
 public struct FModifierSpec
 {
-    public int AttributeId;
+    public GameplayAttributeHandle Attribute;
     public EGameplayModOp ModOp;
     public float EvaluatedMagnitude;
     public EAttributeCapturePolicy CapturePolicy;
