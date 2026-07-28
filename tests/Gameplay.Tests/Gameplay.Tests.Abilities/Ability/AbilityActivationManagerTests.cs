@@ -17,7 +17,7 @@ public class AbilityActivationManagerTests
         var activationManager = new AbilityActivationManager(effectSys);
 
         var owner = store.CreateEntity();
-        var request = new AbilityActivationRequest { Owner = owner, SpecHandle = 0 };
+        var request = new AbilityActivationRequest { Owner = owner, SpecHandle = default };
 
         Assert.False(activationManager.TryActivateAbility(request));
     }
@@ -59,10 +59,10 @@ public class AbilityActivationManagerTests
         owner.GetComponent<GameplayTagsComponent>().AddTag(blockedTag);
         owner.AddComponent(new AbilityCollectionComponent
         {
-            Specs = new[] { new AbilitySpec { Ability = ability, Handle = 0 } }
+            Specs = new[] { new AbilitySpec { Ability = ability, Handle = default } }
         });
 
-        var request = new AbilityActivationRequest { Owner = owner, SpecHandle = 0 };
+        var request = new AbilityActivationRequest { Owner = owner, SpecHandle = default };
         Assert.False(activationManager.TryActivateAbility(request));
     }
 
@@ -81,10 +81,10 @@ public class AbilityActivationManagerTests
         var owner = store.CreateEntity();
         owner.AddComponent(new AbilityCollectionComponent
         {
-            Specs = new[] { new AbilitySpec { Ability = ability, Handle = 0 } }
+            Specs = new[] { new AbilitySpec { Ability = ability, Handle = default } }
         });
 
-        var request = new AbilityActivationRequest { Owner = owner, SpecHandle = 0 };
+        var request = new AbilityActivationRequest { Owner = owner, SpecHandle = default };
         Assert.True(activationManager.TryActivateAbility(request));
         Assert.True(executor.WasCalled);
     }

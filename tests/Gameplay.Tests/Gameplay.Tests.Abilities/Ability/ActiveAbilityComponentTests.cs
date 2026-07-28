@@ -17,7 +17,7 @@ public class ActiveAbilityComponentTests
     public void Default_Handle_IsZero()
     {
         var comp = new ActiveAbilityComponent();
-        Assert.Equal(0, comp.Handle);
+        Assert.False(comp.Handle.IsValid);
     }
 
     [Fact]

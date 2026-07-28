@@ -53,7 +53,7 @@ public class AbilityActivationManager
         }
 
         // ── 3. Create ActiveAbility Entity ──
-        int handle = nextHandle++;
+        var handle = new AbilityHandle(nextHandle++);
         var activeEntity = owner.Store.CreateEntity();
         owner.AddChild(activeEntity);
         activeEntity.AddComponent(new ActiveAbilityComponent

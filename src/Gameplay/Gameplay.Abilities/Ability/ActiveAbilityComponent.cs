@@ -8,7 +8,7 @@ namespace Gameplay.Abilities;
 public struct ActiveAbilityComponent : IComponent
 {
     public float StartTime;                       // 激活时间戳
-    public int Handle;                            // 全局唯一 ID
+    public AbilityHandle Handle;                   // 全局唯一 ID
     public int DefinitionId;                      // Ability 静态定义 Registry 查表 key
     public bool IsActive;                         // 是否激活中
     public Entity Owner;                          // 归属的 Owner Entity

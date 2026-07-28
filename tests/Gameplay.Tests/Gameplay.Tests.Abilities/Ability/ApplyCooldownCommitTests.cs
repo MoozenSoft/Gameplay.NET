@@ -17,7 +17,7 @@ public class ApplyCooldownCommitTests
         var owner = store.CreateEntity();
 
         var ability = new GameplayAbility(); // CooldownEffect = null
-        var spec = new AbilitySpec { Ability = ability, Handle = 1 };
+        var spec = new AbilitySpec { Ability = ability, Handle = new AbilityHandle(1) };
         var request = new AbilityActivationRequest { Owner = owner, SpecHandle = 1 };
 
         // 不应抛出异常

@@ -31,7 +31,7 @@ public class AbilityTaskSystemTests
         var activeAbility = store.CreateEntity();
         activeAbility.AddComponent(new ActiveAbilityComponent
         {
-            Handle = 1,
+            Handle = new AbilityHandle(1),
             IsActive = true,
             Owner = store.CreateEntity(),
             State = EAbilityInstanceState.Active,
@@ -68,7 +68,7 @@ public class AbilityTaskSystemTests
         var activeAbility = store.CreateEntity();
         activeAbility.AddComponent(new ActiveAbilityComponent
         {
-            Handle = 1,
+            Handle = new AbilityHandle(1),
             IsActive = true,
             Owner = store.CreateEntity(),
             State = EAbilityInstanceState.Active,
@@ -107,7 +107,7 @@ public class AbilityTaskSystemTests
         var activeAbility = store.CreateEntity();
         activeAbility.AddComponent(new ActiveAbilityComponent
         {
-            Handle = 1,
+            Handle = new AbilityHandle(1),
             IsActive = true,
             Owner = store.CreateEntity(),
             State = EAbilityInstanceState.Active,
@@ -145,7 +145,7 @@ public class AbilityTaskSystemTests
         var activeAbility = store.CreateEntity();
         activeAbility.AddComponent(new ActiveAbilityComponent
         {
-            Handle = 1,
+            Handle = new AbilityHandle(1),
             IsActive = true,
             Owner = store.CreateEntity(),
             State = EAbilityInstanceState.Active,
@@ -178,7 +178,7 @@ public class AbilityTaskSystemTests
         var activeAbility = store.CreateEntity();
         activeAbility.AddComponent(new ActiveAbilityComponent
         {
-            Handle = 1,
+            Handle = new AbilityHandle(1),
             IsActive = true,
             Owner = store.CreateEntity(),
             State = EAbilityInstanceState.Active,
