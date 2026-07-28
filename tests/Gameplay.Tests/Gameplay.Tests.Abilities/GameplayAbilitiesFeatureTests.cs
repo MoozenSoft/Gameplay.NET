@@ -33,8 +33,8 @@ public class GameplayAbilitiesFeatureTests
         var feature = new GameplayAbilitiesFeature(store, NetMode.Standalone);
 
         var entity = store.CreateEntity();
-        feature.AttributeAggregatorManager.SetAggregatorValue(entity, attributeId: 0, 100f);
-        feature.AttributeAggregatorManager.AddAggregatorMod(entity, 0, geHandle: 1, magnitude: 20f, EGameplayModOp.Additive);
+        feature.AttributeAggregatorManager.SetAggregatorValue(entity, new GameplayAttribute(0), 100f);
+        feature.AttributeAggregatorManager.AddAggregatorMod(entity, new GameplayAttribute(0), geHandle: new GameplayEffectHandle(1), magnitude: 20f, EGameplayModOp.Additive);
 
         // Update 不抛异常即通过
         feature.Update(0.016f);

@@ -33,14 +33,14 @@ internal class AttributeAggregator
     }
 
     /// <summary>添加 Modifier。始终返回 true（总是会改变聚合结果）。</summary>
-    internal bool AddMod(int handle, float magnitude, EGameplayModOp op)
+    internal bool AddMod(GameplayEffectHandle handle, float magnitude, EGameplayModOp op)
     {
         modBuckets[(int)op].Add(new ModEntry { ActiveHandle = handle, Magnitude = magnitude });
         return true;
     }
 
     /// <summary>按 handle 移除 Modifier。手写双指针就地压缩（零 GC）。实际移除时返回 true。</summary>
-    internal bool RemoveModsByHandle(int handle)
+    internal bool RemoveModsByHandle(GameplayEffectHandle handle)
     {
         bool removed = false;
         for (int i = 0; i < modBuckets.Length; i++)

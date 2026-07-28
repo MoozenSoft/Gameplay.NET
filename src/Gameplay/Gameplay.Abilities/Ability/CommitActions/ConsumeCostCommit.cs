@@ -9,21 +9,21 @@ namespace Gameplay.Abilities;
 public class ConsumeCostCommit : IAbilityCommit
 {
     private readonly AttributeAggregatorManager mgr;
-    private readonly int attributeId;
+    private readonly GameplayAttribute attribute;
     private readonly float amount; // 正数 = 消耗
 
-    public ConsumeCostCommit(AttributeAggregatorManager mgr, int attributeId, float cost)
+    public ConsumeCostCommit(AttributeAggregatorManager mgr, GameplayAttribute attribute, float cost)
     {
         this.mgr = mgr;
-        this.attributeId = attributeId;
+        this.attribute = attribute;
         amount = cost;
     }
 
     public void Execute(Entity owner, AbilitySpec spec, in AbilityActivationRequest request)
     {
-        float current = mgr.GetCurrentValue(owner, attributeId);
+        float current = mgr.GetCurrentValue(owner, attribute);
         float newValue = current - amount;
         if (newValue < 0) newValue = 0;
-        mgr.SetAggregatorValue(owner, attributeId, newValue);
+        mgr.SetAggregatorValue(owner, attribute, newValue);
     }
 }

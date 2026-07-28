@@ -25,7 +25,7 @@ public class EffectSystemTests
         {
             Duration = 3.0f,
             TargetEntity = target,
-            Handle = 1,
+            Handle = new GameplayEffectHandle(1),
         });
 
         root.Update(new UpdateTick(1.0f, 0)); // dt = 1.0f
@@ -44,8 +44,8 @@ public class EffectSystemTests
 
         var target = store.CreateEntity();
         // 预设 aggregator，验证 RemoveEffect 会清理 mod
-        mgr.SetAggregatorValue(target, 0, 100f);
-        mgr.AddAggregatorMod(target, 0, geHandle: 1, magnitude: 10f,
+        mgr.SetAggregatorValue(target, new GameplayAttribute(0), 100f);
+        mgr.AddAggregatorMod(target, new GameplayAttribute(0), geHandle: new GameplayEffectHandle(1), magnitude: 10f,
             EGameplayModOp.Additive);
 
         var activeEntity = store.CreateEntity();
@@ -54,13 +54,13 @@ public class EffectSystemTests
         {
             Duration = 0.5f,
             TargetEntity = target,
-            Handle = 1,
+            Handle = new GameplayEffectHandle(1),
         });
 
         root.Update(new UpdateTick(1.0f, 0)); // 过期
 
         // RemoveEffect 清理了 mod，只剩 baseValue
-        float val = mgr.GetCurrentValue(target, attributeId: 0);
+        float val = mgr.GetCurrentValue(target, new GameplayAttribute(0));
         Assert.Equal(100f, val);
     }
 
@@ -79,7 +79,7 @@ public class EffectSystemTests
         {
             Duration = -1f, // Infinite
             TargetEntity = target,
-            Handle = 1,
+            Handle = new GameplayEffectHandle(1),
         });
 
         root.Update(new UpdateTick(10f, 0));
@@ -103,7 +103,7 @@ public class EffectSystemTests
             Duration = 10f,
             Period = 2.0f,
             TargetEntity = target,
-            Handle = 1,
+            Handle = new GameplayEffectHandle(1),
         });
 
         root.Update(new UpdateTick(2.5f, 0)); // Period triggered at t=2.0
@@ -127,9 +127,9 @@ public class EffectSystemTests
         var spec = new GameplayEffectSpec(ge, 1f) { Duration = 5f };
 
         var target = store.CreateEntity();
-        int handle = effectSys.Apply(spec, target);
+        var handle = effectSys.Apply(spec, target);
 
-        Assert.True(handle > 0);
+        Assert.True(handle.IsValid);
         // Verify ActiveGameplayEffect Entity exists under target
     }
 
@@ -173,7 +173,7 @@ public class EffectSystemTests
         var root = new SystemRoot(store) { effectSys };
 
         var target = store.CreateEntity();
-mgr.SetAggregatorValue(target, 0, 100f);
+        mgr.SetAggregatorValue(target, new GameplayAttribute(0), 100f);
 
         var ge = new GameplayEffect
         {
@@ -183,7 +183,7 @@ mgr.SetAggregatorValue(target, 0, 100f);
             {
                 new GameplayModifier
                 {
-                    Attribute = new GameplayAttributeHandle(0),
+                    Attribute = new GameplayAttribute(0),
                     ModOp = EGameplayModOp.Additive,
                     ExecutionType = EModifierExecutionType.ExecuteOnPeriod,
                     MagnitudeCalc = GameplayEffectModifierMagnitude.CreateScalableFloat(1f, -10f),
@@ -198,23 +198,23 @@ mgr.SetAggregatorValue(target, 0, 100f);
         // 手动填充 Modifier 的 EvaluatedMagnitude（通常由 Spec 构造时计算）
         spec.Modifiers.Add(new FModifierSpec
         {
-            Attribute = new GameplayAttributeHandle(0),
+            Attribute = new GameplayAttribute(0),
             ModOp = EGameplayModOp.Additive,
             EvaluatedMagnitude = -10f,
             ExecutionType = EModifierExecutionType.ExecuteOnPeriod,
         });
 
-        int handle = effectSys.Apply(spec, target);
-        Assert.True(handle > 0);
+        var handle = effectSys.Apply(spec, target);
+        Assert.True(handle.IsValid);
 
         // Tick past first period
         root.Update(new UpdateTick(2.5f, 0));
-        float afterFirst = mgr.GetCurrentValue(target, 0);
+        float afterFirst = mgr.GetCurrentValue(target, new GameplayAttribute(0));
         Assert.Equal(90f, afterFirst, 0.001f); // 100 - 10
 
         // Tick past second period
         root.Update(new UpdateTick(2.5f, 0));
-        float afterSecond = mgr.GetCurrentValue(target, 0);
+        float afterSecond = mgr.GetCurrentValue(target, new GameplayAttribute(0));
         Assert.Equal(80f, afterSecond, 0.001f); // 90 - 10
     }
 }

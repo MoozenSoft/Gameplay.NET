@@ -30,11 +30,11 @@ public class EffectSystemIntegrationTests
         };
         var target = store.CreateEntity();
 
-        int handle = effectSys.Apply(new GameplayEffectSpec(ge, 1f) { Duration = 10f, StackCount = 1 }, target);
-        Assert.True(handle > 0);
+        var handle = effectSys.Apply(new GameplayEffectSpec(ge, 1f) { Duration = 10f, StackCount = 1 }, target);
+        Assert.True(handle.IsValid);
 
         // 第二次 Apply → 同源 GE 应该 Stack 而非创建新 Entity
-        int handle2 = effectSys.Apply(new GameplayEffectSpec(ge, 1f) { Duration = 8f, StackCount = 1 }, target);
+        var handle2 = effectSys.Apply(new GameplayEffectSpec(ge, 1f) { Duration = 8f, StackCount = 1 }, target);
         Assert.Equal(handle, handle2);
 
         var activeEntity = effectSys.GetEntityByHandle(handle);
@@ -56,12 +56,12 @@ public class EffectSystemIntegrationTests
         };
         var target = store.CreateEntity();
 
-        int h1 = effectSys.Apply(new GameplayEffectSpec(ge, 1f) { Duration = 10f }, target);
-        Assert.True(h1 > 0);
+        var h1 = effectSys.Apply(new GameplayEffectSpec(ge, 1f) { Duration = 10f }, target);
+        Assert.True(h1.IsValid);
 
         // StackLimit=1 + StackCount()=1 → 不允许新 Stack
-        int h2 = effectSys.Apply(new GameplayEffectSpec(ge, 1f) { Duration = 10f }, target);
-        Assert.Equal(-1, h2);
+        var h2 = effectSys.Apply(new GameplayEffectSpec(ge, 1f) { Duration = 10f }, target);
+        Assert.False(h2.IsValid);
     }
 
     // ── Immunity ──
@@ -84,8 +84,8 @@ public class EffectSystemIntegrationTests
             },
         };
         var target = store.CreateEntity();
-int h = effectSys.Apply(new GameplayEffectSpec(immunityGE, 1f) { Duration = 10f }, target);
-        Assert.True(h > 0);
+        var h = effectSys.Apply(new GameplayEffectSpec(immunityGE, 1f) { Duration = 10f }, target);
+        Assert.True(h.IsValid);
 
         // Step 2: Try to apply "Buff.Fire" GE
         var fireGE = new GameplayEffect
@@ -94,8 +94,8 @@ int h = effectSys.Apply(new GameplayEffectSpec(immunityGE, 1f) { Duration = 10f 
             GrantedTags = new() { GameplayTag.Request("Buff.Fire") },
         };
 
-        int rejected = effectSys.Apply(new GameplayEffectSpec(fireGE, 1f) { Duration = 5f }, target);
-        Assert.Equal(-1, rejected);
+        var rejected = effectSys.Apply(new GameplayEffectSpec(fireGE, 1f) { Duration = 5f }, target);
+        Assert.False(rejected.IsValid);
     }
 
     [Fact]
@@ -131,9 +131,9 @@ int h = effectSys.Apply(new GameplayEffectSpec(immunityGE, 1f) { Duration = 10f 
             GrantedTags = new() { GameplayTag.Request("State.Frozen") },
         };
         var target = store.CreateEntity();
-var freezeSpec = new GameplayEffectSpec(freezeGE, 1f) { Duration = -1f };
-        int freezeHandle = effectSys.Apply(freezeSpec, target);
-        Assert.True(freezeHandle > 0);
+        var freezeSpec = new GameplayEffectSpec(freezeGE, 1f) { Duration = -1f };
+        var freezeHandle = effectSys.Apply(freezeSpec, target);
+        Assert.True(freezeHandle.IsValid);
 
         // Step 2: Apply "Burn" GE that removes "Freeze"
         var burnGE = new GameplayEffect
@@ -146,8 +146,8 @@ var freezeSpec = new GameplayEffectSpec(freezeGE, 1f) { Duration = -1f };
             },
         };
         var burnSpec = new GameplayEffectSpec(burnGE, 1f) { Duration = 5f };
-        int burnHandle = effectSys.Apply(burnSpec, target);
-        Assert.True(burnHandle > 0);
+        var burnHandle = effectSys.Apply(burnSpec, target);
+        Assert.True(burnHandle.IsValid);
 
         // Freeze entity should have been removed
         Assert.True(effectSys.GetEntityByHandle(freezeHandle).IsNull);
@@ -180,10 +180,10 @@ var freezeSpec = new GameplayEffectSpec(freezeGE, 1f) { Duration = -1f };
         };
 
         var target = store.CreateEntity();
-target.AddComponent(new Gameplay.Tags.GameplayTagsComponent());
+        target.AddComponent(new Gameplay.Tags.GameplayTagsComponent());
 
-        int handle = effectSys.Apply(new GameplayEffectSpec(mainGE, 1f) { Duration = 10f }, target);
-        Assert.True(handle > 0);
+        var handle = effectSys.Apply(new GameplayEffectSpec(mainGE, 1f) { Duration = 10f }, target);
+        Assert.True(handle.IsValid);
 
         // Target now has "Buff.Shield" tag from the chained effect
         var tags = target.GetComponent<Gameplay.Tags.GameplayTagsComponent>();
@@ -215,10 +215,10 @@ target.AddComponent(new Gameplay.Tags.GameplayTagsComponent());
         };
 
         var target = store.CreateEntity();
-target.AddComponent(new Gameplay.Tags.GameplayTagsComponent());
+        target.AddComponent(new Gameplay.Tags.GameplayTagsComponent());
 
-        int handle = effectSys.Apply(new GameplayEffectSpec(mainGE, 1f) { Duration = 0.5f }, target);
-        Assert.True(handle > 0);
+        var handle = effectSys.Apply(new GameplayEffectSpec(mainGE, 1f) { Duration = 0.5f }, target);
+        Assert.True(handle.IsValid);
 
         // Run EffectSystem to expire the main GE
         var root = new SystemRoot(store) { effectSys };

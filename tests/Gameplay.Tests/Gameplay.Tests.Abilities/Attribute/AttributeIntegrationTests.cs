@@ -33,7 +33,7 @@ public class AttributeIntegrationTests
         };
         ge.Modifiers.Add(new GameplayModifier
         {
-            Attribute = new GameplayAttributeHandle(0),
+            Attribute = new GameplayAttribute(0),
             ModOp = EGameplayModOp.Additive,
             MagnitudeCalc = GameplayEffectModifierMagnitude.CreateScalableFloat(1.0f, 20f),
         });
@@ -43,21 +43,21 @@ public class AttributeIntegrationTests
         var spec = new GameplayEffectSpec(ge, 1f);
         spec.Modifiers.Add(new FModifierSpec
         {
-            Attribute = new GameplayAttributeHandle(0),
+            Attribute = new GameplayAttribute(0),
             ModOp = EGameplayModOp.Additive,
             EvaluatedMagnitude = 20f, // ScalableFloat: coeff * level + value = 1*1 + 20 = 21? 简化用 20
             CapturePolicy = EAttributeCapturePolicy.Snapshot,
         });
 
         // Act
-        int handle = effectSys.Apply(spec, target);
+        var handle = effectSys.Apply(spec, target);
 
         // Assert
-        Assert.True(handle > 0, "Apply should return a valid handle");
+        Assert.True(handle.IsValid, "Apply should return a valid handle");
 
         // 验证 Aggregator CurrentValue 包含 Modifier 的效果
         // (EffectSystem 默认设置 BaseValue=0，故结果 = 0 + 20 = 20)
-        float after = mgr.GetCurrentValue(target, 0);
+        float after = mgr.GetCurrentValue(target, new GameplayAttribute(0));
         Assert.Equal(20f, after, 0.001f);
 
         // 验证 SG accessor：Component 的 BaseValue 未被修改（Aggregator 独立存储）
@@ -81,20 +81,20 @@ public class AttributeIntegrationTests
         {
             DurationPolicy = EGameplayEffectDurationType.Infinite,
         };
-        ge.Modifiers.Add(new GameplayModifier { Attribute = new GameplayAttributeHandle(0), ModOp = EGameplayModOp.Additive });
-        ge.Modifiers.Add(new GameplayModifier { Attribute = new GameplayAttributeHandle(1), ModOp = EGameplayModOp.Additive });
+        ge.Modifiers.Add(new GameplayModifier { Attribute = new GameplayAttribute(0), ModOp = EGameplayModOp.Additive });
+        ge.Modifiers.Add(new GameplayModifier { Attribute = new GameplayAttribute(1), ModOp = EGameplayModOp.Additive });
 
         var spec = new GameplayEffectSpec(ge, 1f);
-        spec.Modifiers.Add(new FModifierSpec { Attribute = new GameplayAttributeHandle(0), ModOp = EGameplayModOp.Additive, EvaluatedMagnitude = 10f });
-        spec.Modifiers.Add(new FModifierSpec { Attribute = new GameplayAttributeHandle(1), ModOp = EGameplayModOp.Additive, EvaluatedMagnitude = 20f });
+        spec.Modifiers.Add(new FModifierSpec { Attribute = new GameplayAttribute(0), ModOp = EGameplayModOp.Additive, EvaluatedMagnitude = 10f });
+        spec.Modifiers.Add(new FModifierSpec { Attribute = new GameplayAttribute(1), ModOp = EGameplayModOp.Additive, EvaluatedMagnitude = 20f });
 
         // Act
-        int handle = effectSys.Apply(spec, target);
+        var handle = effectSys.Apply(spec, target);
 
         // Assert
-        Assert.True(handle > 0);
-        Assert.Equal(10f, mgr.GetCurrentValue(target, 0), 0.001f);
-        Assert.Equal(20f, mgr.GetCurrentValue(target, 1), 0.001f);
+        Assert.True(handle.IsValid);
+        Assert.Equal(10f, mgr.GetCurrentValue(target, new GameplayAttribute(0)), 0.001f);
+        Assert.Equal(20f, mgr.GetCurrentValue(target, new GameplayAttribute(1)), 0.001f);
 
         // SG accessor: 组件数据未被修改
         ref var str = ref MultiFieldAttrSet.GetStrength(target);
@@ -118,18 +118,18 @@ public class AttributeIntegrationTests
         var spec = new GameplayEffectSpec(new GameplayEffect(), 1f);
         spec.Modifiers.Add(new FModifierSpec
         {
-            Attribute = new GameplayAttributeHandle(0),
+            Attribute = new GameplayAttribute(0),
             ModOp = EGameplayModOp.Additive,
             EvaluatedMagnitude = 30f,
         });
-        int handle = effectSys.Apply(spec, target);
-        Assert.True(handle > 0);
+        var handle = effectSys.Apply(spec, target);
+        Assert.True(handle.IsValid);
 
         // 2. Flush → Evaluate + WriteBack
         mgr.Flush();
 
         // 3. Aggregator 值正确
-        Assert.Equal(30f, mgr.GetCurrentValue(target, 0), 0.001f);
+        Assert.Equal(30f, mgr.GetCurrentValue(target, new GameplayAttribute(0)), 0.001f);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class AttributeIntegrationTests
         var spec = new GameplayEffectSpec(new GameplayEffect(), 1f);
         spec.Modifiers.Add(new FModifierSpec
         {
-            Attribute = new GameplayAttributeHandle(0),
+            Attribute = new GameplayAttribute(0),
             ModOp = EGameplayModOp.Additive,
             EvaluatedMagnitude = 25f,
         });
@@ -159,7 +159,7 @@ public class AttributeIntegrationTests
         effectSys.Apply(spec, target);
 
         // 4. 验证 Aggregator 反映 Modifier
-        Assert.Equal(25f, mgr.GetCurrentValue(target, 0), 0.001f);
+        Assert.Equal(25f, mgr.GetCurrentValue(target, new GameplayAttribute(0)), 0.001f);
 
         // 5. SG accessor: 读组件 BaseValue (独立于 Aggregator)
         ref var healthRef = ref TestAttrSet.GetHealth(target);

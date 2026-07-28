@@ -8,7 +8,7 @@ namespace Gameplay.Abilities;
 public struct WaitAttributeChangeComponent : IComponent
 {
     /// <summary>监听的属性。</summary>
-    public GameplayAttributeHandle Attribute;
+    public GameplayAttribute Attribute;
     /// <summary>注册时的快照值，用于比较变化。</summary>
     public float LastValue;
     /// <summary>等待次数（>0 表示等待多少次变化）。</summary>

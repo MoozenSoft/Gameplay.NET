@@ -1,82 +1,80 @@
 // tests/Gameplay.Tests/Gameplay.Tests.Abilities/Attribute/AttributeAggregatorManagerTests.cs
 namespace Gameplay.Tests.Abilities;
 
-using System;
 using Friflo.Engine.ECS;
 using Gameplay.Abilities;
 using Xunit;
 
 public class AttributeAggregatorManagerTests
 {
-    // 手写 GameplayAttribute（测试用，不依赖 SG）
-    private static GameplayAttribute CreateTestAttribute(int id)
+    // 注册测试用的 GameplayAttribute 描述符
+    private static void RegisterTestAttribute(AttributeAggregatorManager mgr, GameplayAttribute attr)
     {
-        return new GameplayAttribute(
-            id: id,
-            tryReadBaseValue: (Entity entity, out float value) => {
+        mgr.RegisterAttribute(attr,
+            (Entity entity, out float value) => {
                 ref var set = ref entity.GetComponent<ManagerTestAttrSet>();
                 value = set.Value.BaseValue;
-                return true;
             },
-            tryReadCurrentValue: (Entity entity, out float value) => {
+            (Entity entity, out float value) => {
                 ref var set = ref entity.GetComponent<ManagerTestAttrSet>();
                 value = set.Value.CurrentValue;
-                return true;
             },
-            writeCurrentValue: (entity, value) => {
+            (Entity entity, float value) => {
                 ref var data = ref entity.GetComponent<ManagerTestAttrSet>().Value;
                 data.CurrentValue = value;
             });
     }
 
-    private static (EntityStore store, Entity entity, AttributeAggregatorManager mgr,
-        GameplayAttribute attr, GameplayAttributeHandle handle)
-        CreateWithAttribute(int baseValue = 100)
+    private static (EntityStore store, Entity entity, GameplayAttribute attr)
+        CreateWithAttribute(int baseValue = 100, int attrId = 200)
     {
         var store = new EntityStore();
         var entity = store.CreateEntity();
         entity.AddComponent(new ManagerTestAttrSet { Value = new() { BaseValue = baseValue } });
-
-        var attr = CreateTestAttribute(id: 200);
-        var mgr = new AttributeAggregatorManager();
-        mgr.RegisterAttribute(attr);
-        var handle = (GameplayAttributeHandle)attr;
-        return (store, entity, mgr, attr, handle);
+        return (store, entity, new GameplayAttribute(attrId));
     }
 
     [Fact]
     public void GetCurrentValue_NoAggregator_ReturnsBaseValue()
     {
-        var (_, entity, mgr, _, handle) = CreateWithAttribute(baseValue: 100);
-        Assert.Equal(100f, mgr.GetCurrentValue(entity, handle));
+        var (store, entity, attr) = CreateWithAttribute(baseValue: 100, attrId: 500);
+        var mgr = new AttributeAggregatorManager();
+        RegisterTestAttribute(mgr, attr);
+        Assert.Equal(100f, mgr.GetCurrentValue(entity, attr));
     }
 
     [Fact]
     public void SetBaseValue_CreatesAggregatorAndReadsBack()
     {
-        var (_, entity, mgr, _, handle) = CreateWithAttribute(baseValue: 100);
-        mgr.SetBaseValue(entity, handle, 200f);
-        Assert.Equal(200f, mgr.GetBaseValue(entity, handle));
-        Assert.True(mgr.HasAggregator(entity, handle));
+        var (store, entity, attr) = CreateWithAttribute(baseValue: 100, attrId: 501);
+        var mgr = new AttributeAggregatorManager();
+        RegisterTestAttribute(mgr, attr);
+        mgr.SetBaseValue(entity, attr, 200f);
+        Assert.Equal(200f, mgr.GetBaseValue(entity, attr));
+        Assert.True(mgr.HasAggregator(entity, attr));
     }
 
     [Fact]
     public void Flush_SingleDirty_WritesCurrentValue()
     {
-        var (_, entity, mgr, _, handle) = CreateWithAttribute(baseValue: 100);
-        mgr.AddAggregatorMod(entity, handle, geHandle: 1, magnitude: 20f, EGameplayModOp.Additive);
+        var (store, entity, attr) = CreateWithAttribute(baseValue: 100, attrId: 502);
+        var mgr = new AttributeAggregatorManager();
+        RegisterTestAttribute(mgr, attr);
+        mgr.AddAggregatorMod(entity, attr, geHandle: new GameplayEffectHandle(1), magnitude: 20f, EGameplayModOp.Additive);
         mgr.Flush();
-        Assert.Equal(120f, mgr.GetCurrentValue(entity, handle));
+        Assert.Equal(120f, mgr.GetCurrentValue(entity, attr));
     }
 
     [Fact]
     public void Flush_MultipleChanges_OnlyEvaluatesOnce()
     {
-        var (_, entity, mgr, _, handle) = CreateWithAttribute(baseValue: 100);
-        mgr.AddAggregatorMod(entity, handle, 1, 20f, EGameplayModOp.Additive);
-        mgr.AddAggregatorMod(entity, handle, 2, 30f, EGameplayModOp.Additive);
+        var (store, entity, attr) = CreateWithAttribute(baseValue: 100, attrId: 503);
+        var mgr = new AttributeAggregatorManager();
+        RegisterTestAttribute(mgr, attr);
+        mgr.AddAggregatorMod(entity, attr, new GameplayEffectHandle(1), 20f, EGameplayModOp.Additive);
+        mgr.AddAggregatorMod(entity, attr, new GameplayEffectHandle(2), 30f, EGameplayModOp.Additive);
         mgr.Flush();
-        Assert.Equal(150f, mgr.GetCurrentValue(entity, handle));
+        Assert.Equal(150f, mgr.GetCurrentValue(entity, attr));
     }
 
     [Fact]
@@ -85,75 +83,85 @@ public class AttributeAggregatorManagerTests
         var store = new EntityStore();
         var entity = store.CreateEntity();
         entity.AddComponent(new ManagerTestMultiAttrSet());
-        var attrA = new GameplayAttribute(id: 301,
-            tryReadBaseValue: (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldA.BaseValue; return true; },
-            tryReadCurrentValue: (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldA.CurrentValue; return true; },
-            writeCurrentValue: (e, v) => { ref var d = ref e.GetComponent<ManagerTestMultiAttrSet>().FieldA; d.CurrentValue = v; });
-        var attrB = new GameplayAttribute(id: 302,
-            tryReadBaseValue: (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldB.BaseValue; return true; },
-            tryReadCurrentValue: (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldB.CurrentValue; return true; },
-            writeCurrentValue: (e, v) => { ref var d = ref e.GetComponent<ManagerTestMultiAttrSet>().FieldB; d.CurrentValue = v; });
         var mgr = new AttributeAggregatorManager();
-        mgr.RegisterAttribute(attrA);
-        mgr.RegisterAttribute(attrB);
+        mgr.RegisterAttribute(new GameplayAttribute(301),
+            (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldA.BaseValue; },
+            (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldA.CurrentValue; },
+            (Entity e, float v) => { e.GetComponent<ManagerTestMultiAttrSet>().FieldA.CurrentValue = v; });
+        mgr.RegisterAttribute(new GameplayAttribute(302),
+            (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldB.BaseValue; },
+            (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldB.CurrentValue; },
+            (Entity e, float v) => { e.GetComponent<ManagerTestMultiAttrSet>().FieldB.CurrentValue = v; });
 
-        mgr.AddAggregatorMod(entity, (GameplayAttributeHandle)attrA, 1, 20f, EGameplayModOp.Additive);
-        mgr.AddAggregatorMod(entity, (GameplayAttributeHandle)attrB, 1, 50f, EGameplayModOp.Additive);
-
-        mgr.RemoveAggregatorModsByHandle(1);
-
+        mgr.AddAggregatorMod(entity, new GameplayAttribute(301), new GameplayEffectHandle(1), 20f, EGameplayModOp.Additive);
+        mgr.AddAggregatorMod(entity, new GameplayAttribute(302), new GameplayEffectHandle(1), 50f, EGameplayModOp.Additive);
+        mgr.RemoveAggregatorModsByHandle(new GameplayEffectHandle(1));
         mgr.Flush();
-        Assert.Equal(0f, mgr.GetCurrentValue(entity, (GameplayAttributeHandle)attrA));
-        Assert.Equal(0f, mgr.GetCurrentValue(entity, (GameplayAttributeHandle)attrB));
+        Assert.Equal(0f, mgr.GetCurrentValue(entity, new GameplayAttribute(301)));
+        Assert.Equal(0f, mgr.GetCurrentValue(entity, new GameplayAttribute(302)));
     }
 
     [Fact]
     public void RemoveMod_NonExistentHandle_NoChange()
     {
-        var (_, entity, mgr, _, handle) = CreateWithAttribute(baseValue: 100);
-        mgr.AddAggregatorMod(entity, handle, 1, 20f, EGameplayModOp.Additive);
-        mgr.RemoveAggregatorModsByHandle(999);
+        var (store, entity, attr) = CreateWithAttribute(baseValue: 100, attrId: 504);
+        var mgr = new AttributeAggregatorManager();
+        RegisterTestAttribute(mgr, attr);
+        mgr.AddAggregatorMod(entity, attr, new GameplayEffectHandle(1), 20f, EGameplayModOp.Additive);
+        mgr.RemoveAggregatorModsByHandle(new GameplayEffectHandle(999));
         mgr.Flush();
-        Assert.Equal(120f, mgr.GetCurrentValue(entity, handle));
+        Assert.Equal(120f, mgr.GetCurrentValue(entity, attr));
     }
 
     [Fact]
     public void GetCurrentValue_BeforeFlush_ReturnsPreviousFlushedValue()
     {
-        var (_, entity, mgr, _, handle) = CreateWithAttribute(baseValue: 100);
-        mgr.AddAggregatorMod(entity, handle, 1, 20f, EGameplayModOp.Additive);
-        float value = mgr.GetCurrentValue(entity, handle);
+        var (store, entity, attr) = CreateWithAttribute(baseValue: 100, attrId: 505);
+        var mgr = new AttributeAggregatorManager();
+        RegisterTestAttribute(mgr, attr);
+        mgr.AddAggregatorMod(entity, attr, new GameplayEffectHandle(1), 20f, EGameplayModOp.Additive);
+        float value = mgr.GetCurrentValue(entity, attr);
         Assert.Equal(0f, value);
     }
 
     [Fact]
     public void RemoveEntity_ClearsAggregators()
     {
-        var (_, entity, mgr, _, handle) = CreateWithAttribute(baseValue: 100);
-        mgr.AddAggregatorMod(entity, handle, 1, 20f, EGameplayModOp.Additive);
-        Assert.True(mgr.HasAggregator(entity, handle));
+        var (store, entity, attr) = CreateWithAttribute(baseValue: 100, attrId: 506);
+        var mgr = new AttributeAggregatorManager();
+        RegisterTestAttribute(mgr, attr);
+        mgr.AddAggregatorMod(entity, attr, new GameplayEffectHandle(1), 20f, EGameplayModOp.Additive);
+        Assert.True(mgr.HasAggregator(entity, attr));
         mgr.RemoveEntity(entity);
-        Assert.False(mgr.HasAggregator(entity, handle));
+        Assert.False(mgr.HasAggregator(entity, attr));
     }
 
     [Fact]
     public void Flush_DirtyClearedAfterFlush()
     {
-        var (_, entity, mgr, _, handle) = CreateWithAttribute(baseValue: 100);
-        mgr.AddAggregatorMod(entity, handle, 1, 10f, EGameplayModOp.Additive);
+        var (store, entity, attr) = CreateWithAttribute(baseValue: 100, attrId: 507);
+        var mgr = new AttributeAggregatorManager();
+        RegisterTestAttribute(mgr, attr);
+        mgr.AddAggregatorMod(entity, attr, new GameplayEffectHandle(1), 10f, EGameplayModOp.Additive);
         mgr.Flush();
-        Assert.Equal(110f, mgr.GetCurrentValue(entity, handle));
+        Assert.Equal(110f, mgr.GetCurrentValue(entity, attr));
         mgr.Flush();
-        Assert.Equal(110f, mgr.GetCurrentValue(entity, handle));
+        Assert.Equal(110f, mgr.GetCurrentValue(entity, attr));
     }
 
     [Fact]
-    public void RegisterAttribute_DuplicateId_Throws()
+    public void RegisterAttribute_CoveredSilently()
     {
         var mgr = new AttributeAggregatorManager();
-        var attr = new GameplayAttribute(id: 5, writeCurrentValue: (_, _) => { });
-        mgr.RegisterAttribute(attr);
-        Assert.Throws<InvalidOperationException>(() => mgr.RegisterAttribute(attr));
+        mgr.RegisterAttribute(new GameplayAttribute(5),
+            (Entity _, out float v) => { v = 0; },
+            (Entity _, out float v) => { v = 0; },
+            (Entity _, float _) => { });
+        // 覆盖不抛异常
+        mgr.RegisterAttribute(new GameplayAttribute(5),
+            (Entity _, out float v) => { v = 1; },
+            (Entity _, out float v) => { v = 1; },
+            (Entity _, float _) => { });
     }
 
     [Fact]
@@ -162,28 +170,23 @@ public class AttributeAggregatorManagerTests
         var store = new EntityStore();
         var entity = store.CreateEntity();
         entity.AddComponent(new ManagerTestMultiAttrSet());
-        var attrA = new GameplayAttribute(id: 401,
-            tryReadBaseValue: (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldA.BaseValue; return true; },
-            tryReadCurrentValue: (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldA.CurrentValue; return true; },
-            writeCurrentValue: (e, v) => { ref var d = ref e.GetComponent<ManagerTestMultiAttrSet>().FieldA; d.CurrentValue = v; });
-        var attrB = new GameplayAttribute(id: 402,
-            tryReadBaseValue: (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldB.BaseValue; return true; },
-            tryReadCurrentValue: (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldB.CurrentValue; return true; },
-            writeCurrentValue: (e, v) => { ref var d = ref e.GetComponent<ManagerTestMultiAttrSet>().FieldB; d.CurrentValue = v; });
         var mgr = new AttributeAggregatorManager();
-        mgr.RegisterAttribute(attrA);
-        mgr.RegisterAttribute(attrB);
+        mgr.RegisterAttribute(new GameplayAttribute(401),
+            (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldA.BaseValue; },
+            (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldA.CurrentValue; },
+            (Entity e, float v) => { e.GetComponent<ManagerTestMultiAttrSet>().FieldA.CurrentValue = v; });
+        mgr.RegisterAttribute(new GameplayAttribute(402),
+            (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldB.BaseValue; },
+            (Entity e, out float v) => { ref var s = ref e.GetComponent<ManagerTestMultiAttrSet>(); v = s.FieldB.CurrentValue; },
+            (Entity e, float v) => { e.GetComponent<ManagerTestMultiAttrSet>().FieldB.CurrentValue = v; });
 
-        mgr.AddAggregatorMod(entity, (GameplayAttributeHandle)attrA, 1, 20f, EGameplayModOp.Additive);
-        mgr.AddAggregatorMod(entity, (GameplayAttributeHandle)attrB, 2, 50f, EGameplayModOp.Additive);
+        mgr.AddAggregatorMod(entity, new GameplayAttribute(401), new GameplayEffectHandle(1), 20f, EGameplayModOp.Additive);
+        mgr.AddAggregatorMod(entity, new GameplayAttribute(402), new GameplayEffectHandle(2), 50f, EGameplayModOp.Additive);
         mgr.Flush();
-
-        Assert.Equal(20f, mgr.GetCurrentValue(entity, (GameplayAttributeHandle)attrA));
-        Assert.Equal(50f, mgr.GetCurrentValue(entity, (GameplayAttributeHandle)attrB));
+        Assert.Equal(20f, mgr.GetCurrentValue(entity, new GameplayAttribute(401)));
+        Assert.Equal(50f, mgr.GetCurrentValue(entity, new GameplayAttribute(402)));
     }
 }
-
-// ── 本测试专用的 AttributeSet（无 [GameplayAttribute]，SG 不处理）──
 
 internal struct ManagerTestAttrSet : IAttributeSetComponent
 {

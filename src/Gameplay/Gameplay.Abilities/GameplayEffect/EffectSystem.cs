@@ -16,9 +16,9 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
     private int nextHandle = 1;
 
     // Handle -> Spec 缓存（Apply 时存储，Remove 时取回）
-    private readonly Dictionary<int, GameplayEffectSpec> handleToSpec = new();
+    private readonly Dictionary<GameplayEffectHandle, GameplayEffectSpec> handleToSpec = new();
     // Handle -> Entity 懒查询（Remove 时需要 Entity 来移除 Tags）
-    private readonly Dictionary<int, Entity> handleToEntity = new();
+    private readonly Dictionary<GameplayEffectHandle, Entity> handleToEntity = new();
 
     public EffectSystem(AttributeAggregatorManager attributeManager)
     {
@@ -109,11 +109,11 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         return true;
     }
 
-    public int Apply(GameplayEffectSpec spec, Entity target)
+    public GameplayEffectHandle Apply(GameplayEffectSpec spec, Entity target)
     {
         // 1. PreApply: RemoveOtherEffects — 先收集 handles，迭代完再移除，防止 ChildEntities 被修改
         var ge = spec.Definition;
-        var toRemove = new List<int>();
+        var toRemove = new List<GameplayEffectHandle>();
         foreach (var removeQuery in ge.RemoveOtherEffectsQueries)
         {
             foreach (var child in target.ChildEntities)
@@ -142,7 +142,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                 {
                     // 同源 GE → Stack
                     int newCount = existing.StackCount + spec.StackCount;
-                    if (newCount > existing.StackLimit) return -1;
+                    if (newCount > existing.StackLimit) return default;
                     existing.StackCount = newCount;
                     switch (existing.StackingDurationPolicy)
                     {
@@ -159,9 +159,9 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         }
 
         // 3. CanApply
-        if (!CanApply(spec, target)) return -1;
+        if (!CanApply(spec, target)) return default;
 
-        int handle = nextHandle++;
+        var handle = new GameplayEffectHandle(nextHandle++);
 
         // 3. Create ActiveGameplayEffect Entity as child of target
         var entity = target.Store.CreateEntity();
@@ -239,9 +239,9 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
     }
 
     // 重入保护：OnCompleteEffects 触发的 Apply → RemoveOtherEffects 不应再回到当前 handle
-    private readonly HashSet<int> removingHandles = new();
+    private readonly HashSet<GameplayEffectHandle> removingHandles = new();
 
-    public void RemoveEffect(int handle, EEffectEndType reason)
+    public void RemoveEffect(GameplayEffectHandle handle, EEffectEndType reason)
     {
         if (!removingHandles.Add(handle)) return; // 防止递归
 
@@ -361,10 +361,10 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         };
 
     /// <summary>按 Handle 查询 ActiveGE Entity。</summary>
-    public Entity GetEntityByHandle(int handle)
+    public Entity GetEntityByHandle(GameplayEffectHandle handle)
         => handleToEntity.TryGetValue(handle, out var entity) ? entity : default;
 
     // ── Handle -> Spec 取回 ──
-    private GameplayEffectSpec? GetSpecFromHandle(int handle)
+    private GameplayEffectSpec? GetSpecFromHandle(GameplayEffectHandle handle)
         => handleToSpec.TryGetValue(handle, out var spec) ? spec : null;
 }

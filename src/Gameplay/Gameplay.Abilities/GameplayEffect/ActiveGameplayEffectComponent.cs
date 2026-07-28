@@ -26,7 +26,7 @@ public struct ActiveGameplayEffectComponent : IComponent
     public EGameplayEffectStackingExpirationPolicy StackingExpirationPolicy;
 
     // ── 句柄与引用 ──
-    public int Handle;                           // 全局唯一 ID
+    public GameplayEffectHandle Handle;           // 全局唯一 ID
     public Entity SourceEntity;                  // 施放者
     public Entity TargetEntity;                  // 目标（父 Entity）
     public int DefinitionId;                     // GameplayEffectRegistry 查表 key（避免托管引用）

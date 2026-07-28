@@ -7,17 +7,17 @@ namespace Gameplay.Abilities;
 /// <summary>
 /// 属性聚合管理器（POCO，非 ECS System）。
 /// 管理 (Entity, GameplayAttribute) → AttributeAggregator 的映射、脏队列、固定阶段 Flush。
-/// 不再依赖 DirtyAttributeComponent 或 QuerySystem。
+/// 读写委托存储在 AttributeDescriptor 注册表中。
 /// </summary>
 public class AttributeAggregatorManager
 {
     // ── 核心数据 ──
     private readonly Dictionary<AttributeKey, AttributeAggregator> aggregators = new();
-    private readonly Dictionary<int, GameplayAttribute> registeredAttributes = new();
+    private readonly Dictionary<GameplayAttribute, AttributeDescriptor> descriptors = new();
 
     // ── 反向索引 ──
     private readonly Dictionary<Entity, List<AttributeKey>> entityToAttributes = new();
-    private readonly Dictionary<int, List<AttributeKey>> handleToAttributes = new();
+    private readonly Dictionary<GameplayEffectHandle, List<AttributeKey>> handleToAttributes = new();
 
     // ── 脏队列（双缓冲） ──
     private List<AttributeKey> currentDirtyQueue = new();
@@ -26,60 +26,73 @@ public class AttributeAggregatorManager
 
     // ── Attribute 注册 ──
 
-    /// <summary>注册 GameplayAttribute 句柄。SG 通过 RegisterAll 批量调用。ID 冲突时抛出异常。</summary>
-    public void RegisterAttribute(GameplayAttribute attribute)
+    /// <summary>
+    /// 注册 AttributeDescriptor（读写委托）。SG 通过 RegisterAll 批量调用。
+    /// 同一 Id 重复注册时静默覆盖（支持热重载）。
+    /// </summary>
+    internal void RegisterAttribute(GameplayAttribute attr,
+        AttributeDescriptor.ReadValue readBase,
+        AttributeDescriptor.ReadValue readCurrent,
+        AttributeDescriptor.WriteValue writeCurrent)
     {
-        if (registeredAttributes.ContainsKey(attribute.Id))
-            throw new InvalidOperationException($"GameplayAttribute ID {attribute.Id} 重复注册——SG 应保证唯一性");
-        registeredAttributes[attribute.Id] = attribute;
+        descriptors[attr] = new AttributeDescriptor(readBase, readCurrent, writeCurrent);
     }
 
-    /// <summary>尝试解析 Handle 为完整 GameplayAttribute。未注册时返回 false。</summary>
-    private bool TryResolve(GameplayAttributeHandle handle, out GameplayAttribute attr)
-        => registeredAttributes.TryGetValue(handle.Id, out attr);
+    /// <summary>从 descriptors 尝试解析委托描述符。未注册时返回 false。</summary>
+    private bool TryGetDescriptor(GameplayAttribute attr, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out AttributeDescriptor? desc)
+        => descriptors.TryGetValue(attr, out desc);
 
     // ── 公开查询 API ──
 
     /// <summary>返回上次 Flush 后的已结算 CurrentValue。无 aggregator 时返回 Component BaseValue。</summary>
-    public float GetCurrentValue(Entity entity, GameplayAttributeHandle handle)
+    public float GetCurrentValue(Entity entity, GameplayAttribute attr)
     {
-        var key = new AttributeKey(entity, handle);
+        var key = new AttributeKey(entity, attr);
         if (aggregators.TryGetValue(key, out var agg))
         {
-            if (TryResolve(handle, out var attr) && attr.TryReadCurrentValue(entity, out var cv))
+            if (TryGetDescriptor(attr, out var desc))
+            {
+                desc.ReadCurrent(entity, out var cv);
                 return cv;
-            return 0f;
+            }
+            return agg.Evaluate();
         }
         // 无 aggregator → 返回 BaseValue
-        if (TryResolve(handle, out var attr2) && attr2.TryReadBaseValue(entity, out var bv))
+        if (TryGetDescriptor(attr, out var desc2))
+        {
+            desc2.ReadBase(entity, out var bv);
             return bv;
+        }
         return 0f;
     }
 
     /// <summary>返回 aggregator 的 BaseValue。不存在时读 Component BaseValue。</summary>
-    public float GetBaseValue(Entity entity, GameplayAttributeHandle handle)
+    public float GetBaseValue(Entity entity, GameplayAttribute attr)
     {
-        var key = new AttributeKey(entity, handle);
+        var key = new AttributeKey(entity, attr);
         if (aggregators.TryGetValue(key, out var agg))
             return agg.BaseValue;
-        if (TryResolve(handle, out var attr) && attr.TryReadBaseValue(entity, out var baseValue))
+        if (TryGetDescriptor(attr, out var desc))
+        {
+            desc.ReadBase(entity, out var baseValue);
             return baseValue;
+        }
         return 0f;
     }
 
     /// <summary>是否存在 (Entity, Attribute) 的聚合器。</summary>
-    public bool HasAggregator(Entity entity, GameplayAttributeHandle handle)
-        => aggregators.ContainsKey(new AttributeKey(entity, handle));
+    public bool HasAggregator(Entity entity, GameplayAttribute attr)
+        => aggregators.ContainsKey(new AttributeKey(entity, attr));
 
     // ── BaseValue 统一入口 ──
 
     /// <summary>设置 BaseValue——唯一写入入口。值改变时 MarkDirty。</summary>
-    public void SetBaseValue(Entity entity, GameplayAttributeHandle handle, float value)
+    public void SetBaseValue(Entity entity, GameplayAttribute attr, float value)
     {
-        var key = new AttributeKey(entity, handle);
+        var key = new AttributeKey(entity, attr);
         if (!aggregators.TryGetValue(key, out var agg))
         {
-            agg = CreateAggregator(entity, handle, key);
+            agg = CreateAggregator(key);
         }
         if (agg.SetBaseValue(value))
             MarkDirty(key, agg);
@@ -88,25 +101,25 @@ public class AttributeAggregatorManager
     // ── Aggregator 修改 API ──
 
     /// <summary>设置聚合器的 Mod 源值。首次创建时从 Component 读取 BaseValue 初始化。</summary>
-    public void SetAggregatorValue(Entity entity, GameplayAttributeHandle handle, float sourceValue)
+    public void SetAggregatorValue(Entity entity, GameplayAttribute attr, float sourceValue)
     {
-        var key = new AttributeKey(entity, handle);
+        var key = new AttributeKey(entity, attr);
         if (!aggregators.TryGetValue(key, out var agg))
         {
-            agg = CreateAggregator(entity, handle, key);
+            agg = CreateAggregator(key);
         }
         if (agg.SetBaseValue(sourceValue))
             MarkDirty(key, agg);
     }
 
     /// <summary>为 (Entity, Attribute) 添加 GE Modifier。</summary>
-    public void AddAggregatorMod(Entity entity, GameplayAttributeHandle handle, int geHandle,
+    public void AddAggregatorMod(Entity entity, GameplayAttribute attr, GameplayEffectHandle geHandle,
         float magnitude, EGameplayModOp op)
     {
-        var key = new AttributeKey(entity, handle);
+        var key = new AttributeKey(entity, attr);
         if (!aggregators.TryGetValue(key, out var agg))
         {
-            agg = CreateAggregator(entity, handle, key);
+            agg = CreateAggregator(key);
         }
         if (agg.AddMod(geHandle, magnitude, op))
         {
@@ -116,7 +129,7 @@ public class AttributeAggregatorManager
     }
 
     /// <summary>移除指定 GE Handle 的所有 Modifier。仅实际删除的 aggregator 才 MarkDirty。</summary>
-    public void RemoveAggregatorModsByHandle(int handle)
+    public void RemoveAggregatorModsByHandle(GameplayEffectHandle handle)
     {
         if (handleToAttributes.TryGetValue(handle, out var keys))
         {
@@ -151,9 +164,9 @@ public class AttributeAggregatorManager
             float result = agg.Evaluate();
             agg.Dirty = false;
 
-            if (TryResolve(key.Attribute, out var attr))
+            if (TryGetDescriptor(key.Attribute, out var desc))
             {
-                attr.TryWriteCurrentValue(key.Entity, result);
+                desc.WriteCurrent(key.Entity, result);
             }
         }
 
@@ -162,53 +175,6 @@ public class AttributeAggregatorManager
 
         // 交换队列：Flush 期间的新增 Dirty 下一帧处理
         Swap(ref currentDirtyQueue, ref nextDirtyQueue);
-    }
-
-    // ── int 兼容重载（平滑迁移期，不走 Resolve）──
-
-    public float GetCurrentValue(Entity entity, int attributeId)
-    {
-        var key = new AttributeKey(entity, new GameplayAttributeHandle(attributeId));
-        return aggregators.TryGetValue(key, out var agg) ? agg.Evaluate() : 0f;
-    }
-
-    public float GetBaseValue(Entity entity, int attributeId)
-    {
-        var key = new AttributeKey(entity, new GameplayAttributeHandle(attributeId));
-        return aggregators.TryGetValue(key, out var agg) ? agg.BaseValue : 0f;
-    }
-
-    public bool HasAggregator(Entity entity, int attributeId)
-        => aggregators.ContainsKey(new AttributeKey(entity, new GameplayAttributeHandle(attributeId)));
-
-    public void SetAggregatorValue(Entity entity, int attributeId, float sourceValue)
-    {
-        var handle = new GameplayAttributeHandle(attributeId);
-        var key = new AttributeKey(entity, handle);
-        if (!aggregators.TryGetValue(key, out var agg))
-        {
-            agg = new AttributeAggregator();
-            aggregators[key] = agg;
-        }
-        if (agg.SetBaseValue(sourceValue))
-            MarkDirty(key, agg);
-    }
-
-    public void AddAggregatorMod(Entity entity, int attributeId, int geHandle,
-        float magnitude, EGameplayModOp op)
-    {
-        var handle = new GameplayAttributeHandle(attributeId);
-        var key = new AttributeKey(entity, handle);
-        if (!aggregators.TryGetValue(key, out var agg))
-        {
-            agg = new AttributeAggregator();
-            aggregators[key] = agg;
-        }
-        if (agg.AddMod(geHandle, magnitude, op))
-        {
-            MarkDirty(key, agg);
-            AddHandleToAttributeIndex(geHandle, key);
-        }
     }
 
     // ── Entity 生命周期 ──
@@ -221,7 +187,6 @@ public class AttributeAggregatorManager
             foreach (var key in keys)
             {
                 aggregators.Remove(key);
-                // 同时清理 handleToAttributes 引用（懒清理——下次 RemoveAggregatorModsByHandle 跳过不存在 key）
                 currentDirtyQueue.Remove(key);
                 nextDirtyQueue.Remove(key);
             }
@@ -242,15 +207,17 @@ public class AttributeAggregatorManager
             currentDirtyQueue.Add(key);
     }
 
-    private AttributeAggregator CreateAggregator(Entity entity, GameplayAttributeHandle handle,
-        AttributeKey key)
+    private AttributeAggregator CreateAggregator(AttributeKey key)
     {
         var agg = new AttributeAggregator();
         // 从 Component 读取已有 BaseValue 初始化
-        if (TryResolve(handle, out var attr) && attr.TryReadBaseValue(entity, out var baseValue))
+        if (TryGetDescriptor(key.Attribute, out var desc))
+        {
+            desc.ReadBase(key.Entity, out var baseValue);
             agg.SetBaseValue(baseValue);
+        }
         aggregators[key] = agg;
-        AddEntityToAttributeIndex(entity, key);
+        AddEntityToAttributeIndex(key.Entity, key);
         return agg;
     }
 
@@ -264,7 +231,7 @@ public class AttributeAggregatorManager
         list.Add(key);
     }
 
-    private void AddHandleToAttributeIndex(int handle, AttributeKey key)
+    private void AddHandleToAttributeIndex(GameplayEffectHandle handle, AttributeKey key)
     {
         if (!handleToAttributes.TryGetValue(handle, out var list))
         {

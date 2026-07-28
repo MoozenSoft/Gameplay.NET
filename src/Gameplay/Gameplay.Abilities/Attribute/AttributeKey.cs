@@ -10,9 +10,9 @@ namespace Gameplay.Abilities;
 internal readonly struct AttributeKey : IEquatable<AttributeKey>
 {
     internal readonly Entity Entity;
-    internal readonly GameplayAttributeHandle Attribute;
+    internal readonly GameplayAttribute Attribute;
 
-    internal AttributeKey(Entity entity, GameplayAttributeHandle attribute)
+    internal AttributeKey(Entity entity, GameplayAttribute attribute)
     {
         Entity = entity;
         Attribute = attribute;

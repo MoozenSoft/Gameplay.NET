@@ -5,7 +5,7 @@ namespace Gameplay.Abilities;
 public struct GameplayModifier
 {
     /// <summary>修改的目标属性。</summary>
-    public GameplayAttributeHandle Attribute;
+    public GameplayAttribute Attribute;
 
     /// <summary>运算类型。</summary>
     public EGameplayModOp ModOp;
