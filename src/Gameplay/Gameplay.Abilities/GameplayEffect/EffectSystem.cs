@@ -27,6 +27,8 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
 
     // 延迟 Apply 队列（OnCompleteEffects / OnApplicationEffects 产生的新 GE）
     private readonly List<(GameplayEffectSpec spec, Entity target)> deferredApplies = new();
+    // 延迟删除队列（过期 GE 的 Handle，Query 循环后批量 RemoveEffect）
+    private readonly List<GameplayEffectHandle> pendingRemovals = new();
     private static readonly System.Random sharedRandom = new();
 
     protected override void OnUpdate()
@@ -40,7 +42,27 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                 comp.Duration -= dt;
                 if (comp.Duration <= 0)
                 {
-                    HandleExpiration(ref comp, entity);
+                    // StackCount > 1 且非 ClearEntireStack → 原地减 Stack + 刷新 Duration（安全，不删 Entity）
+                    if (comp.StackCount > 1)
+                    {
+                        comp.StackCount--;
+                        var spec = GetSpecFromHandle(comp.Handle);
+                        switch (comp.StackingExpirationPolicy)
+                        {
+                            case EGameplayEffectStackingExpirationPolicy.ClearEntireStack:
+                                pendingRemovals.Add(comp.Handle);
+                                break;
+                            case EGameplayEffectStackingExpirationPolicy.RemoveSingleStackAndRefreshDuration:
+                            case EGameplayEffectStackingExpirationPolicy.RefreshDuration:
+                                comp.Duration = spec?.Duration ?? comp.Duration;
+                                break;
+                        }
+                        entity.GetComponent<ActiveGameplayEffectComponent>() = comp;
+                    }
+                    else
+                    {
+                        pendingRemovals.Add(comp.Handle);
+                    }
                     return;
                 }
             }
@@ -57,7 +79,12 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             }
         });
 
-        // 延迟 Apply（OnCompleteEffects 链接触发，避免 Query 内结构修改）
+        // 延迟删除（避免 Query 循环内 DeleteEntity）
+        for (int i = 0; i < pendingRemovals.Count; i++)
+            RemoveEffect(pendingRemovals[i], EEffectEndType.Normal);
+        pendingRemovals.Clear();
+
+        // 延迟 Apply（OnCompleteEffects 链接触发）
         for (int i = 0; i < deferredApplies.Count; i++)
         {
             var (chainSpec, chainTarget) = deferredApplies[i];
@@ -299,30 +326,6 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
         }
 
         removingHandles.Remove(handle);
-    }
-
-    private void HandleExpiration(ref ActiveGameplayEffectComponent comp, Entity entity)
-    {
-        if (comp.StackCount > 1)
-        {
-            comp.StackCount--;
-            var spec = GetSpecFromHandle(comp.Handle);
-            switch (comp.StackingExpirationPolicy)
-            {
-                case EGameplayEffectStackingExpirationPolicy.ClearEntireStack:
-                    RemoveEffect(comp.Handle, EEffectEndType.Normal);
-                    break;
-                case EGameplayEffectStackingExpirationPolicy.RemoveSingleStackAndRefreshDuration:
-                case EGameplayEffectStackingExpirationPolicy.RefreshDuration:
-                    comp.Duration = spec?.Duration ?? comp.Duration; // 刷新 Duration
-                    break;
-            }
-            entity.GetComponent<ActiveGameplayEffectComponent>() = comp;
-        }
-        else
-        {
-            RemoveEffect(comp.Handle, EEffectEndType.Normal);
-        }
     }
 
     /// <summary>
