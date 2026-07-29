@@ -1,5 +1,8 @@
 <Solution>
-  <Project Path="src/Gameplay.CodeGen/Gameplay.CodeGen.csproj" />
-  <Project Path="src/Gameplay/Gameplay.csproj" />
-  <Project Path="tests/Gameplay.Tests/Gameplay.Tests.csproj" />
+  <Folder Name="/00-Gameplay/">
+    <Project Path="src/Gameplay.CodeGen/Gameplay.CodeGen.csproj" />
+    <Project Path="src/Gameplay/Gameplay.csproj" />
+    <Project Path="tests/Gameplay.Tests/Gameplay.Tests.csproj" />
+  </Folder>
+  <Folder Name="/01-Samples/" />
 </Solution>
