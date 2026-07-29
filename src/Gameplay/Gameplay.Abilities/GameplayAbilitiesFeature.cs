@@ -38,6 +38,7 @@ public class GameplayAbilitiesFeature
         // ── 事件系统 ──
         EventBus = new GameplayEventBus();
         EventDispatcher = new GameplayEventDispatcher(EventBus);
+        AttributeAggregatorManager.SetEventBus(EventBus);
 
         // ── Ability 激活 ──
         ActivationManager = new AbilityActivationManager(EffectSystem);

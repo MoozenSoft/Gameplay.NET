@@ -1,6 +1,6 @@
 namespace Gameplay.Abilities;
 
-public class GameplayEventBus
+public sealed partial class GameplayEventBus
 {
     private GameplayEventFrame current = new();
     private GameplayEventFrame pending = new();

@@ -14,6 +14,7 @@ public class AttributeAggregatorManager
     // ── 核心数据 ──
     private readonly Dictionary<AttributeKey, AttributeAggregator> aggregators = new();
     private readonly Dictionary<GameplayAttribute, AttributeDescriptor> descriptors = new();
+    private GameplayEventBus? eventBus;
 
     // ── 反向索引 ──
     private readonly Dictionary<Entity, List<AttributeKey>> entityToAttributes = new();
@@ -145,6 +146,9 @@ public class AttributeAggregatorManager
         }
     }
 
+    /// <summary>设置事件总线，用于 Flush 时发布 AttributeChangedEvent。</summary>
+    public void SetEventBus(GameplayEventBus bus) => eventBus = bus;
+
     // ── Flush ──
 
     /// <summary>
@@ -161,12 +165,30 @@ public class AttributeAggregatorManager
             if (!aggregators.TryGetValue(key, out var agg))
                 continue;
 
+            // 读旧值用于事件比较
+            float oldValue = 0f;
+            bool hasDesc = TryGetDescriptor(key.Attribute, out var desc);
+            if (hasDesc)
+                desc.ReadCurrent(key.Entity, out oldValue);
+
             float result = agg.Evaluate();
             agg.Dirty = false;
 
-            if (TryGetDescriptor(key.Attribute, out var desc))
+            if (hasDesc)
             {
                 desc.WriteCurrent(key.Entity, result);
+
+                // 值变化时发布事件
+                if (eventBus != null && oldValue != result)
+                {
+                    eventBus.Enqueue(new AttributeChangedEvent
+                    {
+                        Target    = key.Entity,
+                        Attribute = key.Attribute,
+                        OldValue  = oldValue,
+                        NewValue  = result,
+                    }, source: default, target: key.Entity);
+                }
             }
         }
 
