@@ -12,6 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\Gameplay.Shared\*.cs" Link="CodeGen\Shared\%(FileName)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Friflo.Engine.ECS" Version="3.*" />
   </ItemGroup>
 
