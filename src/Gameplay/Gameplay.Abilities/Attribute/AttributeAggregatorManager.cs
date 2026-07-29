@@ -166,16 +166,12 @@ public class AttributeAggregatorManager
                 continue;
 
             // 读旧值用于事件比较
-            float oldValue = 0f;
-            bool hasDesc = TryGetDescriptor(key.Attribute, out var desc);
-            if (hasDesc)
-                desc.ReadCurrent(key.Entity, out oldValue);
-
             float result = agg.Evaluate();
             agg.Dirty = false;
 
-            if (hasDesc)
+            if (TryGetDescriptor(key.Attribute, out var desc))
             {
+                desc.ReadCurrent(key.Entity, out var oldValue);
                 desc.WriteCurrent(key.Entity, result);
 
                 // 值变化时发布事件

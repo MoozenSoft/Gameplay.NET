@@ -209,7 +209,7 @@ public class GameplayEventGenerator : IIncrementalGenerator
     private static bool HasGameplayEventFrame(Compilation compilation)
     {
         var frameType = compilation.GetTypeByMetadataName($"{OutputNamespace}.GameplayEventFrame");
-        return frameType != null && frameType.ContainingAssembly.Equals(compilation.Assembly);
+        return frameType != null && SymbolEqualityComparer.Default.Equals(frameType.ContainingAssembly, compilation.Assembly);
     }
 
     /// <summary>从 SyntaxProvider transform 传递的事件信息。</summary>
