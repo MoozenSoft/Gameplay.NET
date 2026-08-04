@@ -5,10 +5,29 @@ using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 using Gameplay.Abilities;
 using Gameplay.Tasks;
+using Gameplay.Tags;
 using Xunit;
 
 public class TaskBuilderTests
 {
+    private static readonly GameplayTag TestTag = CreateTestTag();
+    private static readonly GameplayTag TestTag2 = CreateTestTag2();
+
+    // Request 是只读查找，必须先注册（不依赖其他测试类的静态构造——xUnit 并行执行）
+    private static GameplayTag CreateTestTag()
+    {
+        GameplayTagManager.RegisterTags("Test.Tag");
+        return GameplayTag.Request("Test.Tag");
+    }
+
+    private static GameplayTag CreateTestTag2()
+    {
+        GameplayTagManager.RegisterTags("Test.Tag2");
+        return GameplayTag.Request("Test.Tag2");
+    }
+
+    private static GameplayTagContainer RequiredQuery => new GameplayTagContainer { TestTag, TestTag2 };
+
     private static Entity CreateWaitDelayTask(EntityStore store, float duration, Entity activeAbility)
         => TaskBuilder.Delay(store, duration, activeAbility);
 
@@ -27,6 +46,122 @@ public class TaskBuilderTests
         Assert.Equal(activeAbility.Id, ownerComp.Owner.Id);
         // Builder 把 Task 挂到 Owner（ActiveAbility）下，供 AllTasksDone 检测
         Assert.Equal(activeAbility.Id, entity.Parent.Id);
+    }
+
+    [Fact]
+    public void WaitTagQueryAdded_CreatesQueryListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitTagQueryAdded(store, target, RequiredQuery, owner);
+
+        Assert.True(entity.HasComponent<TaskStateComponent>());
+        Assert.True(entity.HasComponent<TaskOwnerComponent>());
+        ref var listener = ref entity.GetComponent<TagListenerComponent>();
+        Assert.Equal(target.Id, listener.Target.Id);
+        Assert.NotNull(listener.RequiredTags);
+        Assert.Equal(2, listener.RequiredTags.Count); // 防御性拷贝：内容一致
+        Assert.Equal(TagCondition.Added, listener.Condition);
+    }
+
+    [Fact]
+    public void WaitTagQueryRemoved_CreatesQueryListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitTagQueryRemoved(store, target, RequiredQuery, owner);
+
+        ref var listener = ref entity.GetComponent<TagListenerComponent>();
+        Assert.Equal(TagCondition.Removed, listener.Condition);
+        Assert.NotNull(listener.RequiredTags);
+    }
+
+    [Fact]
+    public void WaitTagQueryAdded_EmptyContainer_Throws()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+
+        // 空集合的 HasAll 恒真/恒假，语义无意义——Builder fail-fast
+        Assert.Throws<System.ArgumentException>(() =>
+            TaskBuilder.WaitTagQueryAdded(store, target, new GameplayTagContainer(), owner));
+    }
+
+    [Fact]
+    public void WaitTagQueryAdded_ContainerMutation_DoesNotAffectTask()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+        var required = RequiredQuery;
+
+        var entity = TaskBuilder.WaitTagQueryAdded(store, target, required, owner);
+
+        // 防御性拷贝：调用者修改原容器不影响已创建 Task 的条件
+        required.RemoveTag(TestTag);
+        ref var listener = ref entity.GetComponent<TagListenerComponent>();
+        Assert.Equal(2, listener.RequiredTags.Count);
+    }
+
+    [Fact]
+    public void WaitAttributeAbove_CreatesThresholdListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitAttributeAbove(store, target, new GameplayAttribute(0), 100f, owner);
+
+        ref var listener = ref entity.GetComponent<AttributeListener>();
+        Assert.Equal(EAttributeCondition.Above, listener.Condition);
+        Assert.Equal(100f, listener.Threshold);
+    }
+
+    [Fact]
+    public void WaitAttributeBelow_CreatesThresholdListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitAttributeBelow(store, target, new GameplayAttribute(0), 50f, owner);
+
+        ref var listener = ref entity.GetComponent<AttributeListener>();
+        Assert.Equal(EAttributeCondition.Below, listener.Condition);
+        Assert.Equal(50f, listener.Threshold);
+    }
+
+    [Fact]
+    public void WaitAttributeRatioAbove_CreatesRatioListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitAttributeRatioAbove(store, target, new GameplayAttribute(0), 0.5f, owner);
+
+        ref var listener = ref entity.GetComponent<AttributeListener>();
+        Assert.Equal(EAttributeCondition.RatioAbove, listener.Condition);
+        Assert.Equal(0.5f, listener.Threshold);
+    }
+
+    [Fact]
+    public void WaitAttributeRatioBelow_CreatesRatioListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitAttributeRatioBelow(store, target, new GameplayAttribute(0), 0.5f, owner);
+
+        ref var listener = ref entity.GetComponent<AttributeListener>();
+        Assert.Equal(EAttributeCondition.RatioBelow, listener.Condition);
+        Assert.Equal(0.5f, listener.Threshold);
     }
 
     [Fact]

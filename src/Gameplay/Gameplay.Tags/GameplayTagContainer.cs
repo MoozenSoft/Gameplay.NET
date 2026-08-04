@@ -11,7 +11,11 @@ public class GameplayTagContainer : IEnumerable<GameplayTag>
 
     public int Count => tagSet.Count;
 
-    public void AddTag(GameplayTag tag) => tagSet.Set(tag.id);
+    public void AddTag(GameplayTag tag)
+    {
+        if (!tag.IsValid) return; // 与 GameplayTagsComponent.AddTag 对齐——无效 Tag 不设置位 0
+        tagSet.Set(tag.id);
+    }
 
     public void Add(GameplayTag tag) => AddTag(tag);
 

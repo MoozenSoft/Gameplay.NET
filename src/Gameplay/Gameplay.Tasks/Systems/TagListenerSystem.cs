@@ -19,18 +19,18 @@ public class TagListenerSystem : QuerySystem<TagListenerComponent, TaskStateComp
             // Pending→Running 在 guard 之前，防止目标无效时任务卡在 Pending
             if (state.State == ETaskState.Pending)
             {
-                // Removed：如果 tag 本来就不在，立即 Done
+                // Removed：如果条件本来就不满足，立即 Done
                 if (listener.Condition == TagCondition.Removed)
                 {
                     var pendingTarget = listener.Target;
-                    if (!pendingTarget.IsNull && pendingTarget.TryGetComponent<GameplayTagsComponent>(out var t) && t.HasTag(listener.Tag))
+                    if (IsConditionMet(pendingTarget, listener))
                     {
                         listener.WasPresent = true;
                         state.State = ETaskState.Running;
                     }
                     else
                     {
-                        TaskCommands.Complete(entity); // Tag 不存在 → 已完成
+                        TaskCommands.Complete(entity); // 条件已满足（Tag 不存在）→ 已完成
                     }
                     return;
                 }
@@ -39,26 +39,39 @@ public class TagListenerSystem : QuerySystem<TagListenerComponent, TaskStateComp
             }
 
             var target = listener.Target;
-            if (target.IsNull || !target.HasComponent<GameplayTagsComponent>())
+            if (target.IsNull || !target.TryGetComponent<GameplayTagsComponent>(out var tags))
             {
                 TaskCommands.Complete(entity);
                 return;
             }
 
-            ref var tags = ref target.GetComponent<GameplayTagsComponent>();
+            bool met = listener.RequiredTags != null
+                ? tags.HasAll(listener.RequiredTags)
+                : tags.HasTag(listener.Tag);
             if (listener.Condition == TagCondition.Added)
             {
-                // Added：检查 tag 是否已出现
-                if (tags.HasTag(listener.Tag))
+                // Added：检查条件是否已出现
+                if (met)
                     TaskCommands.Complete(entity);
             }
             else
             {
-                // Removed：检查 tag 是否已被移除
-                bool hasNow = tags.HasTag(listener.Tag);
-                if (listener.WasPresent && !hasNow)
+                // Removed：检查条件是否已被破坏
+                if (listener.WasPresent && !met)
                     TaskCommands.Complete(entity);
             }
         });
+    }
+
+    /// <summary>
+    /// 判定条件是否满足：单 Tag 模式查 HasTag；Query 模式（RequiredTags 非空）查 HasAll。
+    /// </summary>
+    private static bool IsConditionMet(Entity target, in TagListenerComponent listener)
+    {
+        if (target.IsNull || !target.TryGetComponent<GameplayTagsComponent>(out var tags))
+            return false;
+        return listener.RequiredTags != null
+            ? tags.HasAll(listener.RequiredTags)
+            : tags.HasTag(listener.Tag);
     }
 }
