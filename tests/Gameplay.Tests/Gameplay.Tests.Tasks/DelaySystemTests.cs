@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Gameplay.Tests.Tasks;
 
-public class DelayTests
+public class DelaySystemTests
 {
     private static (World World, SystemRoot Root) Setup()
     {

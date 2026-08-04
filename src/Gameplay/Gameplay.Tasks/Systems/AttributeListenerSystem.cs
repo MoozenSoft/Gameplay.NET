@@ -28,6 +28,10 @@ public class AttributeListenerSystem : QuerySystem<AttributeListener, TaskStateC
             if (state.State == ETaskState.Pending)
             {
                 state.State = ETaskState.Running;
+                // 快照当前值——"变化"相对注册时，而非 0（否则初始值非 0 会误判为一次变化）
+                var pendingTarget = listener.Target;
+                if (!pendingTarget.IsNull)
+                    listener.LastValue = mgr.GetCurrentValue(pendingTarget, listener.Attribute);
                 return;
             }
 

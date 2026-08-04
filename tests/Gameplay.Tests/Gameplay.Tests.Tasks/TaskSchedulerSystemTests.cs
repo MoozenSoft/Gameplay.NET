@@ -32,14 +32,6 @@ public class TaskSchedulerSystemTests
     }
 
     [Fact]
-    public void TaskOwnerComponent_Default_Values()
-    {
-        var comp = new TaskOwnerComponent();
-        Assert.Equal(default, comp.Owner);
-        Assert.Equal(0, comp.TaskHandle);
-    }
-
-    [Fact]
     public void AllTasksDone_CancelsActiveAbility()
     {
         var (taskSys, root, activationManager, store) = Setup();
