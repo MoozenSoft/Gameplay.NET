@@ -39,7 +39,7 @@ public class AttributeListenerSystem : QuerySystem<AttributeListener, TaskStateC
             var target = listener.Target;
             if (target.IsNull)
             {
-                state.State = ETaskState.Done;
+                TaskCommands.Complete(entity);
                 return;
             }
 
@@ -49,7 +49,7 @@ public class AttributeListenerSystem : QuerySystem<AttributeListener, TaskStateC
             {
                 listener.Count--;
                 if (listener.Count <= 0)
-                    state.State = ETaskState.Done;
+                    TaskCommands.Complete(entity);
                 else
                     listener.LastValue = current;
             }

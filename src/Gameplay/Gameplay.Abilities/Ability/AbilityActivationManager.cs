@@ -124,10 +124,7 @@ public class AbilityActivationManager
         foreach (var child in activeEntity.ChildEntities)
         {
             if (child.HasComponent<TaskStateComponent>())
-            {
-                ref var taskState = ref child.GetComponent<TaskStateComponent>();
-                taskState.State = ETaskState.Cancelled;
-            }
+                TaskCommands.Cancel(child);
         }
         pendingDeletions.Add(activeEntity);
     }

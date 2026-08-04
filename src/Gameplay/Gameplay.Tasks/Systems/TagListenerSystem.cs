@@ -30,7 +30,7 @@ public class TagListenerSystem : QuerySystem<TagListenerComponent, TaskStateComp
                     }
                     else
                     {
-                        state.State = ETaskState.Done; // Tag 不存在 → 已完成
+                        TaskCommands.Complete(entity); // Tag 不存在 → 已完成
                     }
                     return;
                 }
@@ -41,7 +41,7 @@ public class TagListenerSystem : QuerySystem<TagListenerComponent, TaskStateComp
             var target = listener.Target;
             if (target.IsNull || !target.HasComponent<GameplayTagsComponent>())
             {
-                state.State = ETaskState.Done;
+                TaskCommands.Complete(entity);
                 return;
             }
 
@@ -50,14 +50,14 @@ public class TagListenerSystem : QuerySystem<TagListenerComponent, TaskStateComp
             {
                 // Added：检查 tag 是否已出现
                 if (tags.HasTag(listener.Tag))
-                    state.State = ETaskState.Done;
+                    TaskCommands.Complete(entity);
             }
             else
             {
                 // Removed：检查 tag 是否已被移除
                 bool hasNow = tags.HasTag(listener.Tag);
                 if (listener.WasPresent && !hasNow)
-                    state.State = ETaskState.Done;
+                    TaskCommands.Complete(entity);
             }
         });
     }

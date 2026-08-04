@@ -27,13 +27,13 @@ public class CommitPhaseListenerSystem : QuerySystem<CommitPhaseListener, TaskSt
             var target = listener.Target;
             if (target.IsNull || !target.HasComponent<ActiveAbilityComponent>())
             {
-                state.State = ETaskState.Done;
+                TaskCommands.Complete(entity);
             }
             else
             {
                 ref var activeComp = ref target.GetComponent<ActiveAbilityComponent>();
                 if (activeComp.State == EAbilityInstanceState.Active)
-                    state.State = ETaskState.Done;
+                    TaskCommands.Complete(entity);
             }
         });
     }

@@ -58,10 +58,7 @@ public class GameplayEventSystem : QuerySystem<GameplayEventListener, TaskStateC
         if (entity.TryGetComponent<GameplayEventListener>(out var listener))
         {
             if (listener.EventId == record.EventId)
-            {
-                ref var state = ref entity.GetComponent<TaskStateComponent>();
-                state.State = ETaskState.Done;
-            }
+                TaskCommands.Complete(entity);
         }
     }
 }
