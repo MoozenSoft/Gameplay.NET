@@ -1,24 +1,24 @@
 // tests/Gameplay.Tests/Gameplay.Tests.Abilities/AbilityTask/WaitGameplayEventTaskTests.cs
-namespace Gameplay.Tests.Abilities;
+namespace Gameplay.Tests.Tasks;
 
 using Friflo.Engine.ECS;
 using Gameplay.Abilities;
 using Gameplay.Tasks;
 using Xunit;
 
-public class WaitGameplayEventTaskTests
+public class GameplayEventListenerTests
 {
     [Fact]
-    public void WaitGameplayEventComponent_StoresEventId()
+    public void GameplayEventListener_StoresEventId()
     {
-        var comp = new WaitGameplayEventComponent { EventId = 42 };
+        var comp = new GameplayEventListener { EventId = 42 };
         Assert.Equal((ushort)42, comp.EventId);
     }
 
     [Fact]
-    public void WaitGameplayEventComponent_DefaultEventId_IsZero()
+    public void GameplayEventListener_DefaultEventId_IsZero()
     {
-        var comp = new WaitGameplayEventComponent();
+        var comp = new GameplayEventListener();
         Assert.Equal((ushort)0, comp.EventId);
     }
 
@@ -30,11 +30,11 @@ public class WaitGameplayEventTaskTests
         var eventDispatcher = new GameplayEventDispatcher(bus);
         ushort eventId = 5;
 
-        // Create task entity with WaitGameplayEventComponent
+        // Create task entity with GameplayEventListener
         var taskEntity = store.CreateEntity();
         taskEntity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
-        taskEntity.AddComponent(new AbilityTaskContextComponent());
-        taskEntity.AddComponent(new WaitGameplayEventComponent { EventId = eventId });
+        taskEntity.AddComponent(new TaskOwnerComponent());
+        taskEntity.AddComponent(new GameplayEventListener { EventId = eventId });
 
         // Register as dynamic listener
         eventDispatcher.RegisterDynamic(eventId, taskEntity, 0);
@@ -46,7 +46,7 @@ public class WaitGameplayEventTaskTests
             if (record.EventId != eventId) return;
 
             var entity = store.GetEntityById(entityId);
-            if (entity.HasComponent<WaitGameplayEventComponent>())
+            if (entity.HasComponent<GameplayEventListener>())
             {
                 ref var state = ref entity.GetComponent<TaskStateComponent>();
                 state.State = ETaskState.Done;
@@ -71,8 +71,8 @@ public class WaitGameplayEventTaskTests
 
         var taskEntity = store.CreateEntity();
         taskEntity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
-        taskEntity.AddComponent(new AbilityTaskContextComponent());
-        taskEntity.AddComponent(new WaitGameplayEventComponent { EventId = eventId });
+        taskEntity.AddComponent(new TaskOwnerComponent());
+        taskEntity.AddComponent(new GameplayEventListener { EventId = eventId });
 
         eventDispatcher.RegisterDynamic(eventId, taskEntity, 0);
 
@@ -82,7 +82,7 @@ public class WaitGameplayEventTaskTests
             if (record.EventId != eventId) return;
 
             var entity = store.GetEntityById(entityId);
-            if (entity.HasComponent<WaitGameplayEventComponent>())
+            if (entity.HasComponent<GameplayEventListener>())
             {
                 ref var state = ref entity.GetComponent<TaskStateComponent>();
                 state.State = ETaskState.Done;
@@ -107,8 +107,8 @@ public class WaitGameplayEventTaskTests
 
         var taskEntity = store.CreateEntity();
         taskEntity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
-        taskEntity.AddComponent(new AbilityTaskContextComponent());
-        taskEntity.AddComponent(new WaitGameplayEventComponent { EventId = eventId });
+        taskEntity.AddComponent(new TaskOwnerComponent());
+        taskEntity.AddComponent(new GameplayEventListener { EventId = eventId });
 
         eventDispatcher.RegisterDynamic(eventId, taskEntity, 0);
         eventDispatcher.UnregisterDynamic(eventId, taskEntity, 0);

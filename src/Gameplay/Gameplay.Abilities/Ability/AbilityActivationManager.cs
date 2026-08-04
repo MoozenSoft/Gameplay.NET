@@ -119,13 +119,14 @@ public class AbilityActivationManager
                 tags.RemoveTag(tag);
         }
 
-        // 将 WaitCancel Task 标记为 Done + 入队延迟删除（Query 内不能 DeleteEntity）
+        // 所有子 Task 统一标记 Cancelled + 入队延迟删除（Query 内不能 DeleteEntity）
+        // 不依赖专用标记组件——取消是通用规则，TaskSchedulerSystem 统一销毁
         foreach (var child in activeEntity.ChildEntities)
         {
-            if (child.HasComponent<WaitCancelComponent>() && child.HasComponent<TaskStateComponent>())
+            if (child.HasComponent<TaskStateComponent>())
             {
                 ref var taskState = ref child.GetComponent<TaskStateComponent>();
-                taskState.State = ETaskState.Done;
+                taskState.State = ETaskState.Cancelled;
             }
         }
         pendingDeletions.Add(activeEntity);

@@ -1,5 +1,5 @@
 // tests/Gameplay.Tests/Gameplay.Tests.Abilities/AbilityTask/AbilityTaskSystemTests.cs
-namespace Gameplay.Tests.Abilities;
+namespace Gameplay.Tests.Tasks;
 
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
@@ -7,25 +7,43 @@ using Gameplay.Abilities;
 using Gameplay.Tasks;
 using Xunit;
 
-public class AbilityTaskSystemTests
+public class TaskSchedulerSystemTests
 {
-    [Fact]
-    public void AbilityTaskContextComponent_Default_Values()
+    /// <summary>测试监听器——Owner 全部 Task 完成 → CancelAbility（模拟 GameplayAbilitiesFeature）。</summary>
+    private sealed class TestCompletionListener : ITaskCompletionListener
     {
-        var comp = new AbilityTaskContextComponent();
-        Assert.Equal(default, comp.ActiveAbility);
+        private readonly AbilityActivationManager mgr;
+
+        public TestCompletionListener(AbilityActivationManager mgr) => this.mgr = mgr;
+
+        public void OnAllTasksDone(Entity owner) => mgr.CancelAbility(owner);
+    }
+
+    private static (TaskSchedulerSystem TaskSys, SystemRoot Root, AbilityActivationManager ActivationManager, EntityStore Store) Setup()
+    {
+        var store = new EntityStore();
+        var mgr = new AttributeAggregatorManager();
+        var effectSys = new EffectSystem(mgr);
+        var activationManager = new AbilityActivationManager(effectSys);
+        var taskSys = new TaskSchedulerSystem();
+        taskSys.SetCompletionListener(new TestCompletionListener(activationManager));
+        var root = new SystemRoot(store) { taskSys };
+        return (taskSys, root, activationManager, store);
+    }
+
+    [Fact]
+    public void TaskOwnerComponent_Default_Values()
+    {
+        var comp = new TaskOwnerComponent();
+        Assert.Equal(default, comp.Owner);
         Assert.Equal(0, comp.TaskHandle);
     }
 
     [Fact]
     public void AllTasksDone_CancelsActiveAbility()
     {
-        var store = new EntityStore();
-        var mgr = new AttributeAggregatorManager();
-        var effectSys = new EffectSystem(mgr);
-        var activationManager = new AbilityActivationManager(effectSys);
-        var taskSys = new AbilityTaskSystem(activationManager);
-        var root = new SystemRoot(store) { taskSys };
+        var (taskSys, root, activationManager, store) = Setup();
+        
 
         // ActiveAbility Entity
         var activeAbility = store.CreateEntity();
@@ -41,15 +59,16 @@ public class AbilityTaskSystemTests
         var task1 = store.CreateEntity();
         activeAbility.AddChild(task1);
         task1.AddComponent(new TaskStateComponent { State = ETaskState.Done });
-        task1.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
+        task1.AddComponent(new TaskOwnerComponent { Owner = activeAbility });
 
         var task2 = store.CreateEntity();
         activeAbility.AddChild(task2);
         task2.AddComponent(new TaskStateComponent { State = ETaskState.Done });
-        task2.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
+        task2.AddComponent(new TaskOwnerComponent { Owner = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
         activationManager.ProcessPendingDeletions();
+        taskSys.ProcessPendingDeletions();
 
         // ActiveAbility 应被 Cancel → DeleteEntity → 实体已不存在
         Assert.True(activeAbility.IsNull);
@@ -58,12 +77,8 @@ public class AbilityTaskSystemTests
     [Fact]
     public void SomeTasksPending_DoesNotCancelActiveAbility()
     {
-        var store = new EntityStore();
-        var mgr = new AttributeAggregatorManager();
-        var effectSys = new EffectSystem(mgr);
-        var activationManager = new AbilityActivationManager(effectSys);
-        var taskSys = new AbilityTaskSystem(activationManager);
-        var root = new SystemRoot(store) { taskSys };
+        var (taskSys, root, activationManager, store) = Setup();
+        
 
         var activeAbility = store.CreateEntity();
         activeAbility.AddComponent(new ActiveAbilityComponent
@@ -78,13 +93,13 @@ public class AbilityTaskSystemTests
         var task1 = store.CreateEntity();
         activeAbility.AddChild(task1);
         task1.AddComponent(new TaskStateComponent { State = ETaskState.Done });
-        task1.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
+        task1.AddComponent(new TaskOwnerComponent { Owner = activeAbility });
 
         // Task2: 仍在 Running
         var task2 = store.CreateEntity();
         activeAbility.AddChild(task2);
         task2.AddComponent(new TaskStateComponent { State = ETaskState.Running });
-        task2.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
+        task2.AddComponent(new TaskOwnerComponent { Owner = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
 
@@ -92,17 +107,17 @@ public class AbilityTaskSystemTests
         var comp = activeAbility.GetComponent<ActiveAbilityComponent>();
         Assert.Equal(EAbilityInstanceState.Active, comp.State);
         Assert.True(comp.IsActive);
+
+        // 已完成的 task1 仍被 Scheduler 销毁（task 自身生命周期与 Owner 决策解耦）
+        taskSys.ProcessPendingDeletions();
+        Assert.True(task1.IsNull);
     }
 
     [Fact]
     public void MixedDoneAndCancelled_CancelsActiveAbility()
     {
-        var store = new EntityStore();
-        var mgr = new AttributeAggregatorManager();
-        var effectSys = new EffectSystem(mgr);
-        var activationManager = new AbilityActivationManager(effectSys);
-        var taskSys = new AbilityTaskSystem(activationManager);
-        var root = new SystemRoot(store) { taskSys };
+        var (taskSys, root, activationManager, store) = Setup();
+        
 
         var activeAbility = store.CreateEntity();
         activeAbility.AddComponent(new ActiveAbilityComponent
@@ -117,16 +132,17 @@ public class AbilityTaskSystemTests
         var task1 = store.CreateEntity();
         activeAbility.AddChild(task1);
         task1.AddComponent(new TaskStateComponent { State = ETaskState.Done });
-        task1.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
+        task1.AddComponent(new TaskOwnerComponent { Owner = activeAbility });
 
         // Task2: Cancelled
         var task2 = store.CreateEntity();
         activeAbility.AddChild(task2);
         task2.AddComponent(new TaskStateComponent { State = ETaskState.Cancelled });
-        task2.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
+        task2.AddComponent(new TaskOwnerComponent { Owner = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
         activationManager.ProcessPendingDeletions();
+        taskSys.ProcessPendingDeletions();
 
         // 全部 Done/Cancelled → 应 Cancel → DeleteEntity
         Assert.True(activeAbility.IsNull);
@@ -135,12 +151,8 @@ public class AbilityTaskSystemTests
     [Fact]
     public void PendingState_DoesNotTriggerCancel()
     {
-        var store = new EntityStore();
-        var mgr = new AttributeAggregatorManager();
-        var effectSys = new EffectSystem(mgr);
-        var activationManager = new AbilityActivationManager(effectSys);
-        var taskSys = new AbilityTaskSystem(activationManager);
-        var root = new SystemRoot(store) { taskSys };
+        var (taskSys, root, activationManager, store) = Setup();
+        
 
         var activeAbility = store.CreateEntity();
         activeAbility.AddComponent(new ActiveAbilityComponent
@@ -155,7 +167,7 @@ public class AbilityTaskSystemTests
         var task1 = store.CreateEntity();
         activeAbility.AddChild(task1);
         task1.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
-        task1.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
+        task1.AddComponent(new TaskOwnerComponent { Owner = activeAbility });
 
         root.Update(new UpdateTick(0.16f, 0));
 
@@ -165,16 +177,12 @@ public class AbilityTaskSystemTests
     }
 
     [Fact]
-    public void NoTaskContextEntities_SystemDoesNothing()
+    public void NoTaskOwnerEntities_SystemDoesNothing()
     {
-        var store = new EntityStore();
-        var mgr = new AttributeAggregatorManager();
-        var effectSys = new EffectSystem(mgr);
-        var activationManager = new AbilityActivationManager(effectSys);
-        var taskSys = new AbilityTaskSystem(activationManager);
-        var root = new SystemRoot(store) { taskSys };
+        var (taskSys, root, activationManager, store) = Setup();
+        
 
-        // 创建 ActiveAbility，但不创建任何 Task entity（无 AbilityTaskContextComponent）
+        // 创建 ActiveAbility，但不创建任何 Task entity（无 TaskOwnerComponent）
         var activeAbility = store.CreateEntity();
         activeAbility.AddComponent(new ActiveAbilityComponent
         {

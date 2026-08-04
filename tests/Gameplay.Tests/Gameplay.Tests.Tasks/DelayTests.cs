@@ -6,13 +6,13 @@ using Xunit;
 
 namespace Gameplay.Tests.Tasks;
 
-public class GameplayTaskTests
+public class DelayTests
 {
     private static (World World, SystemRoot Root) Setup()
     {
         var world = new World(NetMode.Standalone);
         var root = new SystemRoot(world.Store) {
-            new DelayTaskSystem(),
+            new DelaySystem(),
         };
         return (world, root);
     }
@@ -22,7 +22,7 @@ public class GameplayTaskTests
         var entity = store.CreateEntity();
         entity.AddComponent(new TaskOwnerComponent { Owner = default });
         entity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
-        entity.AddComponent(new DelayTaskComponent { Duration = duration, Elapsed = 0f });
+        entity.AddComponent(new DelayComponent { Duration = duration, Elapsed = 0f });
         return entity;
     }
 
@@ -47,7 +47,7 @@ public class GameplayTaskTests
         root.Update(new UpdateTick(0.16f, 0)); // Pending → Running
         root.Update(new UpdateTick(0.16f, 0)); // Running, 累加 Elapsed
 
-        ref var delay = ref entity.GetComponent<DelayTaskComponent>();
+        ref var delay = ref entity.GetComponent<DelayComponent>();
         Assert.Equal(0.16f, delay.Elapsed, 4);
     }
 

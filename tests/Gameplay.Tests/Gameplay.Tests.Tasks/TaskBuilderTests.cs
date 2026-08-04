@@ -1,5 +1,5 @@
 // tests/Gameplay.Tests/Gameplay.Tests.Abilities/AbilityTask/WaitDelayTaskTests.cs
-namespace Gameplay.Tests.Abilities;
+namespace Gameplay.Tests.Tasks;
 
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
@@ -7,17 +7,10 @@ using Gameplay.Abilities;
 using Gameplay.Tasks;
 using Xunit;
 
-public class WaitDelayTaskTests
+public class TaskBuilderTests
 {
     private static Entity CreateWaitDelayTask(EntityStore store, float duration, Entity activeAbility)
-    {
-        var entity = store.CreateEntity();
-        entity.AddComponent(new TaskStateComponent { State = ETaskState.Pending });
-        entity.AddComponent(new TaskOwnerComponent { Owner = default });
-        entity.AddComponent(new DelayTaskComponent { Duration = duration, Elapsed = 0f });
-        entity.AddComponent(new AbilityTaskContextComponent { ActiveAbility = activeAbility });
-        return entity;
-    }
+        => TaskBuilder.Delay(store, duration, activeAbility);
 
     [Fact]
     public void WaitDelayTask_HasAllRequiredComponents()
@@ -28,11 +21,12 @@ public class WaitDelayTaskTests
 
         Assert.True(entity.HasComponent<TaskStateComponent>());
         Assert.True(entity.HasComponent<TaskOwnerComponent>());
-        Assert.True(entity.HasComponent<DelayTaskComponent>());
-        Assert.True(entity.HasComponent<AbilityTaskContextComponent>());
+        Assert.True(entity.HasComponent<DelayComponent>());
 
-        ref var ctx = ref entity.GetComponent<AbilityTaskContextComponent>();
-        Assert.Equal(activeAbility.Id, ctx.ActiveAbility.Id);
+        ref var ownerComp = ref entity.GetComponent<TaskOwnerComponent>();
+        Assert.Equal(activeAbility.Id, ownerComp.Owner.Id);
+        // Builder 把 Task 挂到 Owner（ActiveAbility）下，供 AllTasksDone 检测
+        Assert.Equal(activeAbility.Id, entity.Parent.Id);
     }
 
     [Fact]
@@ -52,7 +46,7 @@ public class WaitDelayTaskTests
 
         var root = new SystemRoot(store)
         {
-            new DelayTaskSystem(),
+            new DelaySystem(),
         };
 
         root.Update(new UpdateTick(0.16f, 0)); // Pending → Running (Elapsed still 0)
@@ -80,7 +74,7 @@ public class WaitDelayTaskTests
 
         var root = new SystemRoot(store)
         {
-            new DelayTaskSystem(),
+            new DelaySystem(),
         };
 
         root.Update(new UpdateTick(0.16f, 0));

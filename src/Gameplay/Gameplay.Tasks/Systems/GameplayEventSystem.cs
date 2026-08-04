@@ -1,32 +1,21 @@
-// src/Gameplay/Gameplay.Abilities/AbilityTask/WaitGameplayEventTask.cs
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
-using Gameplay.Tasks;
+using Gameplay.Abilities;
 
-namespace Gameplay.Abilities;
-
-/// <summary>
-/// WaitGameplayEvent Task Component —— 存储等待的 EventId。<br/>
-/// 当 GameplayEventDispatcher 分发匹配的 GameplayEvent 时，TaskState 自动设为 Done。
-/// </summary>
-public struct WaitGameplayEventComponent : IComponent
-{
-    /// <summary>要监听的事件 ID。</summary>
-    public ushort EventId;
-}
+namespace Gameplay.Tasks;
 
 /// <summary>
-/// WaitGameplayEvent Task System —— 管理 Task 的注册和事件分发。<br/>
+/// 事件能力 Driver——管理 GameplayEventListener 的注册与事件分发。<br/>
 /// 1. 为 Pending Task 注册 GameplayEventDispatcher 动态 Listener。<br/>
-/// 2. 通过 OnDynamicInvoke 回调，在匹配事件到达时将 TaskState 设为 Done。
+/// 2. 通过 OnDynamicInvoke 回调，在匹配事件到达时将 Task 设为 Done。
 /// </summary>
-public class WaitGameplayEventTaskSystem : QuerySystem<WaitGameplayEventComponent, TaskStateComponent>
+public class GameplayEventSystem : QuerySystem<GameplayEventListener, TaskStateComponent>
 {
     private readonly GameplayEventDispatcher eventDispatcher;
     private readonly EntityStore store;
     private bool callbackRegistered;
 
-    public WaitGameplayEventTaskSystem(GameplayEventDispatcher eventDispatcher, EntityStore store)
+    public GameplayEventSystem(GameplayEventDispatcher eventDispatcher, EntityStore store)
     {
         this.eventDispatcher = eventDispatcher;
         this.store = store;
@@ -42,23 +31,23 @@ public class WaitGameplayEventTaskSystem : QuerySystem<WaitGameplayEventComponen
         }
 
         // 为 Pending Task 注册 GameplayEventDispatcher 动态 Listener
-        Query.ForEachEntity((ref WaitGameplayEventComponent wait, ref TaskStateComponent state, Entity entity) =>
+        Query.ForEachEntity((ref GameplayEventListener listener, ref TaskStateComponent state, Entity entity) =>
         {
             if (state.State == ETaskState.Pending)
             {
-                eventDispatcher.RegisterDynamic(wait.EventId, entity, 0);
+                eventDispatcher.RegisterDynamic(listener.EventId, entity, 0);
                 state.State = ETaskState.Running;
             }
             else if (state.State == ETaskState.Done || state.State == ETaskState.Cancelled)
             {
-                eventDispatcher.UnregisterDynamic(wait.EventId, entity, 0);
+                eventDispatcher.UnregisterDynamic(listener.EventId, entity, 0);
             }
         });
     }
 
     /// <summary>
     /// GameplayEventDispatcher 动态分发回调。
-    /// 当事件 ID 匹配 WaitGameplayEventComponent.EventId 时，将 TaskState 设为 Done。
+    /// 当事件 ID 匹配 GameplayEventListener.EventId 时，将 Task 设为 Done。
     /// </summary>
     private void HandleDynamicInvoke(in GameplayEventRecord record, int entityId, int handlerId)
     {
@@ -66,9 +55,9 @@ public class WaitGameplayEventTaskSystem : QuerySystem<WaitGameplayEventComponen
         if (entity.IsNull)
             return;
 
-        if (entity.TryGetComponent<WaitGameplayEventComponent>(out var waitComp))
+        if (entity.TryGetComponent<GameplayEventListener>(out var listener))
         {
-            if (waitComp.EventId == record.EventId)
+            if (listener.EventId == record.EventId)
             {
                 ref var state = ref entity.GetComponent<TaskStateComponent>();
                 state.State = ETaskState.Done;

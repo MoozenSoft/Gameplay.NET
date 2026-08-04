@@ -21,7 +21,7 @@ public class GameplayAbilitiesFeatureTests
         Assert.NotNull(feature.EventBus);
         Assert.NotNull(feature.EventDispatcher);
         Assert.NotNull(feature.ActivationManager);
-        Assert.NotNull(feature.AbilityTaskSystem);
+        Assert.NotNull(feature.TaskScheduler);
         Assert.NotNull(feature.PredictionManager);
         Assert.NotNull(feature.CueManager);
     }

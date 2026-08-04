@@ -9,17 +9,17 @@ namespace Gameplay.Abilities;
 /// 全部 System 和 Manager 组织起来，挂到已有 EntityStore。
 /// 不是 World 的包裹，只是注册入口。
 /// </summary>
-public class GameplayAbilitiesFeature
+public class GameplayAbilitiesFeature : ITaskCompletionListener
 {
     // ── Friflo QuerySystems（SystemRoot 管理）──
     public AttributeAggregatorManager AttributeAggregatorManager { get; }
     public EffectSystem EffectSystem { get; }
-    public AbilityTaskSystem AbilityTaskSystem { get; }
-    public WaitGameplayEventTaskSystem WaitEventTaskSystem { get; }
-    public WaitAttributeChangeTaskSystem WaitAttrTaskSystem { get; }
-    public WaitGameplayTagTaskSystem WaitTagTaskSystem { get; }
-    public WaitAbilityCommitTaskSystem WaitCommitTaskSystem { get; }
-    public DelayTaskSystem DelayTaskSystem { get; }
+    public TaskSchedulerSystem TaskScheduler { get; }
+    public GameplayEventSystem GameplayEventTaskSystem { get; }
+    public AttributeListenerSystem AttributeListenerTaskSystem { get; }
+    public TagListenerSystem TagListenerTaskSystem { get; }
+    public CommitPhaseListenerSystem CommitPhaseListenerTaskSystem { get; }
+    public DelaySystem DelayTaskSystem { get; }
     public SystemRoot SystemRoot { get; }
 
     // ── POCO Manager / System（外部调用）──
@@ -47,32 +47,39 @@ public class GameplayAbilitiesFeature
         CueManager = CreateCueManager(netMode);
         PredictionManager = new PredictionManager();
 
-        // ── Task 系统 ──
-        AbilityTaskSystem = new AbilityTaskSystem(ActivationManager);
-        WaitEventTaskSystem = new WaitGameplayEventTaskSystem(EventDispatcher, store);
-        WaitAttrTaskSystem = new WaitAttributeChangeTaskSystem(AttributeAggregatorManager);
-        WaitTagTaskSystem = new WaitGameplayTagTaskSystem();
-        WaitCommitTaskSystem = new WaitAbilityCommitTaskSystem();
-        DelayTaskSystem = new DelayTaskSystem();
+        // ── Task 系统（Runtime + Driver）──
+        TaskScheduler = new TaskSchedulerSystem();
+        TaskScheduler.SetCompletionListener(this); // 全部 Task 完成 → CancelAbility
+        GameplayEventTaskSystem = new GameplayEventSystem(EventDispatcher, store);
+        AttributeListenerTaskSystem = new AttributeListenerSystem(AttributeAggregatorManager);
+        TagListenerTaskSystem = new TagListenerSystem();
+        CommitPhaseListenerTaskSystem = new CommitPhaseListenerSystem();
+        DelayTaskSystem = new DelaySystem();
 
         // ── SystemRoot — 按 Phase 注册 Friflo QuerySystem ──
         SystemRoot = new SystemRoot(store)
         {
             // Phase 1: 内置 Task 推进（Pending→Running + 条件检查）
-            DelayTaskSystem,          // DelayTask 计时（共享——WaitDelayTask 复用）
-            WaitEventTaskSystem,
-            WaitAttrTaskSystem,
-            WaitTagTaskSystem,
-            WaitCommitTaskSystem,
-            // Phase 2: AbilityTask 完成检测（所有 Task Done → EndAbility）
-            AbilityTaskSystem,
+            DelayTaskSystem,          // Delay 计时（共享——TaskBuilder.Delay 复用）
+            GameplayEventTaskSystem,
+            AttributeListenerTaskSystem,
+            TagListenerTaskSystem,
+            CommitPhaseListenerTaskSystem,
+            // Phase 2: Task 完成检测（所有 Task Done → 通知 ITaskCompletionListener）
+            TaskScheduler,
             // Phase 3: GE Duration/Period Tick + Apply/Remove
             EffectSystem,
         };
-        // WaitEventTaskSystem 在 Phase 1: 注册 Pending Task 为 GameplayEventDispatcher listener
+        // GameplayEventTaskSystem 在 Phase 1: 注册 Pending Task 为 GameplayEventDispatcher listener
         // GameplayEventDispatcher.Tick() 在 Update() 开头 Phase 0: 消费本帧事件 → 通知 listener
-        // → 下一帧 WaitEventTaskSystem.OnUpdate 检测到 ETaskState.Done
+        // → 下一帧 GameplayEventTaskSystem.OnUpdate 检测到 ETaskState.Done
     }
+
+    /// <summary>
+    /// ITaskCompletionListener —— Owner（ActiveAbility）的所有 Task 完成时结束 Ability。
+    /// </summary>
+    public void OnAllTasksDone(Entity owner)
+        => ActivationManager.CancelAbility(owner);
 
     /// <summary>
     /// 每帧更新入口。先消费 Event，再执行 ECS SystemRoot。
@@ -90,6 +97,7 @@ public class GameplayAbilitiesFeature
 
         // Phase 5: 延迟删除（Query 循环内不能 DeleteEntity）
         ActivationManager.ProcessPendingDeletions();
+        TaskScheduler.ProcessPendingDeletions();
     }
 
     private static GameplayCueManager CreateCueManager(NetMode netMode)

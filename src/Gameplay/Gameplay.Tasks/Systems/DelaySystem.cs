@@ -4,16 +4,16 @@ using Friflo.Engine.ECS.Systems;
 namespace Gameplay.Tasks;
 
 /// <summary>
-/// 每帧推进 DelayTask。<br/>
+/// 延时能力 Driver——每帧推进 DelayComponent。<br/>
 /// Pending → Running → (Elapsed >= Duration → Done)。
-/// 不处理 Done/Cancelled 的销毁，由外部决策。
+/// 不处理 Done/Cancelled 的销毁，由 TaskSchedulerSystem 统一负责。
 /// </summary>
-public class DelayTaskSystem : QuerySystem<TaskStateComponent, DelayTaskComponent>
+public class DelaySystem : QuerySystem<TaskStateComponent, DelayComponent>
 {
     protected override void OnUpdate()
     {
         Query.ForEachEntity(
-            (ref TaskStateComponent state, ref DelayTaskComponent delay, Entity _) =>
+            (ref TaskStateComponent state, ref DelayComponent delay, Entity _) =>
         {
             switch (state.State)
             {
@@ -30,7 +30,7 @@ public class DelayTaskSystem : QuerySystem<TaskStateComponent, DelayTaskComponen
                         state.State = ETaskState.Done;
                     break;
 
-                // Done / Cancelled → 不处理，等外部决策
+                // Done / Cancelled → 不处理，等 TaskSchedulerSystem 统一销毁
             }
         });
     }

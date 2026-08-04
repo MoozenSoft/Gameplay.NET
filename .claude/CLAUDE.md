@@ -112,6 +112,9 @@ dotnet run --project samples/Gameplay.Host/Gameplay.Host.csproj
 - **数据驱动（Data-Driven）**：行为由数据定义，逻辑与数据分离。两层含义：① ECS 层——Entity 行为由挂载的 Component 组合决定，不靠类继承；Component 为纯数据 struct（无行为方法），System 持有全部逻辑。② 配置层——玩法数值（血量、伤害、冷却时间等）不进代码，走静态数据配置（如 JSON、数据表）；代码只定义数据结构和消费方式，具体值由策划/配置决定。判断"能不能做某事" = 查数据而非写死条件。
 - **事件驱动（Event-Driven）**：跨系统通信走事件总线，避免直接耦合。生产方 `GameplayEventBus.Enqueue(in record)` —— 写进去就不管谁来消费；消费方注册 `IGameplayEventHandler` 或动态 Listener，由 `GameplayEventDispatcher.Tick()` 统一分发。适合伤害/治疗/拾取等需要多方响应的场景，添加新消费者无需改动生产者。
 - **命令模式（Command Pattern）**：将请求/操作封装为接口对象，统一执行流程。如 `IAbilityRequirement.Evaluate()`（条件检查，纯函数无副作用）、`IAbilityCommit.Execute()`（副作用提交，可回滚）、`IAbilityExecutor.Execute()`（执行体）、`IGameplayEventHandler.Handle()`（事件处理）。接口约束让同类操作可串联组合、入队延迟执行、失败时回滚。
+- **依赖方向（允许的耦合 vs 不允许的耦合）**：区分"能力构建在服务之上"（允许）与"平台依赖业务规则"（不允许）。
+  - ✅ **允许：消费**——能力 System 可引用其他域的服务/数据/类型来完成自己的能力，依赖方向单向（能力是消费者，服务是提供者）。例：`GameplayEventSystem` 引用 `GameplayEventDispatcher`、`AttributeListenerSystem` 引用 `AttributeAggregatorManager`、`CommitPhaseListenerSystem` 读取 `ActiveAbilityComponent`、`TaskBuilder` 的 `GameplayAttribute` 参数。耦合是能力定义的一部分——去掉耦合等于去掉能力。
+  - ❌ **禁止：倒置**——通用平台层（Runtime / 基础设施）不得依赖上层业务对象或编码业务规则。例：`TaskSchedulerSystem` 不得直接持有 `AbilityActivationManager`（"Task 全完成 → CancelAbility"是 GAS 决策）；必须通过输出协议（如 `ITaskCompletionListener`）把决策权留给上层实现。判据：平台是否开始替上层做业务决定。
 - 遵守 TDD（测试驱动开发）
 - 优先使用 0 GC 方案，但酌情权衡——热路径（每帧遍历大量 Entity 的 System）严格要求；冷路径（初始化、配置加载、RPC 处理）可放松，以可读性为先：
   - **struct 代替 class**：值类型栈分配，无 GC 压力；ECS Component 均为 struct

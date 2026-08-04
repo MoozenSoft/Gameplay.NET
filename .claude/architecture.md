@@ -98,6 +98,8 @@ System 遍历：
 
 **预测由状态同步层统一处理**：Ability 激活时，Client 本地创建预测 Effect Entity；服务端权威状态到达后，由状态同步的 reconciliation 机制回滚（参见"状态同步"节）。GAS 层不做重复预测逻辑。
 
+> **Task 分层**：`Gameplay.Tasks` 分三层——Runtime（生命周期，零 GAS 依赖）、Components/Systems（能力，可引用 GAS 服务）、Builders（Facade）。"允许/禁止的耦合"准则见 `.claude/CLAUDE.md` 编码约定「依赖方向」。
+
 ## 状态同步
 
 采用**服务端权威**模型，配合客户端预测/回滚。
