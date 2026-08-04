@@ -98,7 +98,38 @@ System 遍历：
 
 **预测由状态同步层统一处理**：Ability 激活时，Client 本地创建预测 Effect Entity；服务端权威状态到达后，由状态同步的 reconciliation 机制回滚（参见"状态同步"节）。GAS 层不做重复预测逻辑。
 
-> **Task 分层**：`Gameplay.Tasks` 分三层——Runtime（生命周期，零 GAS 依赖）、Components/Systems（能力，可引用 GAS 服务）、Builders（Facade）。"允许/禁止的耦合"准则见 `.claude/CLAUDE.md` 编码约定「依赖方向」。
+### Task 分层与拆分规则
+
+**三层结构**（`Gameplay.Tasks/`）：
+
+```
+Runtime/     生命周期（TaskState、TaskOwner、TaskCommands、TaskSchedulerSystem、ITaskCompletionListener）
+             ——零业务依赖，不引用 GAS 域（"允许/禁止的耦合"见 CLAUDE.md「依赖方向」）
+Components/  能力数据（DelayComponent、GameplayEventListener、TagListenerComponent、AttributeListener、CommitPhaseListener）
+Systems/     能力 Driver（DelaySystem、GameplayEventSystem、TagListenerSystem、AttributeListenerSystem、CommitPhaseListenerSystem）
+Builders/    Facade/Factory（TaskBuilder）——创建 Archetype 组合，本身无逻辑
+```
+
+**Component 拆分规则**：
+
+1. **Component 表示"数据能力（Capability）"，不表示"API 名称（Task）"**——`DelayComponent` 而非 `WaitDelayComponent`。同一个能力被 Ability/Quest/AI 复用，名字取能力本身。
+2. **同类能力合并**：同一种能力的条件变体用一个 Component + 枚举，不拆组件——`TagListenerComponent` + `TagCondition { Added, Removed }`，而非 `WaitTagAddedComponent` + `WaitTagRemovedComponent`。
+3. **Component 自包含**：监听目标显式存 `Target` 字段（监听谁就存谁），不从 Owner 上下文动态解析——旧 `AbilityTaskContextComponent`（ActiveAbility → Owner 跳转）的教训。
+4. **例外**：语义本身就是独立完整能力（如 TargetData：TargetActor + Trace + Confirm）可保持请求类命名（`TargetDataRequestComponent`）。
+
+**System 拆分规则**：
+
+1. **一个能力一个 System（Driver）**——Query 固定为 `TaskState + 能力组件`，Query 保持稳定，不因使用者（Ability/Quest）而变。既非"一个 Task 一个 System"（膨胀成几十个），也非"万能 switch System"。
+2. **System 内允许 switch 枚举条件，禁止 switch 能力类型**——`TagListenerSystem` 内 `switch(TagCondition)` 是同一能力的分支 ✅；`switch(task.Type)` 跨能力分派 ❌。
+3. **职责边界**——Driver 管前半程：`Pending→Running`（含能力专属初始化：注册监听、快照）与条件检查；完成/取消走 `TaskCommands.Complete/Cancel`（状态命令统一入口）；`TaskSchedulerSystem` 管后半程：检测终态 → 通知 `ITaskCompletionListener` → 帧末销毁。状态是唯一事实来源。
+
+**新增 Task 判据**：
+
+| 情况 | 动作 |
+|------|------|
+| 需要新增 Component（数据）+ System（逻辑） | 新 Task——新建能力组件 + Driver System + Builder 方法 |
+| 只是既有能力的新条件（Added/Removed/Greater/Less） | 现有 Component 加枚举 + 现有 System 加分支 |
+| 现有组件组合可表达（如 WaitDelay 复用 Delay） | 只加 `TaskBuilder.Xxx` 方法，零新类型 |
 
 ## 状态同步
 
