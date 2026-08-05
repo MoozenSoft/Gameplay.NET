@@ -8,7 +8,7 @@ Gameplay.NET —— 专注游戏玩法的 .NET 类库。目标平台 **netstanda
 
 三种 Target 模式：**Client**（客户端）、**Server**（Dedicated Server）、**Host**（Listen Server）。
 
-核心架构：**ECS + GAS + 状态同步（Bubble/预测回滚）**，详见 `.claude/architecture.md`。
+核心架构：**ECS + GAS + 状态同步（Bubble/预测回滚）**，详见 `.claude/gameplay-architecture.md`。
 
 ## 项目结构
 
@@ -16,8 +16,11 @@ Gameplay.NET —— 专注游戏玩法的 .NET 类库。目标平台 **netstanda
 Gameplay.NET.slnx   → 解决方案文件，关联所有项目
 src/
   Gameplay/              → Gameplay.dll         核心玩法类库
+  Gameplay.CodeGen/      → Gameplay.CodeGen.dll 源生成器（SG：GameplayAttribute / GameplayEvent）
+  Gameplay.Shared/       → 共享源文件（SG 标记特性，Compile Include 进 Gameplay.dll，非独立项目）
 tests/
-  Gameplay.Tests/        → Gameplay.Tests.dll    xUnit 单元测试
+  Gameplay.Tests/         → Gameplay.Tests.dll    xUnit 单元测试
+  Gameplay.Tests.Samples/ → Gameplay.Tests.Samples.dll  xUnit 单元测试（对应 samples/ 5 个项目）
 samples/
   Gameplay.Infrastructure/ → Gameplay.Infrastructure.dll  共享基础设施（网络层、日志等）
   Gameplay.RPG/            → Gameplay.RPG.dll             使用 Gameplay.dll 的玩法示例
@@ -43,6 +46,8 @@ Gameplay.Infrastructure.dll  Gameplay.RPG.dll
 - **Gameplay.RPG.dll**：玩法示例，依赖 Gameplay.dll
 - **Gameplay.{Client,Server,Host}.exe**：各模式入口，引用 Infrastructure + RPG + Gameplay
 
+样例项目架构详见 `.claude/samples-architecture.md`。
+
 ## 编译配置
 
 | 宏 | 模式 |
@@ -51,9 +56,9 @@ Gameplay.Infrastructure.dll  Gameplay.RPG.dll
 | `GP_WITH_SERVER_CODE` | Host |
 | `GP_SERVER;GP_WITH_SERVER_CODE` | Server |
 
-运行时通过 `World.GetNetMode()` 返回 `NetMode` 枚举区分模式。详见 `.claude/architecture.md`。
+运行时通过 `World.GetNetMode()` 返回 `NetMode` 枚举区分模式。详见 `.claude/gameplay-architecture.md`。
 
-多目标 `netstandard2.1` + `net10.0`，详见 `.claude/architecture.md`。
+多目标 `netstandard2.1` + `net10.0`，详见 `.claude/gameplay-architecture.md`。
 
 ## 构建命令
 

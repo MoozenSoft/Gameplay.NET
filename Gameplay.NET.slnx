@@ -4,5 +4,14 @@
     <Project Path="src/Gameplay/Gameplay.csproj" />
     <Project Path="tests/Gameplay.Tests/Gameplay.Tests.csproj" />
   </Folder>
-  <Folder Name="/01-Samples/" />
+  <Folder Name="/01-Samples-ClassLibrary/">
+    <Project Path="samples/Gameplay.Infrastructure/Gameplay.Infrastructure.csproj" />
+    <Project Path="samples/Gameplay.RPG/Gameplay.RPG.csproj" />
+  </Folder>
+  <Folder Name="/01-Samples-Exe/">
+    <Project Path="samples/Gameplay.Client/Gameplay.Client.csproj" />
+    <Project Path="samples/Gameplay.Server/Gameplay.Server.csproj" />
+    <Project Path="samples/Gameplay.Host/Gameplay.Host.csproj" />
+    <Project Path="tests/Gameplay.Tests.Samples/Gameplay.Tests.Samples.csproj" />
+  </Folder>
 </Solution>

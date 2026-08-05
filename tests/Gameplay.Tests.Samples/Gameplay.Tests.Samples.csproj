@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Gameplay.Tests.Samples</RootNamespace>
+    <AssemblyName>Gameplay.Tests.Samples</AssemblyName>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
+    <PackageReference Include="xunit" Version="2.*" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../samples/Gameplay.Infrastructure/Gameplay.Infrastructure.csproj" />
+    <ProjectReference Include="../../samples/Gameplay.RPG/Gameplay.RPG.csproj" />
+    <ProjectReference Include="../../samples/Gameplay.Client/Gameplay.Client.csproj" />
+    <ProjectReference Include="../../samples/Gameplay.Server/Gameplay.Server.csproj" />
+    <ProjectReference Include="../../samples/Gameplay.Host/Gameplay.Host.csproj" />
+    <ProjectReference Include="../../src/Gameplay.CodeGen/Gameplay.CodeGen.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>
