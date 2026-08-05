@@ -4,13 +4,12 @@ using Gameplay.Abilities;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// GE 能力 Driver——事件驱动：监听 EffectSystem 的施加/移除事件，<br/>
-/// 匹配（Target + Query + Condition）的 Task 完成（Done）。<br/>
-/// 与 GameplayEventSystem 同构（事件回调驱动，非每帧轮询）。<br/>
-/// 注意：事件回调发生在 SystemRoot.Update 之外，此时 QuerySystem.Query 属性为 null
-/// （Friflo OnUpdateGroup: SetQuery → OnUpdate → SetQuery(null)）——回调内用 store.Query 遍历。
-/// </summary>
+/// <summary>GE 能力 Driver——事件驱动：监听 EffectSystem 的施加/移除事件，匹配（Target + Query + Condition）的 Task 完成（Done）。</summary>
+/// <remarks>
+/// <para>与 GameplayEventSystem 同构（事件回调驱动，非每帧轮询）。</para>
+/// <para>事件回调发生在 SystemRoot.Update 之外，此时 QuerySystem.Query 属性为 null
+/// （Friflo OnUpdateGroup: SetQuery → OnUpdate → SetQuery(null)）——回调内用 store.Query 泛型遍历。</para>
+/// </remarks>
 public class EffectListenerSystem : QuerySystem<EffectListener, TaskStateComponent>
 {
     private readonly EffectSystem effectSystem;
@@ -52,7 +51,7 @@ public class EffectListenerSystem : QuerySystem<EffectListener, TaskStateCompone
     /// <summary>遍历 Running 状态的监听 Task，匹配（Target + Condition + Query）则完成。</summary>
     private void CompleteMatching(GameplayEffectSpec spec, Entity target, EEffectCondition condition)
     {
-        // 事件回调在 Update 之外——Query 属性为 null，用 store.Query 遍历（store 内部缓存 ArchetypeQuery）
+        // 事件回调在 Update 之外——Query 属性为 null，用 store.Query 泛型遍历（store 内部缓存 ArchetypeQuery）
         var query = store.Query<EffectListener, TaskStateComponent>();
         query.ForEachEntity((ref EffectListener listener, ref TaskStateComponent state, Entity entity) =>
         {

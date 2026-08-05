@@ -4,10 +4,10 @@ using Friflo.Engine.ECS.Systems;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// 生成能力 Driver（Action 类）——克隆预制实体到指定位置，任务立即完成（Done）。<br/>
-/// 克隆/AddComponent 是结构变化，不能在 Query 循环内执行——先收集 Pending Task，帧末统一生成。
-/// </summary>
+/// <summary>生成能力 Driver（Action 类）——克隆预制实体到指定位置，任务立即完成（Done）。</summary>
+/// <remarks>
+/// <para>克隆/AddComponent 是结构变化，不能在 Query 循环内执行——先收集 Pending Task，帧末统一生成。</para>
+/// </remarks>
 public class SpawnSystem : QuerySystem<SpawnRequestComponent, TaskStateComponent>
 {
     private readonly List<Entity> pendingSpawns = new();

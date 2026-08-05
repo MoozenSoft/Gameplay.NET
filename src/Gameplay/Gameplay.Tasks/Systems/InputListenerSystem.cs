@@ -4,11 +4,11 @@ using Gameplay.Interfaces;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// 输入能力 Driver——每帧轮询 IInputService，满足触发条件时 Task 完成（Done）。<br/>
-/// 无输入环境（Server）不注入服务——生命周期照走（Pending→Running），只是条件永不满足。<br/>
-/// 同一 Query 内按 <see cref="EInputTrigger"/> 分支——同一能力内的条件分支，不是跨能力 switch。
-/// </summary>
+/// <summary>输入能力 Driver——每帧轮询 IInputService，满足触发条件时 Task 完成（Done）。</summary>
+/// <remarks>
+/// <para>无输入环境（Server）不注入服务——生命周期照走（Pending→Running），只是条件永不满足。</para>
+/// <para>同一 Query 内按 <see cref="EInputTrigger"/> 分支——同一能力内的条件分支，不是跨能力 switch。</para>
+/// </remarks>
 public class InputListenerSystem : QuerySystem<InputListener, TaskStateComponent>
 {
     private IInputService? inputService;

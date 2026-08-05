@@ -77,22 +77,28 @@
 /// </list>
 ```
 
-## 六、符号：中文自然表达优先，复杂数学关系用合法转义
+## 六、符号：Unicode 优先，中文次之，转义兜底
 
 ```csharp
-// ✅ 自然表达用中文
+// ✅ 优先：Unicode 符号（≤ ≥ ≠ 等，XML 中无需转义）
+/// <summary>CurrentValue ≤ Threshold。</summary>
+/// <param name="duration">持续时间（≤ 0 表示立即完成）。</param>
+/// <remarks>Duration ≠ 0 时才结算。</remarks>
+
+// ✅ fallback 1：中文自然表达
 /// <summary>CurrentValue 大于 Threshold。</summary>
 /// <param name="count">等待次数（大于 0）。</param>
 
-// ✅ 复杂关系用合法转义（更清楚）
-/// <param name="duration">持续时间（小于等于 0 表示立即完成）。</param>   // 或：
-/// <remarks>Duration 小于等于 0 时立即完成。</remarks>
+// ✅ fallback 2：合法转义（仅当 Unicode 与中文均不合适）
+/// <param name="duration">持续时间（&lt;= 0 表示立即完成）。</param>
 
 // ❌ 禁止：裸 < 会触发 CS1570（badly formed XML comment）
 /// <summary>CurrentValue < Threshold。</summary>
 ```
 
-**规则**：能自然用中文表达就用中文；数学关系复杂（`<=`/`!=`/`>=`）时使用合法转义（`&lt;=`）反而更清楚。`<` 和 `&` 永远必须转义。
+**规则**：优先使用 Unicode 数学符号（`≤` `≥` `≠` 等）——XML 注释中合法、无需转义且更清晰；无法用符号表达时回退到中文自然表达；两者都不合适时才用合法转义（`&lt;=`/`&gt;=`/`!=`）。`<` 和 `&` 永远必须转义（裸写会触发 CS1570 / 非法 XML）。
+
+**范围**：Unicode 优先仅针对**数学关系符号**（`≤` `≥` `≠` 等）。代码语法符号（如泛型尖括号 `Query<T>`）不进此规则——按中文自然表达（fallback 1）或转义（fallback 2，需精确展示代码语法时）处理，不使用 `⟨⟩`/`＜＞` 等近似字符替代。
 
 ## 七、代码引用
 
@@ -147,5 +153,4 @@ public enum EAttributeCondition
 
 ## 现状与建议
 
-- 存量代码：`<br/>` 较多、部分注释带"谁写入/技术债"——**不批量改**（避免大改动噪音），新写/触碰的代码按新规范
-- 技术债注释（如 CommitPhaseListener 的循环依赖说明）：迁移到 ADR 或保留为普通 `//` 注释（非 XML）
+- 技术债注释（如 CommitPhaseListener 的循环依赖说明）：保留为普通 `//` 注释（非 XML）

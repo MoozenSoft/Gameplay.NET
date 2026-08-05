@@ -5,14 +5,14 @@ using Gameplay.Tags;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// Task Builder（Facade/Factory）——创建 Task Entity 的唯一入口。<br/>
-/// 本身无逻辑：创建 TaskState + TaskOwner + 能力组件（Archetype 组合），并挂到 Owner 下。<br/>
-/// 使用 Friflo <see cref="EntityStoreExtensions.CreateEntity{T1,T2,T3}"/> 重载，
-/// 创建即最终 Archetype——避免逐个 AddComponent 的多次 structural change（Archetype 迁移）。<br/>
-/// 底层不存在 GameplayTask / AbilityTask 之分——只有不同的 Owner 与 Component 组合。<br/>
-/// Ability 用 TaskBuilder.WaitXxx（owner = ActiveAbility），Gameplay 用 TaskBuilder.Delay / TaskBuilder.MoveTo（owner = 任意 Entity）。
-/// </summary>
+/// <summary>Task Builder（Facade/Factory）——创建 Task Entity 的唯一入口。</summary>
+/// <remarks>
+/// <para>本身无逻辑：创建 TaskState + TaskOwner + 能力组件（Archetype 组合），并挂到 Owner 下。</para>
+/// <para>使用 Friflo <see cref="EntityStoreExtensions.CreateEntity{T1,T2,T3}"/> 重载，
+/// 创建即最终 Archetype——避免逐个 AddComponent 的多次 structural change（Archetype 迁移）。</para>
+/// <para>底层不存在 GameplayTask / AbilityTask 之分——只有不同的 Owner 与 Component 组合。</para>
+/// <para>Ability 用 TaskBuilder.WaitXxx（owner = ActiveAbility），Gameplay 用 TaskBuilder.Delay / TaskBuilder.MoveTo（owner = 任意 Entity）。</para>
+/// </remarks>
 public static class TaskBuilder
 {
     /// <summary>创建延时 Task——等待指定时间后完成（Done）。</summary>
@@ -225,9 +225,9 @@ public static class TaskBuilder
     }
 
     /// <summary>
-    /// 创建 Tag 监听 Task 基础 Archetype：TaskState + TaskOwner + TagListenerComponent。<br/>
-    /// 单 Tag 模式（required 为 null）用 tag；Query 模式用 required（防御性拷贝——可变 class 引用，
-    /// 防调用者后续修改改写所有 Task 的条件）。
+    /// <para>创建 Tag 监听 Task 基础 Archetype：TaskState + TaskOwner + TagListenerComponent。</para>
+    /// <para>单 Tag 模式（required 为 null）用 tag；Query 模式用 required（防御性拷贝——可变 class 引用，
+    /// 防调用者后续修改改写所有 Task 的条件）。</para>
     /// </summary>
     private static Entity CreateTagListenerTask(EntityStore store, Entity target, GameplayTag tag,
         GameplayTagContainer? required, TagCondition condition, Entity owner, int taskHandle)
@@ -302,7 +302,8 @@ public static class TaskBuilder
         return entity;
     }
 
-    /// <summary>深拷贝 GameplayEffectQuery（可变 class 引用——快照语义，防调用者后续修改改写所有 Task 的条件）。</summary>
+    /// <summary>深拷贝 GameplayEffectQuery（快照语义）。</summary>
+    /// <remarks>可变 class 引用——调用者后续修改会改写所有 Task 的条件。</remarks>
     private static GameplayEffectQuery CopyQuery(GameplayEffectQuery source)
     {
         return new GameplayEffectQuery

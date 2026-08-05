@@ -2,9 +2,10 @@ using System;
 
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// ActiveAbility 的轻量句柄。AbilityActivationManager 内部分配，替代裸 int。
-/// </summary>
+/// <summary>ActiveAbility 的轻量句柄。</summary>
+/// <remarks>
+/// <para>AbilityActivationManager 内部分配。</para>
+/// </remarks>
 public readonly struct AbilityHandle : IEquatable<AbilityHandle>
 {
     public readonly int Id;

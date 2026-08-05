@@ -4,11 +4,13 @@ using Gameplay.Abilities;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// 事件能力 Driver——管理 GameplayEventListener 的注册与事件分发。<br/>
-/// 1. 为 Pending Task 注册 GameplayEventDispatcher 动态 Listener。<br/>
-/// 2. 通过 OnDynamicInvoke 回调，在匹配事件到达时将 Task 设为 Done。
-/// </summary>
+/// <summary>事件能力 Driver——管理 GameplayEventListener 的注册与事件分发。</summary>
+/// <remarks>
+/// <list type="number">
+/// <item><description>为 Pending Task 注册 GameplayEventDispatcher 动态 Listener。</description></item>
+/// <item><description>通过 OnDynamicInvoke 回调，在匹配事件到达时将 Task 设为 Done。</description></item>
+/// </list>
+/// </remarks>
 public class GameplayEventSystem : QuerySystem<GameplayEventListener, TaskStateComponent>
 {
     private readonly GameplayEventDispatcher eventDispatcher;

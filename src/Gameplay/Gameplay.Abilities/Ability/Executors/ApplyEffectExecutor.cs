@@ -2,10 +2,10 @@ using Friflo.Engine.ECS;
 
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// 对 Target 施加一组 GameplayEffectSpec 的 Executor。
-/// 典型的"火球 = Apply DamageGE(to target) + Apply BurnEffect(to target)"模式。
-/// </summary>
+/// <summary>对 Target 施加一组 GameplayEffectSpec 的 Executor。</summary>
+/// <remarks>
+/// <para>典型的"火球 = Apply DamageGE(to target) + Apply BurnEffect(to target)"模式。</para>
+/// </remarks>
 public class ApplyEffectExecutor : IAbilityExecutor
 {
     private readonly EffectSystem effectSystem;

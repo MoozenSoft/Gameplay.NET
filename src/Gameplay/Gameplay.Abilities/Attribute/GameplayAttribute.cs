@@ -2,10 +2,10 @@ using System;
 
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// GameplayAttribute 类型安全标识符——编译期由 SG 生成。
-/// 纯 Id 包装，读写委托储存在 AttributeAggregatorManager 内部的 AttributeDescriptor 注册表。
-/// </summary>
+/// <summary>GameplayAttribute 类型安全标识符（编译期由 SG 生成）。</summary>
+/// <remarks>
+/// <para>纯 Id 包装，读写委托储存在 AttributeAggregatorManager 内部的 AttributeDescriptor 注册表。</para>
+/// </remarks>
 public readonly struct GameplayAttribute : IEquatable<GameplayAttribute>
 {
     /// <summary>全局唯一 AttributeId（SG 分配）。</summary>

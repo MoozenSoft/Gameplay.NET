@@ -1,10 +1,10 @@
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// 预测回滚 System。
-/// Confirm: 找到所有带该 PredictionKey 的 Entity → 标记 Confirmed。
-/// Reject: 销毁预测 Entity + Aggregator 回滚。
-/// </summary>
+/// <summary>预测回滚 System。</summary>
+/// <remarks>
+/// <para>Confirm：找到所有带该 PredictionKey 的 Entity → 标记 Confirmed。</para>
+/// <para>Reject：销毁预测 Entity + Aggregator 回滚。</para>
+/// </remarks>
 public class PredictionManager
 {
     private IPredictionService? service;

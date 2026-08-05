@@ -12,13 +12,12 @@ public enum TagCondition
     Removed,
 }
 
-/// <summary>
-/// Tag 监听能力——等待目标 Entity 获得/移除指定 GameplayTag（或 Tag 集合）。<br/>
-/// <see cref="RequiredTags"/> 非空时为 Query 模式：全部 Tag 出现/消失才满足条件
-/// （Added = HasAll；Removed = HasAll 从 true 变 false）。<br/>
-/// 合并旧 WaitGameplayTagAddedComponent + WaitGameplayTagRemovedComponent，
-/// 由 TagListenerSystem 在同一个 Query 内按 <see cref="Condition"/> 分支处理。
-/// </summary>
+/// <summary>Tag 监听能力——等待目标 Entity 获得/移除指定 GameplayTag（或 Tag 集合）。</summary>
+/// <remarks>
+/// <para><see cref="RequiredTags"/> 非空时为 Query 模式：全部 Tag 出现/消失才满足条件
+/// （Added = HasAll；Removed = HasAll 从 true 变 false）。</para>
+/// <para>Added / Removed 两种条件由 TagListenerSystem 在同一个 Query 内按 <see cref="Condition"/> 分支处理。</para>
+/// </remarks>
 public struct TagListenerComponent : IComponent
 {
     /// <summary>监听谁身上的 Tag（玩家 / 任意 Entity）。</summary>

@@ -5,12 +5,12 @@ using Friflo.Engine.ECS.Systems;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// 移动能力 Driver（Action 类）——Duration 插值模型（对齐 UE5 AbilityTask_MoveToLocation）：<br/>
-/// Pending 帧快照 <see cref="MoveToComponent.StartLocation"/>（UE5 Activate 时捕获），
-/// 每帧 <c>Lerp(Start, Destination, Elapsed/Duration)</c>，时长结束精确落点并完成（Done）。<br/>
-/// Duration &lt;= 0：立即落点完成。目标无效/无 Position：防御性完成。
-/// </summary>
+/// <summary>移动能力 Driver（Action 类）——按 Duration 将 <see cref="MoveToComponent.Target"/> 线性插值移动到 <see cref="MoveToComponent.Destination"/>，完成后 Task 结束（Done）。</summary>
+/// <remarks>
+/// <para>对齐 UE5 AbilityTask_MoveToLocation：Pending 帧快照 <see cref="MoveToComponent.StartLocation"/>（UE5 Activate 时捕获），
+/// 每帧 <c>Lerp(Start, Destination, Elapsed/Duration)</c>，时长结束精确落点。</para>
+/// <para>Duration ≤ 0：立即落点完成。目标无效/无 Position：防御性完成。</para>
+/// </remarks>
 public class MoveToSystem : QuerySystem<MoveToComponent, TaskStateComponent>
 {
     protected override void OnUpdate()

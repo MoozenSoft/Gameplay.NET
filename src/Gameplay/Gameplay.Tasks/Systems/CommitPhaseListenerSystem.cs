@@ -4,10 +4,8 @@ using Gameplay.Abilities;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// Commit 阶段能力 Driver——当目标 ActiveAbility 的 State 变为 Active（Commit 已完成）时 Task 完成（Done）。<br/>
-/// 注：引用 Gameplay.Abilities 域类型（ActiveAbilityComponent / EAbilityInstanceState），技术债见计划。
-/// </summary>
+/// <summary>Commit 阶段能力 Driver——当目标 ActiveAbility 的 State 变为 Active（Commit 已完成）时 Task 完成（Done）。</summary>
+// 技术债：引用 Gameplay.Abilities 域类型（ActiveAbilityComponent / EAbilityInstanceState），见 task-architecture-refactor 计划。
 public class CommitPhaseListenerSystem : QuerySystem<CommitPhaseListener, TaskStateComponent>
 {
     protected override void OnUpdate()

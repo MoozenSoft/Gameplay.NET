@@ -4,10 +4,10 @@ using Gameplay.Tags;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// Tag 能力 Driver——每帧检查目标 Entity 的 Tag 状态变化（Added / Removed）。<br/>
-/// 同一 Query 内按 <see cref="TagCondition"/> 分支——同一能力内的条件分支，不是跨能力 switch。
-/// </summary>
+/// <summary>Tag 能力 Driver——每帧检查目标 Entity 的 Tag 状态变化（Added / Removed）。</summary>
+/// <remarks>
+/// <para>同一 Query 内按 <see cref="TagCondition"/> 分支——同一能力内的条件分支，不是跨能力 switch。</para>
+/// </remarks>
 public class TagListenerSystem : QuerySystem<TagListenerComponent, TaskStateComponent>
 {
     protected override void OnUpdate()

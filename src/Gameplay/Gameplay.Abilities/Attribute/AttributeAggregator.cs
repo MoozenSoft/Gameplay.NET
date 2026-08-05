@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// 单个 GameplayAttribute 的运行时聚合器。
-/// 不是 Component，由 AttributeAggregatorManager 内部 Dictionary 管理。
-/// Dirty 状态由 Manager 统一控制，Evaluate() 不自行清理。
-/// </summary>
+/// <summary>单个 GameplayAttribute 的运行时聚合器。</summary>
+/// <remarks>
+/// <para>不是 Component，由 AttributeAggregatorManager 内部 Dictionary 管理。</para>
+/// <para>Dirty 状态由 Manager 统一控制，Evaluate() 不自行清理。</para>
+/// </remarks>
 internal class AttributeAggregator
 {
     internal float BaseValue { get; private set; }

@@ -4,10 +4,10 @@ using Gameplay.Tags;
 
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// ActiveGameplayEffect 的运行时 Component（单一，所有字段合一）。
-/// 挂在 Target Entity 下的子 Entity 上。
-/// </summary>
+/// <summary>ActiveGameplayEffect 的运行时 Component（单一，所有字段合一）。</summary>
+/// <remarks>
+/// <para>挂在 Target Entity 下的子 Entity 上。</para>
+/// </remarks>
 public struct ActiveGameplayEffectComponent : IComponent
 {
     // ── 时间 ──

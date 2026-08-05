@@ -2,9 +2,10 @@ using System;
 
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// ActiveGameplayEffect 的轻量句柄。EffectSystem 内部分配，替代裸 int。
-/// </summary>
+/// <summary>ActiveGameplayEffect 的轻量句柄。</summary>
+/// <remarks>
+/// <para>EffectSystem 内部分配。</para>
+/// </remarks>
 public readonly struct GameplayEffectHandle : IEquatable<GameplayEffectHandle>
 {
     public readonly int Id;

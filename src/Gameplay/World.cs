@@ -24,6 +24,7 @@ public class World
     /// <summary>返回当前网络模式。</summary>
     public NetMode GetNetMode() => NetMode;
 
-    /// <summary>Friflo ECS 实体存储。第一版直接暴露，后续封装。</summary>
+    /// <summary>Friflo ECS 实体存储。</summary>
+    // 第一版直接暴露，后续封装
     public EntityStore Store => _store;
 }

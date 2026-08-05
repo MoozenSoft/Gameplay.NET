@@ -4,12 +4,12 @@ using Gameplay.Abilities;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// 属性能力 Driver——每帧检查目标 Entity 的属性值是否满足监听条件，满足时 Task 完成（Done）。<br/>
-/// <see cref="EAttributeCondition.Changed"/> 为边沿触发（相对注册时快照）；
-/// 阈值模式（Above/Below/RatioAbove/RatioBelow）为电平触发（每帧比较当前值，注册时已满足则下一帧完成）。<br/>
-/// 读取的是上一帧 Phase 4 Flush 后的已结算值，具有确定性。
-/// </summary>
+/// <summary>属性能力 Driver——每帧检查目标 Entity 的属性值是否满足监听条件，满足时 Task 完成（Done）。</summary>
+/// <remarks>
+/// <para><see cref="EAttributeCondition.Changed"/> 为边沿触发（相对注册时快照）；
+/// 阈值模式（Above/Below/RatioAbove/RatioBelow）为电平触发（每帧比较当前值，注册时已满足则下一帧完成）。</para>
+/// <para>读取的是上一帧 Phase 4 Flush 后的已结算值，具有确定性。</para>
+/// </remarks>
 public class AttributeListenerSystem : QuerySystem<AttributeListener, TaskStateComponent>
 {
     private readonly AttributeAggregatorManager mgr;

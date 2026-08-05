@@ -4,15 +4,17 @@ using Friflo.Engine.ECS.Systems;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// Task 生命周期管理（替代旧 AbilityTaskSystem）。<br/>
-/// 职责：
-/// 1. 检测 Done/Cancelled 的 Task（状态为唯一事实来源，Driver System 负责推进状态）；<br/>
-/// 2. 对每个结束的 Task，子 Entity 遍历检查 Owner 的所有 Task 是否全部结束（AllTasksDone）；<br/>
-/// 3. 全部结束 → 通知 <see cref="ITaskCompletionListener"/>（当帧 Task 仍存活，可读数据）；<br/>
-/// 4. 入队延迟销毁该 Task，帧末由 <see cref="ProcessPendingDeletions"/> 统一删除（Query 内不能 DeleteEntity）。<br/>
-/// 不做的：Pending→Running 转移（各 Driver 负责，Pending 含能力专属初始化）。
-/// </summary>
+/// <summary>Task 生命周期管理。</summary>
+/// <remarks>
+/// <para>职责：</para>
+/// <list type="number">
+/// <item><description>检测 Done/Cancelled 的 Task（状态为唯一事实来源，Driver System 负责推进状态）。</description></item>
+/// <item><description>对每个结束的 Task，子 Entity 遍历检查 Owner 的所有 Task 是否全部结束（AllTasksDone）。</description></item>
+/// <item><description>全部结束 → 通知 <see cref="ITaskCompletionListener"/>（当帧 Task 仍存活，可读数据）。</description></item>
+/// <item><description>入队延迟销毁该 Task，帧末由 <see cref="ProcessPendingDeletions"/> 统一删除（Query 内不能 DeleteEntity）。</description></item>
+/// </list>
+/// <para>不做的：Pending→Running 转移（各 Driver 负责，Pending 含能力专属初始化）。</para>
+/// </remarks>
 public class TaskSchedulerSystem : QuerySystem<TaskStateComponent, TaskOwnerComponent>
 {
     private readonly List<Entity> pendingDeletions = new();

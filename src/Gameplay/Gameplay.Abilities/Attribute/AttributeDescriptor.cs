@@ -2,10 +2,10 @@ using Friflo.Engine.ECS;
 
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// Manager 内部存储的 GameplayAttribute 读写委托描述符。
-/// 由 SG 通过 RegisterAttribute 注册，不暴露给外部。
-/// </summary>
+/// <summary>Manager 内部存储的 GameplayAttribute 读写委托描述符。</summary>
+/// <remarks>
+/// <para>由 SG 通过 RegisterAttribute 注册，不暴露给外部。</para>
+/// </remarks>
 internal sealed class AttributeDescriptor
 {
     internal delegate void ReadValue(Entity entity, out float value);

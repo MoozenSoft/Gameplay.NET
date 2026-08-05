@@ -6,11 +6,13 @@ using Gameplay.Tags;
 namespace Gameplay.Tasks;
 
 /// <summary>
-/// Ability 激活能力 Driver——事件驱动：监听 AbilityActivationManager 的激活事件，<br/>
-/// 匹配（AssetTags 相交）的 Task 完成（Done）。<br/>
-/// 与 EffectListenerSystem 同构：OnUpdate 内注册事件 + Pending→Running；
-/// 事件回调（Update 之外）用 store.Query&lt;&gt;() 遍历（QuerySystem.Query 此时为 null）。
+/// Ability 激活能力 Driver——事件驱动：监听 <see cref="AbilityActivationManager"/> 的激活事件，
+/// 匹配（AssetTags 相交）的 Task 完成（Done）。
 /// </summary>
+/// <remarks>
+/// <para>与 EffectListenerSystem 同构：OnUpdate 内注册事件 + Pending→Running。</para>
+/// <para>事件回调发生在 SystemRoot.Update 之外，此时 QuerySystem.Query 属性为 null——回调内用 store.Query 泛型遍历。</para>
+/// </remarks>
 public class AbilityActivateListenerSystem : QuerySystem<AbilityActivateListener, TaskStateComponent>
 {
     private readonly AbilityActivationManager activationManager;

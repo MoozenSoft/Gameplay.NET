@@ -13,10 +13,10 @@ public enum EInputTrigger
     Hold,
 }
 
-/// <summary>
-/// 输入监听能力——每帧轮询 <see cref="Gameplay.Interfaces.IInputService"/>，满足触发条件时 Task 完成（Done）。<br/>
-/// 对应 UE 的 WaitInputPress / WaitInputRelease。同一 System 内按 <see cref="Trigger"/> 分支——同一能力内的条件分支。
-/// </summary>
+/// <summary>输入监听能力——每帧轮询 <see cref="Gameplay.Interfaces.IInputService"/>，满足触发条件时 Task 完成（Done）。</summary>
+/// <remarks>
+/// <para>对应 UE 的 WaitInputPress / WaitInputRelease。同一 System 内按 <see cref="Trigger"/> 分支——同一能力内的条件分支。</para>
+/// </remarks>
 public struct InputListener : IComponent
 {
     /// <summary>输入动作 ID（策划配置的动作标识）。</summary>

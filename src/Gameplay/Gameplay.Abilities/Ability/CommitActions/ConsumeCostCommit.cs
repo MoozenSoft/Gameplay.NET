@@ -2,10 +2,10 @@ using Friflo.Engine.ECS;
 
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// 直接消耗属性值的 Commit（Mana/Stamina/Ammo 等）。
-/// 一次性状态变化不包装 Instant GE。
-/// </summary>
+/// <summary>直接消耗属性值的 Commit（Mana/Stamina/Ammo 等）。</summary>
+/// <remarks>
+/// <para>一次性状态变化不包装 Instant GE。</para>
+/// </remarks>
 public class ConsumeCostCommit : IAbilityCommit
 {
     private readonly AttributeAggregatorManager mgr;

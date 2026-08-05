@@ -18,11 +18,11 @@ public enum EAttributeCondition
     RatioBelow,
 }
 
-/// <summary>
-/// 属性监听能力——等待目标 Entity 的指定 GameplayAttribute 满足条件（变化/阈值/比值阈值）。<br/>
-/// 读取的是上一帧 Phase 4 Flush 后的已结算值，具有确定性。<br/>
-/// <see cref="Changed"/> 用 <see cref="LastValue"/> + <see cref="Count"/>；阈值模式用 <see cref="Threshold"/>。
-/// </summary>
+/// <summary>属性监听能力——等待目标 Entity 的指定 GameplayAttribute 满足条件（变化/阈值/比值阈值）。</summary>
+/// <remarks>
+/// <para>读取的是上一帧 Phase 4 Flush 后的已结算值，具有确定性。</para>
+/// <para><see cref="Changed"/> 用 <see cref="LastValue"/> + <see cref="Count"/>；阈值模式用 <see cref="Threshold"/>。</para>
+/// </remarks>
 public struct AttributeListener : IComponent
 {
     /// <summary>监听谁身上的属性（玩家 / 任意 Entity）。</summary>

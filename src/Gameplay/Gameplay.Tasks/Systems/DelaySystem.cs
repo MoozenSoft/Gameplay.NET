@@ -3,11 +3,11 @@ using Friflo.Engine.ECS.Systems;
 
 namespace Gameplay.Tasks;
 
-/// <summary>
-/// 延时能力 Driver——每帧推进 DelayComponent。<br/>
-/// Pending → Running → (Elapsed >= Duration → Done)。
-/// 不处理 Done/Cancelled 的销毁，由 TaskSchedulerSystem 统一负责。
-/// </summary>
+/// <summary>延时能力 Driver——每帧推进 DelayComponent。</summary>
+/// <remarks>
+/// <para>Pending → Running → (Elapsed ≥ Duration → Done)。</para>
+/// <para>不处理 Done/Cancelled 的销毁，由 TaskSchedulerSystem 统一负责。</para>
+/// </remarks>
 public class DelaySystem : QuerySystem<TaskStateComponent, DelayComponent>
 {
     protected override void OnUpdate()

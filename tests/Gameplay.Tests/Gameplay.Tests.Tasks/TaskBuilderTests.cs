@@ -105,7 +105,7 @@ public class TaskBuilderTests
         // 防御性拷贝：调用者修改原容器不影响已创建 Task 的条件
         required.RemoveTag(TestTag);
         ref var listener = ref entity.GetComponent<TagListenerComponent>();
-        Assert.Equal(2, listener.RequiredTags.Count);
+        Assert.Equal(2, listener.RequiredTags?.Count);
     }
 
     [Fact]
@@ -253,6 +253,22 @@ public class TaskBuilderTests
         var owner = store.CreateEntity();
 
         Assert.Throws<System.ArgumentException>(() => TaskBuilder.Repeat(store, 0.5f, 0, 42, owner));
+    }
+
+    [Fact]
+    public void WaitEffectApplied_QueryMutation_DoesNotAffectTask()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+        var query = GameplayEffectQuery.MakeQuery_MatchAnyGrantedTags(RequiredQuery);
+
+        var entity = TaskBuilder.WaitEffectApplied(store, target, query, owner);
+
+        // 防御性拷贝：调用者修改原 Query 不影响已创建 Task 的条件
+        query.OwningTagQuery.RemoveTag(TestTag);
+        ref var listener = ref entity.GetComponent<EffectListener>();
+        Assert.Equal(2, listener.Query.OwningTagQuery.Count);
     }
 
     [Fact]

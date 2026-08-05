@@ -2,10 +2,10 @@ using System;
 
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// 通用无 GC struct 缓冲。
-/// 内部使用 T[] 存储，只重置计数不清内存，适用于热路径复用。
-/// </summary>
+/// <summary>通用无 GC struct 缓冲。</summary>
+/// <remarks>
+/// <para>内部使用 T[] 存储，只重置计数不清内存，适用于热路径复用。</para>
+/// </remarks>
 public sealed class StructBuffer<T> where T : struct
 {
     private T[] buffer = Array.Empty<T>();

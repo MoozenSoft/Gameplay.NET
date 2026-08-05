@@ -4,11 +4,10 @@ using Friflo.Engine.ECS;
 
 namespace Gameplay.Abilities;
 
-/// <summary>
-/// 属性聚合管理器（POCO，非 ECS System）。
-/// 管理 (Entity, GameplayAttribute) → AttributeAggregator 的映射、脏队列、固定阶段 Flush。
-/// 读写委托存储在 AttributeDescriptor 注册表中。
-/// </summary>
+/// <summary>属性聚合管理器（POCO，非 ECS System）——管理 (Entity, GameplayAttribute) → AttributeAggregator 映射、脏队列与固定阶段 Flush。</summary>
+/// <remarks>
+/// <para>读写委托存储在 AttributeDescriptor 注册表中。</para>
+/// </remarks>
 public class AttributeAggregatorManager
 {
     // ── 核心数据 ──
@@ -27,10 +26,11 @@ public class AttributeAggregatorManager
 
     // ── Attribute 注册 ──
 
-    /// <summary>
-    /// 注册 AttributeDescriptor（读写委托）。SG 通过 RegisterAll 批量调用。
-    /// 同一 Id 重复注册时静默覆盖（支持热重载）。
-    /// </summary>
+    /// <summary>注册 AttributeDescriptor（读写委托）。</summary>
+    /// <remarks>
+    /// <para>SG 通过 RegisterAll 批量调用。</para>
+    /// <para>同一 Id 重复注册时静默覆盖（支持热重载）。</para>
+    /// </remarks>
     internal void RegisterAttribute(GameplayAttribute attr,
         AttributeDescriptor.ReadValue readBase,
         AttributeDescriptor.ReadValue readCurrent,
@@ -151,10 +151,10 @@ public class AttributeAggregatorManager
 
     // ── Flush ──
 
-    /// <summary>
-    /// 固定阶段批量刷新：遍历当前脏队列，Evaluate 并写回 CurrentValue。
-    /// Flush 中新增的 Dirty 进入 nextDirtyQueue，留待下一帧处理。
-    /// </summary>
+    /// <summary>固定阶段批量刷新：遍历当前脏队列，Evaluate 并写回 CurrentValue。</summary>
+    /// <remarks>
+    /// <para>Flush 中新增的 Dirty 进入 nextDirtyQueue，留待下一帧处理。</para>
+    /// </remarks>
     public void Flush()
     {
         isFlushing = true;
