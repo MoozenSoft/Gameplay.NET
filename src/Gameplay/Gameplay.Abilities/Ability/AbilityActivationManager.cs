@@ -1,4 +1,5 @@
 // src/Gameplay/Gameplay.Abilities/Ability/AbilityActivationManager.cs
+using System;
 using System.Collections.Generic;
 using Friflo.Engine.ECS;
 using Gameplay.Tags;
@@ -12,6 +13,9 @@ namespace Gameplay.Abilities;
 /// </summary>
 public class AbilityActivationManager
 {
+    /// <summary>Ability 激活成功通知（AbilityActivateListenerSystem 等消费）。参数：激活的 Ability 定义、Owner。</summary>
+    public event Action<GameplayAbility, Entity>? AbilityActivated;
+
     private readonly EffectSystem effectSystem;
     private int nextHandle = 1;
 
@@ -95,6 +99,7 @@ public class AbilityActivationManager
                 tags.AddTag(tag);
         }
 
+        AbilityActivated?.Invoke(ability, owner);
         return true;
     }
 

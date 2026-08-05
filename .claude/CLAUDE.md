@@ -95,7 +95,7 @@ dotnet run --project samples/Gameplay.Host/Gameplay.Host.csproj
 
 ## 编码约定
 
-- 文档和注释使用**中文**，专业术语使用英文
+- 文档和注释使用**中文**，专业术语使用英文；XML 文档注释规范见 `.claude/xml-doc-comment-guidelines.md`
 - C# 命名遵循 .NET 惯例（PascalCase 公开成员，camelCase 私有成员）
 - 枚举以 `E` 打头
 - **Friflo IComponent 修改必须走 ref**——`TryGetComponent<T>(out var x)` 返回的是栈上拷贝，修改后不写回则静默丢失。修改 Component 的标准模式：
@@ -108,6 +108,7 @@ dotnet run --project samples/Gameplay.Host/Gameplay.Host.csproj
   
   // ❌ 禁止：TryGetComponent(out var) + 修改（值拷贝陷阱）
   ```（如 `EGameplayModOp`、`EEffectEndType`、`EActivationSource`）
+- **Friflo `QuerySystem.Query` 只在 OnUpdate 生命周期内有效**——`OnUpdateGroup` 执行 `SetQuery(query) → OnUpdate() → SetQuery(null)`，Update 结束后 Query 属性为 null。事件回调（如 EffectSystem 施加/移除事件）发生在 Update 之外，访问 `Query` 会 NRE。事件回调内必须用 `store.Query<T1, T2>()` 遍历（store 内部缓存 ArchetypeQuery）。先例：`GameplayEventSystem`（`store.GetEntityById`）、`EffectListenerSystem`（`store.Query<EffectListener, TaskStateComponent>()`）——OnUpdate 内用 `Query` 属性，回调内用 `store.Query<>()`。
 - 使用文件范围的命名空间（比如：src/Gameplay/ 目录使用 `namespace Gameplay;`，src/Gameplay/Gameplay.Tags 目录使用 `namespace Gameplay.Tags;`，src/Gameplay/Gameplay.Abilities 目录使用 `namespace Gameplay.Abilities;`，src/Gameplay/Gameplay.Tasks 目录使用 `namespace Gameplay.Tasks;`，tests/Gameplay.Tests/Gameplay.Tests.Tags 目录使用 `namespace Gameplay.Tests.Tags;`，不加大括号缩进）
 - **数据驱动（Data-Driven）**：行为由数据定义，逻辑与数据分离。两层含义：① ECS 层——Entity 行为由挂载的 Component 组合决定，不靠类继承；Component 为纯数据 struct（无行为方法），System 持有全部逻辑。② 配置层——玩法数值（血量、伤害、冷却时间等）不进代码，走静态数据配置（如 JSON、数据表）；代码只定义数据结构和消费方式，具体值由策划/配置决定。判断"能不能做某事" = 查数据而非写死条件。
 - **事件驱动（Event-Driven）**：跨系统通信走事件总线，避免直接耦合。生产方 `GameplayEventBus.Enqueue(in record)` —— 写进去就不管谁来消费；消费方注册 `IGameplayEventHandler` 或动态 Listener，由 `GameplayEventDispatcher.Tick()` 统一分发。适合伤害/治疗/拾取等需要多方响应的场景，添加新消费者无需改动生产者。

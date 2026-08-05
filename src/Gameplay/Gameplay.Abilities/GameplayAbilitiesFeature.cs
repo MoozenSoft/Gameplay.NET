@@ -1,5 +1,6 @@
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
+using Gameplay.Interfaces;
 using Gameplay.Tasks;
 
 namespace Gameplay.Abilities;
@@ -15,11 +16,17 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
     public AttributeAggregatorManager AttributeAggregatorManager { get; }
     public EffectSystem EffectSystem { get; }
     public TaskSchedulerSystem TaskScheduler { get; }
-    public GameplayEventSystem GameplayEventTaskSystem { get; }
-    public AttributeListenerSystem AttributeListenerTaskSystem { get; }
-    public TagListenerSystem TagListenerTaskSystem { get; }
-    public CommitPhaseListenerSystem CommitPhaseListenerTaskSystem { get; }
-    public DelaySystem DelayTaskSystem { get; }
+    public GameplayEventSystem GameplayEventSystem { get; }
+    public AttributeListenerSystem AttributeListenerSystem { get; }
+    public TagListenerSystem TagListenerSystem { get; }
+    public CommitPhaseListenerSystem CommitPhaseListenerSystem { get; }
+    public EffectListenerSystem EffectListenerSystem { get; }
+    public AbilityActivateListenerSystem AbilityActivateListenerSystem { get; }
+    public InputListenerSystem InputListenerSystem { get; }
+    public SpawnSystem SpawnSystem { get; }
+    public MoveToSystem MoveToSystem { get; }
+    public TimerSystem TimerSystem { get; }
+    public DelaySystem DelaySystem { get; }
     public SystemRoot SystemRoot { get; }
 
     // ── POCO Manager / System（外部调用）──
@@ -50,29 +57,41 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
         // ── Task 系统（Runtime + Driver）──
         TaskScheduler = new TaskSchedulerSystem();
         TaskScheduler.SetCompletionListener(this); // 全部 Task 完成 → CancelAbility
-        GameplayEventTaskSystem = new GameplayEventSystem(EventDispatcher, store);
-        AttributeListenerTaskSystem = new AttributeListenerSystem(AttributeAggregatorManager);
-        TagListenerTaskSystem = new TagListenerSystem();
-        CommitPhaseListenerTaskSystem = new CommitPhaseListenerSystem();
-        DelayTaskSystem = new DelaySystem();
+        GameplayEventSystem = new GameplayEventSystem(EventDispatcher, store);
+        AttributeListenerSystem = new AttributeListenerSystem(AttributeAggregatorManager);
+        TagListenerSystem = new TagListenerSystem();
+        CommitPhaseListenerSystem = new CommitPhaseListenerSystem();
+        EffectListenerSystem = new EffectListenerSystem(EffectSystem, store);
+        AbilityActivateListenerSystem = new AbilityActivateListenerSystem(ActivationManager, store);
+        InputListenerSystem = new InputListenerSystem();
+        SpawnSystem = new SpawnSystem();
+        MoveToSystem = new MoveToSystem();
+        TimerSystem = new TimerSystem(EventBus);
+        DelaySystem = new DelaySystem();
 
         // ── SystemRoot — 按 Phase 注册 Friflo QuerySystem ──
         SystemRoot = new SystemRoot(store)
         {
             // Phase 1: 内置 Task 推进（Pending→Running + 条件检查）
-            DelayTaskSystem,          // Delay 计时（共享——TaskBuilder.Delay 复用）
-            GameplayEventTaskSystem,
-            AttributeListenerTaskSystem,
-            TagListenerTaskSystem,
-            CommitPhaseListenerTaskSystem,
+            DelaySystem,          // Delay 计时（共享——TaskBuilder.Delay 复用）
+            GameplayEventSystem,
+            AttributeListenerSystem,
+            TagListenerSystem,
+            CommitPhaseListenerSystem,
+            EffectListenerSystem,
+            AbilityActivateListenerSystem,
+            InputListenerSystem,
+            SpawnSystem,
+            MoveToSystem,
+            TimerSystem,
             // Phase 2: Task 完成检测（所有 Task Done → 通知 ITaskCompletionListener）
             TaskScheduler,
             // Phase 3: GE Duration/Period Tick + Apply/Remove
             EffectSystem,
         };
-        // GameplayEventTaskSystem 在 Phase 1: 注册 Pending Task 为 GameplayEventDispatcher listener
+        // GameplayEventSystem 在 Phase 1: 注册 Pending Task 为 GameplayEventDispatcher listener
         // GameplayEventDispatcher.Tick() 在 Update() 开头 Phase 0: 消费本帧事件 → 通知 listener
-        // → 下一帧 GameplayEventTaskSystem.OnUpdate 检测到 ETaskState.Done
+        // → 下一帧 GameplayEventSystem.OnUpdate 检测到 ETaskState.Done
     }
 
     /// <summary>
@@ -80,6 +99,10 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
     /// </summary>
     public void OnAllTasksDone(Entity owner)
         => ActivationManager.CancelAbility(owner);
+
+    /// <summary>注入输入服务（无输入环境如 Dedicated Server 不调用——Input 类 Task 保持 Running）。</summary>
+    public void SetInputService(IInputService inputService)
+        => InputListenerSystem.SetInputService(inputService);
 
     /// <summary>
     /// 每帧更新入口。先消费 Event，再执行 ECS SystemRoot。

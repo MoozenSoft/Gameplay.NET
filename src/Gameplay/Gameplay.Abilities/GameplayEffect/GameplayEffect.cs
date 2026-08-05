@@ -28,6 +28,8 @@ public class GameplayEffect
 
     // ── 副作用 ──
     public GameplayTagContainer GrantedTags = new();
+    /// <summary>GE 自身标签（GameplayEffectQuery.EffectTagQuery 的匹配目标）——区别于 GrantedTags（给目标的）。与 GameplayAbility.AssetTags 同名一致（静态定义的自身标签）。</summary>
+    public GameplayTagContainer AssetTags = new();
     public GameplayTagContainer BlockedAbilityTags = new();
     public GameplayTagContainer CancelAbilityTags = new();
 

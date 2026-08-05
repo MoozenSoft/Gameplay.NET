@@ -18,6 +18,8 @@ public class GameplayEffectQuery
         if (Definition != null && spec.Definition != Definition) return false;
         if (OwningTagQuery.Count > 0 && !spec.Definition.GrantedTags.HasAny(OwningTagQuery))
             return false;
+        if (EffectTagQuery.Count > 0 && !spec.Definition.AssetTags.HasAny(EffectTagQuery))
+            return false;
         return true;
     }
 

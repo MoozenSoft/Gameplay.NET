@@ -100,6 +100,100 @@ public static class TaskBuilder
         return entity;
     }
 
+    /// <summary>创建 GE 监听 Task——匹配的 GE 施加到目标时完成（Done）。</summary>
+    public static Entity WaitEffectApplied(EntityStore store, Entity target, GameplayEffectQuery query, Entity owner, int taskHandle = 0)
+    {
+        var entity = CreateEffectTask(store, target, query, EEffectCondition.Applied, owner, taskHandle);
+        return entity;
+    }
+
+    /// <summary>创建 GE 监听 Task——匹配的 GE 从目标移除时完成（Done）。</summary>
+    public static Entity WaitEffectRemoved(EntityStore store, Entity target, GameplayEffectQuery query, Entity owner, int taskHandle = 0)
+    {
+        var entity = CreateEffectTask(store, target, query, EEffectCondition.Removed, owner, taskHandle);
+        return entity;
+    }
+
+    /// <summary>创建 Ability 激活监听 Task——character 激活匹配 AssetTags 的 Ability 时完成（Done）。character 无符号 = 任何角色；abilityTags 为 null/空 = 任何 Ability。</summary>
+    public static Entity WaitAbilityActivate(EntityStore store, GameplayTagContainer? abilityTags, Entity character, Entity owner, int taskHandle = 0)
+    {
+        var entity = store.CreateEntity(
+            new TaskStateComponent { State = ETaskState.Pending },
+            new TaskOwnerComponent { Owner = owner, TaskHandle = taskHandle },
+            new AbilityActivateListener
+            {
+                Character = character,
+                // 防御性拷贝——可变 class 引用，防调用者后续修改改写所有 Task 的条件
+                AbilityTags = abilityTags == null ? null : CopyContainer(abilityTags),
+            });
+        owner.AddChild(entity);
+        return entity;
+    }
+
+    /// <summary>创建输入监听 Task——指定动作本帧按下时完成（Done）。</summary>
+    public static Entity WaitInputPress(EntityStore store, int actionId, Entity owner, int taskHandle = 0)
+    {
+        var entity = CreateInputTask(store, actionId, EInputTrigger.Press, owner, taskHandle);
+        return entity;
+    }
+
+    /// <summary>创建输入监听 Task——指定动作本帧释放时完成（Done）。</summary>
+    public static Entity WaitInputRelease(EntityStore store, int actionId, Entity owner, int taskHandle = 0)
+    {
+        var entity = CreateInputTask(store, actionId, EInputTrigger.Release, owner, taskHandle);
+        return entity;
+    }
+
+    /// <summary>创建输入监听 Task——指定动作处于按住状态时完成（Done）。</summary>
+    public static Entity WaitInputHeld(EntityStore store, int actionId, Entity owner, int taskHandle = 0)
+    {
+        var entity = CreateInputTask(store, actionId, EInputTrigger.Hold, owner, taskHandle);
+        return entity;
+    }
+
+    /// <summary>创建重复 Task——每 interval 秒发一次 pulseEventId 事件（Timer 能力），count 次后完成（Done）。</summary>
+    public static Entity Repeat(EntityStore store, float interval, int count, ushort pulseEventId, Entity owner, int taskHandle = 0)
+    {
+        if (interval <= 0f)
+            throw new ArgumentException("Interval 必须大于 0——否则无限脉冲风暴", nameof(interval));
+        if (count <= 0)
+            throw new ArgumentException("Count 必须大于 0——无限脉冲请直接使用 TimerComponent.RemainingPulses=0", nameof(count));
+
+        var entity = store.CreateEntity(
+            new TaskStateComponent { State = ETaskState.Pending },
+            new TaskOwnerComponent { Owner = owner, TaskHandle = taskHandle },
+            new TimerComponent
+            {
+                Interval = interval,
+                RemainingPulses = count,
+                PulseEventId = pulseEventId,
+            });
+        owner.AddChild(entity);
+        return entity;
+    }
+
+    /// <summary>创建移动 Task（Action）——在 duration 秒内将 target 从当前位置插值到目的地，完成后结束（Done）。</summary>
+    public static Entity MoveTo(EntityStore store, Entity target, Position destination, float duration, Entity owner, int taskHandle = 0)
+    {
+        var entity = store.CreateEntity(
+            new TaskStateComponent { State = ETaskState.Pending },
+            new TaskOwnerComponent { Owner = owner, TaskHandle = taskHandle },
+            new MoveToComponent { Target = target, Destination = destination, Duration = duration });
+        owner.AddChild(entity);
+        return entity;
+    }
+
+    /// <summary>创建生成 Task（Action）——克隆预制实体到指定位置，立即完成（Done）。生成结果存 SpawnRequestComponent.SpawnedEntity。</summary>
+    public static Entity SpawnActor(EntityStore store, Entity prefab, Position spawnPosition, Entity owner, int taskHandle = 0)
+    {
+        var entity = store.CreateEntity(
+            new TaskStateComponent { State = ETaskState.Pending },
+            new TaskOwnerComponent { Owner = owner, TaskHandle = taskHandle },
+            new SpawnRequestComponent { Prefab = prefab, SpawnPosition = spawnPosition });
+        owner.AddChild(entity);
+        return entity;
+    }
+
     /// <summary>创建 Commit 阶段监听 Task——目标 ActiveAbility Commit 完成（State=Active）时完成（Done）。</summary>
     public static Entity WaitCommitPhase(EntityStore store, Entity activeAbility, Entity owner, int taskHandle = 0)
     {
@@ -164,12 +258,58 @@ public static class TaskBuilder
         return entity;
     }
 
-    /// <summary>拷贝 GameplayTagContainer（冷路径，可接受分配）。</summary>
+    /// <summary>拷贝 GameplayTagContainer（冷路径，可接受分配）。容器内无效 Tag（未注册名）fail-fast——否则被静默跳过，条件意外变成"匹配任何"。</summary>
     private static GameplayTagContainer CopyContainer(GameplayTagContainer source)
     {
         var copy = new GameplayTagContainer();
         foreach (var tag in source)
+        {
+            if (!tag.IsValid)
+                throw new ArgumentException("容器包含无效 Tag——未注册的 Tag 名会被静默忽略，导致条件变成'匹配任何'", nameof(source));
             copy.AddTag(tag);
+        }
         return copy;
+    }
+
+    /// <summary>创建输入监听 Task 基础 Archetype：TaskState + TaskOwner + InputListener。</summary>
+    private static Entity CreateInputTask(EntityStore store, int actionId, EInputTrigger trigger, Entity owner, int taskHandle)
+    {
+        var entity = store.CreateEntity(
+            new TaskStateComponent { State = ETaskState.Pending },
+            new TaskOwnerComponent { Owner = owner, TaskHandle = taskHandle },
+            new InputListener { ActionId = actionId, Trigger = trigger });
+        owner.AddChild(entity);
+        return entity;
+    }
+
+    /// <summary>创建 GE 监听 Task 基础 Archetype：TaskState + TaskOwner + EffectListener（Query 防御性拷贝——快照语义）。</summary>
+    private static Entity CreateEffectTask(EntityStore store, Entity target, GameplayEffectQuery query,
+        EEffectCondition condition, Entity owner, int taskHandle)
+    {
+        if (query == null)
+            throw new ArgumentException("Query 不能为 null——无法匹配任何 GE", nameof(query));
+
+        var entity = store.CreateEntity(
+            new TaskStateComponent { State = ETaskState.Pending },
+            new TaskOwnerComponent { Owner = owner, TaskHandle = taskHandle },
+            new EffectListener
+            {
+                Target = target,
+                Query = CopyQuery(query),
+                Condition = condition,
+            });
+        owner.AddChild(entity);
+        return entity;
+    }
+
+    /// <summary>深拷贝 GameplayEffectQuery（可变 class 引用——快照语义，防调用者后续修改改写所有 Task 的条件）。</summary>
+    private static GameplayEffectQuery CopyQuery(GameplayEffectQuery source)
+    {
+        return new GameplayEffectQuery
+        {
+            OwningTagQuery = source.OwningTagQuery.Count > 0 ? CopyContainer(source.OwningTagQuery) : new(),
+            EffectTagQuery = source.EffectTagQuery.Count > 0 ? CopyContainer(source.EffectTagQuery) : new(),
+            Definition = source.Definition,
+        };
     }
 }

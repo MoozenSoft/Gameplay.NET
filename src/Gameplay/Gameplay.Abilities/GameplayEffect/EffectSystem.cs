@@ -1,4 +1,5 @@
 // src/Gameplay/GameplayAbilities/GameplayEffect/EffectSystem.cs
+using System;
 using System.Collections.Generic;
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
@@ -30,6 +31,14 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
     // 延迟删除队列（过期 GE 的 Handle，Query 循环后批量 RemoveEffect）
     private readonly List<GameplayEffectHandle> pendingRemovals = new();
     private static readonly System.Random sharedRandom = new();
+
+    // ── GE 生命周期事件（EffectListenerSystem 等消费；与 AttributeChangedEvent 同为域级事件）──
+
+    /// <summary>GE 施加成功（含 Stack 叠加）。参数：spec、施加目标。</summary>
+    public event Action<GameplayEffectSpec, Entity>? EffectApplied;
+
+    /// <summary>GE 移除。参数：spec、原施加目标、移除原因。</summary>
+    public event Action<GameplayEffectSpec, Entity, EEffectEndType>? EffectRemoved;
 
     protected override void OnUpdate()
     {
@@ -180,6 +189,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
                     }
                     if (existing.StackingPeriodPolicy == EGameplayEffectStackingPeriodPolicy.ResetOnSuccessfulApplication)
                         existing.PeriodProgress = 0f;
+                    EffectApplied?.Invoke(spec, target);
                     return existing.Handle;
                 }
             }
@@ -262,6 +272,7 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             }
         }
 
+        EffectApplied?.Invoke(spec, target);
         return handle;
     }
 
@@ -313,9 +324,12 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             }
 
             // 销毁 Entity
+            Entity effectTarget = default;
             if (handleToEntity.TryGetValue(handle, out var effectEntity))
             {
                 // 级联删除子 Entity（如 OnCompleteEffects 链产生的子 GE）
+                if (effectEntity.HasComponent<ActiveGameplayEffectComponent>())
+                    effectTarget = effectEntity.GetComponent<ActiveGameplayEffectComponent>().TargetEntity;
                 foreach (var child in effectEntity.ChildEntities)
                     child.DeleteEntity();
                 effectEntity.DeleteEntity();
@@ -323,6 +337,9 @@ public class EffectSystem : QuerySystem<ActiveGameplayEffectComponent>
             // Remove from Handle caches
             handleToSpec.Remove(handle);
             handleToEntity.Remove(handle);
+
+            // 通知（回调期间 removingHandles 仍持有——回调内 RemoveEffect 同一 handle 会被守卫吞掉，不会重入）
+            EffectRemoved?.Invoke(spec, effectTarget, reason);
         }
 
         removingHandles.Remove(handle);

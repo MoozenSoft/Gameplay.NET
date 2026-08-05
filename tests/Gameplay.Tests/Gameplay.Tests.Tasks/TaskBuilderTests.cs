@@ -109,6 +109,153 @@ public class TaskBuilderTests
     }
 
     [Fact]
+    public void WaitEffectApplied_CreatesEffectListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitEffectApplied(store, target,
+            GameplayEffectQuery.MakeQuery_MatchAnyGrantedTags(RequiredQuery), owner);
+
+        ref var listener = ref entity.GetComponent<EffectListener>();
+        Assert.Equal(target.Id, listener.Target.Id);
+        Assert.NotNull(listener.Query);
+        Assert.Equal(EEffectCondition.Applied, listener.Condition);
+    }
+
+    [Fact]
+    public void WaitEffectRemoved_CreatesEffectListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitEffectRemoved(store, target,
+            GameplayEffectQuery.MakeQuery_MatchAnyGrantedTags(RequiredQuery), owner);
+
+        ref var listener = ref entity.GetComponent<EffectListener>();
+        Assert.Equal(EEffectCondition.Removed, listener.Condition);
+        Assert.NotNull(listener.Query);
+    }
+
+    [Fact]
+    public void WaitAbilityActivate_CreatesListener_WithTagCopy()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var abilityTags = RequiredQuery;
+
+        var entity = TaskBuilder.WaitAbilityActivate(store, abilityTags, character: store.CreateEntity(), owner);
+
+        ref var listener = ref entity.GetComponent<AbilityActivateListener>();
+        Assert.NotNull(listener.AbilityTags);
+        Assert.Equal(2, listener.AbilityTags.Count); // 防御性拷贝
+
+        // 调用者修改原容器不影响已创建 Task
+        abilityTags.RemoveTag(TestTag);
+        Assert.Equal(2, listener.AbilityTags.Count);
+    }
+
+    [Fact]
+    public void WaitAbilityActivate_NullTags_MatchesAny()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitAbilityActivate(store, null, character: store.CreateEntity(), owner);
+
+        ref var listener = ref entity.GetComponent<AbilityActivateListener>();
+        Assert.Null(listener.AbilityTags);
+    }
+
+    [Fact]
+    public void WaitInputPress_CreatesPressListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitInputPress(store, 1, owner);
+
+        ref var listener = ref entity.GetComponent<InputListener>();
+        Assert.Equal(1, listener.ActionId);
+        Assert.Equal(EInputTrigger.Press, listener.Trigger);
+    }
+
+    [Fact]
+    public void WaitInputRelease_CreatesReleaseListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitInputRelease(store, 1, owner);
+
+        ref var listener = ref entity.GetComponent<InputListener>();
+        Assert.Equal(1, listener.ActionId);
+        Assert.Equal(EInputTrigger.Release, listener.Trigger);
+    }
+
+    [Fact]
+    public void WaitInputHeld_CreatesHoldListener()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+
+        var entity = TaskBuilder.WaitInputHeld(store, 1, owner);
+
+        ref var listener = ref entity.GetComponent<InputListener>();
+        Assert.Equal(1, listener.ActionId);
+        Assert.Equal(EInputTrigger.Hold, listener.Trigger);
+    }
+
+    [Fact]
+    public void MoveTo_CreatesMoveComponent()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+        var target = store.CreateEntity();
+
+        var entity = TaskBuilder.MoveTo(store, target, new Position(5f, 0f, 0f), 2f, owner);
+
+        ref var move = ref entity.GetComponent<MoveToComponent>();
+        Assert.Equal(target.Id, move.Target.Id);
+        Assert.Equal(new Position(5f, 0f, 0f), move.Destination);
+        Assert.Equal(2f, move.Duration);
+    }
+
+    [Fact]
+    public void Repeat_CreatesTimerComponent()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+
+        var entity = TaskBuilder.Repeat(store, interval: 0.5f, count: 3, pulseEventId: 42, owner);
+
+        ref var timer = ref entity.GetComponent<TimerComponent>();
+        Assert.Equal(0.5f, timer.Interval);
+        Assert.Equal(3, timer.RemainingPulses);
+        Assert.Equal((ushort)42, timer.PulseEventId);
+    }
+
+    [Fact]
+    public void Repeat_InvalidInterval_Throws()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+
+        Assert.Throws<System.ArgumentException>(() => TaskBuilder.Repeat(store, 0f, 3, 42, owner));
+    }
+
+    [Fact]
+    public void Repeat_InvalidCount_Throws()
+    {
+        var store = new EntityStore();
+        var owner = store.CreateEntity();
+
+        Assert.Throws<System.ArgumentException>(() => TaskBuilder.Repeat(store, 0.5f, 0, 42, owner));
+    }
+
+    [Fact]
     public void WaitAttributeAbove_CreatesThresholdListener()
     {
         var store = new EntityStore();
