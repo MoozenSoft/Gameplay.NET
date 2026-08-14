@@ -12,6 +12,9 @@
     <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
 
+  <!-- 编译模式共享配置（GameplayMode → 宏 / 输出目录），单一事实来源 -->
+  <Import Project="../../build/Gameplay.Mode.props" />
+
   <ItemGroup>
     <ProjectReference Include="../../src/Gameplay/Gameplay.csproj" />
     <ProjectReference Include="../../src/Gameplay.CodeGen/Gameplay.CodeGen.csproj"

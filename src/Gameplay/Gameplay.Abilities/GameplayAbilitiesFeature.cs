@@ -33,7 +33,7 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
     public GameplayEventBus EventBus { get; }
     public GameplayEventDispatcher EventDispatcher { get; }
     public AbilityActivationManager ActivationManager { get; }
-    public GameplayCueManager CueManager { get; }
+    public GameplayCueManager? CueManager { get; }
     public PredictionManager PredictionManager { get; }
 
     public GameplayAbilitiesFeature(EntityStore store, NetMode netMode)
@@ -123,7 +123,7 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
         TaskScheduler.ProcessPendingDeletions();
     }
 
-    private static GameplayCueManager CreateCueManager(NetMode netMode)
+    private static GameplayCueManager? CreateCueManager(NetMode netMode)
     {
 #if GP_SERVER
         return null; // DS 无表现层

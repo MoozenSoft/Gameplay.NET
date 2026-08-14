@@ -23,7 +23,11 @@ public class GameplayAbilitiesFeatureTests
         Assert.NotNull(feature.ActivationManager);
         Assert.NotNull(feature.TaskScheduler);
         Assert.NotNull(feature.PredictionManager);
+#if GP_SERVER
+        Assert.Null(feature.CueManager);    // Server 编译：DS 无表现层，CueManager 为 null
+#else
         Assert.NotNull(feature.CueManager);
+#endif
     }
 
     [Fact]

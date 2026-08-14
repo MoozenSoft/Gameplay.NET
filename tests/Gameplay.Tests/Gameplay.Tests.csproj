@@ -13,6 +13,9 @@
     <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
 
+  <!-- 编译模式共享配置：让测试项目的编译宏（GP_SERVER 等）与被测 Gameplay.dll 保持一致 -->
+  <Import Project="../../build/Gameplay.Mode.props" />
+
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
     <PackageReference Include="xunit" Version="2.*" />

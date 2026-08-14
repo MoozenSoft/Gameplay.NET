@@ -1,0 +1,53 @@
+<Project>
+
+  <!--
+    Gameplay 库编译模式共享配置。
+    通过 -p:GameplayMode=Client|Host|Server 选择（默认 Host），映射到编译宏与输出目录。
+    被 Gameplay.dll 与 Gameplay.RPG.dll 共同导入，单一事实来源。
+  -->
+
+  <!-- 编译模式：Host（默认）/ Client / Server -->
+  <PropertyGroup>
+    <GameplayMode Condition="'$(GameplayMode)' == ''">Host</GameplayMode>
+  </PropertyGroup>
+
+  <!-- 模式 → 附加宏 + 输出目录片段（非法模式两者均为空） -->
+  <Choose>
+    <When Condition="'$(GameplayMode)' == 'Client'">
+      <PropertyGroup>
+        <_GameplayMacros></_GameplayMacros>
+        <_GameplayModeDir>Client</_GameplayModeDir>
+      </PropertyGroup>
+    </When>
+    <When Condition="'$(GameplayMode)' == 'Host'">
+      <PropertyGroup>
+        <_GameplayMacros>GP_WITH_SERVER_CODE</_GameplayMacros>
+        <_GameplayModeDir>Host</_GameplayModeDir>
+      </PropertyGroup>
+    </When>
+    <When Condition="'$(GameplayMode)' == 'Server'">
+      <PropertyGroup>
+        <_GameplayMacros>GP_SERVER;GP_WITH_SERVER_CODE</_GameplayMacros>
+        <_GameplayModeDir>Server</_GameplayModeDir>
+      </PropertyGroup>
+    </When>
+  </Choose>
+
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);$(_GameplayMacros)</DefineConstants>
+  </PropertyGroup>
+
+  <!-- 按模式分输出目录：bin/<Configuration>/<GameplayMode>/（程序集名不变）。
+       用 _GameplayModeDir（仅合法模式非空）而非原始 GameplayMode，避免非法值产生 bin/Debug/<非法值>/ 空目录。 -->
+  <PropertyGroup>
+    <OutputPath>bin\$(Configuration)\$(_GameplayModeDir)\</OutputPath>
+  </PropertyGroup>
+
+  <!-- 非法模式快速失败：_GameplayModeDir 为空说明没有匹配的 When 分支。
+       挂到 PrepareForBuild 之前，避免非法值先创建出 bin/<Configuration>/<非法值>/ 空目录。 -->
+  <Target Name="_ValidateGameplayMode" BeforeTargets="PrepareForBuild;Build">
+    <Error Condition="'$(_GameplayModeDir)' == ''"
+           Text="GameplayMode 必须是 Client / Host / Server，当前值为 '$(GameplayMode)'。" />
+  </Target>
+
+</Project>

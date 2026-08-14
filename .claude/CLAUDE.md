@@ -50,11 +50,13 @@ Gameplay.Infrastructure.dll  Gameplay.RPG.dll
 
 ## 编译配置
 
-| 宏 | 模式 |
-|----|------|
-| 无宏 | Client |
-| `GP_WITH_SERVER_CODE` | Host |
-| `GP_SERVER;GP_WITH_SERVER_CODE` | Server |
+构建时通过 `-p:GameplayMode=Client|Host|Server` 选择模式（默认 `Host`），`build/Gameplay.Mode.props` 将其映射到编译宏：
+
+| GameplayMode | 编译宏 | 模式 |
+|--------------|--------|------|
+| `Client` | 无 | Client |
+| `Host`（默认） | `GP_WITH_SERVER_CODE` | Host |
+| `Server` | `GP_SERVER;GP_WITH_SERVER_CODE` | Server |
 
 运行时通过 `World.GetNetMode()` 返回 `NetMode` 枚举区分模式。详见 `.claude/gameplay-architecture.md`。
 
@@ -73,9 +75,10 @@ dotnet build samples/Gameplay.Infrastructure/Gameplay.Infrastructure.csproj
 # Release 构建
 dotnet build src/Gameplay/Gameplay.csproj -c Release
 
-# 按模式构建（传入宏）
-dotnet build src/Gameplay/Gameplay.csproj -p:DefineConstants=GP_WITH_SERVER_CODE          # Host
-dotnet build src/Gameplay/Gameplay.csproj -p:DefineConstants=GP_SERVER;GP_WITH_SERVER_CODE # Server
+# 按模式构建（-p:GameplayMode）
+dotnet build src/Gameplay/Gameplay.csproj -p:GameplayMode=Client # Client
+dotnet build src/Gameplay/Gameplay.csproj -p:GameplayMode=Host   # Host
+dotnet build src/Gameplay/Gameplay.csproj -p:GameplayMode=Server # Server
 
 # 指定 TFM
 dotnet build src/Gameplay/Gameplay.csproj -f netstandard2.1
@@ -93,9 +96,9 @@ dotnet test tests/Gameplay.Tests/Gameplay.Tests.csproj -f net10.0
 ## 示例运行
 
 ```bash
-dotnet run --project samples/Gameplay.Client/Gameplay.Client.csproj
-dotnet run --project samples/Gameplay.Server/Gameplay.Server.csproj
-dotnet run --project samples/Gameplay.Host/Gameplay.Host.csproj
+dotnet run --project samples/Gameplay.Client/Gameplay.Client.csproj -p:GameplayMode=Client
+dotnet run --project samples/Gameplay.Server/Gameplay.Server.csproj -p:GameplayMode=Server
+dotnet run --project samples/Gameplay.Host/Gameplay.Host.csproj   -p:GameplayMode=Host
 ```
 
 ## 编码约定
