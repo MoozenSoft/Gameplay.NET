@@ -25,7 +25,7 @@ public class SpawnSystemTests
     {
         var store = new EntityStore();
         var prefab = store.CreateEntity();
-        prefab.AddComponent(new HealthComponent { Value = 100f });
+        prefab.AddComponent(new TestValueComponent { Value = 100f });
 
         var (task, root) = Setup(store, prefab, new Position(1f, 2f, 3f));
 
@@ -36,7 +36,7 @@ public class SpawnSystemTests
         var spawned = task.GetComponent<SpawnRequestComponent>().SpawnedEntity;
         Assert.False(spawned.IsNull);
         Assert.NotEqual(prefab.Id, spawned.Id); // 是新的实体
-        Assert.Equal(100f, spawned.GetComponent<HealthComponent>().Value); // 组件被克隆
+        Assert.Equal(100f, spawned.GetComponent<TestValueComponent>().Value); // 组件被克隆
         Assert.Equal(new Position(1f, 2f, 3f), spawned.GetComponent<Position>()); // 位置被设置
     }
 
@@ -75,7 +75,7 @@ public class SpawnSystemTests
     {
         var store = new EntityStore();
         var prefab = store.CreateEntity();
-        prefab.AddComponent(new HealthComponent { Value = 100f });
+        prefab.AddComponent(new TestValueComponent { Value = 100f });
 
         var (task, root) = Setup(store, prefab, new Position(1f, 1f, 1f));
 

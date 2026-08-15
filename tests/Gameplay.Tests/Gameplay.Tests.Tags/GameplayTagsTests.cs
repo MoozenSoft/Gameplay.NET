@@ -144,14 +144,14 @@ public class GameplayTagsTests
         var world = CreateWorld();
         var entity = world.Store.CreateEntity();
         entity.AddComponent(new GameplayTagsComponent());
-        entity.AddComponent(new HealthComponent { Value = 100f });
+        entity.AddComponent(new TestValueComponent { Value = 100f });
 
         ref var tags = ref entity.GetComponent<GameplayTagsComponent>();
         tags.AddTag(GameplayTag.Request("StatusEffect.Stunned"));
 
-        var query = world.Store.Query<GameplayTagsComponent, HealthComponent>();
+        var query = world.Store.Query<GameplayTagsComponent, TestValueComponent>();
         int count = 0;
-        query.ForEachEntity((ref GameplayTagsComponent gameplayTags, ref HealthComponent health, Entity _) =>
+        query.ForEachEntity((ref GameplayTagsComponent gameplayTags, ref TestValueComponent health, Entity _) =>
         {
             count++;
             Assert.True(gameplayTags.Matches(GameplayTag.Request("StatusEffect.Stunned")));
