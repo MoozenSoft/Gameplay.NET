@@ -8,12 +8,12 @@ Gameplay.NET 的 GAS 子系统基于 **ECS + 命令模式 + 事件驱动**，不
 
 | 阶段 | 内容 | 说明 |
 |------|------|------|
-| Phase 0 | Event 交换+分发 | `EventDispatcher.Tick()` — 消费本帧事件 |
-| Phase 1 | Task 推进 | Delay / WaitEvent / WaitAttr / WaitTag / WaitCommit System |
-| Phase 2 | AbilityTask 完成检测 | `AbilityTaskSystem` — 全部 Task Done → CancelAbility |
+| Phase 0 | Event 交换+分发 | `GameplayEventDispatcher.Tick()` — 消费本帧事件 |
+| Phase 1 | Task 推进 | 11 个 Driver System（Delay / Event / Tag / Attribute / Commit / Effect / AbilityActivate / Input / Spawn / MoveTo / Timer） |
+| Phase 2 | Task 完成检测 | `TaskSchedulerSystem` — 检测终态 → 通知 `ITaskCompletionListener` |
 | Phase 3 | GE Duration/Period | `EffectSystem.OnUpdate()` — 计时、周期执行、过期 |
-| Phase 4 | Attribute 刷新 | `AggregatorManager.Flush()` — 统一 Evaluate + 写回 CurrentValue |
-| Phase 5 | 延迟删除 | `ActivationManager.ProcessPendingDeletions()` |
+| Phase 4 | Attribute 刷新 | `AttributeAggregatorManager.Flush()` — 统一 Evaluate + 写回 CurrentValue |
+| Phase 5 | 延迟删除 | `ActivationManager` + `TaskScheduler` 的 `ProcessPendingDeletions()` |
 
 ---
 
@@ -26,7 +26,7 @@ graph TD
     end
 
     subgraph Phase0["Phase 0 · 事件分发"]
-        P0["EventDispatcher.Tick()"]
+        P0["GameplayEventDispatcher.Tick()"]
         SWAP["Swap 取出 pending 帧"]
         DISP["遍历事件记录"]
         STATIC["→ 静态 Handler<br/>IGameplayEventHandler"]
@@ -36,20 +36,26 @@ graph TD
     end
 
     subgraph Phase123["Phase 1~3 · ECS SystemRoot.Update"]
-        P1["Phase 1 · Task 推进"]
-        DELAY["DelayTaskSystem<br/>计时递减"]
-        WAIT_EVT["WaitGameplayEventTaskSystem<br/>事件匹配"]
-        WAIT_ATTR["WaitAttributeChangeTaskSystem<br/>属性变化检测"]
-        WAIT_TAG["WaitGameplayTagTaskSystem<br/>Tag 增删检测"]
-        WAIT_COMMIT["WaitAbilityCommitTaskSystem<br/>Commit 完成检测"]
-        P1 --> DELAY & WAIT_EVT & WAIT_ATTR & WAIT_TAG & WAIT_COMMIT
-        PENDING["Pending Task → Running → Done"]
+        P1["Phase 1 · Task 推进（Driver）"]
+        DELAY["DelaySystem<br/>计时递减"]
+        WAIT_EVT["GameplayEventSystem<br/>事件匹配"]
+        WAIT_ATTR["AttributeListenerSystem<br/>属性变化/阈值检测"]
+        WAIT_TAG["TagListenerSystem<br/>Tag 增删检测"]
+        WAIT_COMMIT["CommitPhaseListenerSystem<br/>Commit 完成检测"]
+        WAIT_EFFECT["EffectListenerSystem<br/>GE 施加/移除检测"]
+        WAIT_ABILITY["AbilityActivateListenerSystem<br/>Ability 激活检测"]
+        WAIT_INPUT["InputListenerSystem<br/>输入触发检测"]
+        WAIT_TIMER["TimerSystem<br/>周期脉冲"]
+        WAIT_SPAWN["SpawnSystem<br/>克隆预制体"]
+        WAIT_MOVE["MoveToSystem<br/>位置插值"]
+        P1 --> DELAY & WAIT_EVT & WAIT_ATTR & WAIT_TAG & WAIT_COMMIT & WAIT_EFFECT & WAIT_ABILITY & WAIT_INPUT & WAIT_TIMER & WAIT_SPAWN & WAIT_MOVE
+        PENDING["Pending Task → Running → Done/Cancelled"]
 
-        P2["Phase 2 · Ability 完成检测"]
-        ATS["AbilityTaskSystem"]
-        CHECK["遍历 ActiveAbility 子 Entity<br/>所有 Task 都 Done/Cancelled？"]
-        CANCEL["CancelAbility<br/>移除 OwnedTags · 清理子 Entity"]
-        P2 --> ATS --> CHECK -->|是| CANCEL
+        P2["Phase 2 · Task 完成检测"]
+        ATS["TaskSchedulerSystem"]
+        CHECK["遍历 Owner 子 Entity<br/>所有 Task 都 Done/Cancelled？"]
+        NOTIFY["ITaskCompletionListener<br/>OnAllTasksDone → CancelAbility"]
+        P2 --> ATS --> CHECK -->|是| NOTIFY
         CHECK -->|否| NOOP["等待下一帧"]
 
         P3["Phase 3 · Effect Tick"]
@@ -149,12 +155,12 @@ graph TD
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Pending: Executor 创建 Task Entity
-    Pending --> Running: TaskSystem 检测条件满足
-    Running --> Done: 任务完成（延迟到、事件到达...）
-    Running --> Cancelled: Ability 被 Cancel
-    Done --> [*]: AbilityTaskSystem 清理
-    Cancelled --> [*]: AbilityTaskSystem 清理
+    [*] --> Pending: TaskBuilder 创建 Task Entity
+    Pending --> Running: Driver System 推进（含能力专属初始化）
+    Running --> Done: 条件满足（延迟到、事件到达...）
+    Running --> Cancelled: Owner 被 Cancel
+    Done --> [*]: TaskSchedulerSystem 帧末销毁
+    Cancelled --> [*]: TaskSchedulerSystem 帧末销毁
 
     state 全部完成 {
         Done
@@ -256,24 +262,41 @@ Override 存在 → 返回最后一个 Override 值
 
 **激活流程**：`Request → 查 AbilitySpec → Requirements 检查 → Commit 提交 → 创建 ActiveAbility Entity → Executor 执行（异常则回滚 Commit）`
 
-### 5. AbilityTask — 异步任务
+### 5. Task — 异步任务
 
-Executor 内部创建 Task Entity，挂在 ActiveAbility Entity 下，每个 Task 有 `TaskStateComponent` 状态机：
+`TaskBuilder` 创建 Task Entity（`TaskStateComponent` + `TaskOwnerComponent` + 能力组件），挂在 Owner Entity 下。底层**无「GameplayTask / AbilityTask」之分**——只有不同 Owner 与 Component 组合；Ability 用 `TaskBuilder.WaitXxx`（owner = ActiveAbility），任意 Entity 用 `TaskBuilder.Delay` / `MoveTo`。
+
+状态机（状态是唯一事实来源）：
 
 ```
 Pending → Running → Done / Cancelled
 ```
 
-`AbilityTaskSystem` 检测到**全部 Task 都 Done/Cancelled** 时调用 `CancelAbility` 结束 Ability。
+- **Driver System**（11 个，一个能力一个）：管前半程 `Pending→Running`（含能力专属初始化：注册监听、快照）与条件检查；完成/取消走 `TaskCommands.Complete/Cancel`。
+- **`TaskSchedulerSystem`**：管后半程——检测 Done/Cancelled → 检查 Owner 所有 Task 是否全部结束 → 全部结束则通知 `ITaskCompletionListener`（GAS 侧即 `CancelAbility`）→ 帧末销毁。
 
-支持的 Task：`DelayTask`、`WaitGameplayEventTask`、`WaitAttributeChangeTask`、`WaitGameplayTagTask`、`WaitAbilityCommitTask`
+支持的 Task（`TaskBuilder` 方法）：
+
+| 能力 | 方法 | 触发完成条件 |
+|------|------|------------|
+| 延时 | `Delay` | 计时结束 |
+| 事件监听 | `WaitEvent` | 匹配 GameplayEvent |
+| Tag 监听 | `WaitTagAdded` / `WaitTagRemoved` / `WaitTagQueryAdded` / `WaitTagQueryRemoved` | Tag 增删 / 集合条件 |
+| 属性监听 | `WaitAttributeChange` / `Above` / `Below` / `RatioAbove` / `RatioBelow` | 属性变化 / 阈值 |
+| GE 监听 | `WaitEffectApplied` / `WaitEffectRemoved` | GE 施加 / 移除 |
+| Ability 监听 | `WaitAbilityActivate` | 匹配 AssetTags 的 Ability 激活 |
+| 输入监听 | `WaitInputPress` / `Release` / `Held` | 输入触发 |
+| 周期脉冲 | `Repeat` | interval 脉冲 count 次 |
+| 移动 | `MoveTo` | 位置插值完成 |
+| 生成 | `SpawnActor` | 克隆预制体到位置 |
+| Commit 监听 | `WaitCommitPhase` | ActiveAbility Commit 完成 |
 
 ### 6. GameplayEvent — 事件总线
 
 遵循事件驱动模式，跨系统解耦：
 
 - **生产**：`GameplayEventBus.Enqueue(in record)` → 写入 pending 帧
-- **消费**：`EventDispatcher.Tick()` → `Swap` 取出当前帧 → 分发到注册的 Handler
+- **消费**：`GameplayEventDispatcher.Tick()` → `Swap` 取出当前帧 → 分发到注册的 Handler
   - **静态 Handler**：`IGameplayEventHandler` 接口，全局生效
   - **动态 Listener**：Entity 上的 Handler，按 `(entityId, handlerId)` 注册/注销
 
@@ -288,11 +311,11 @@ Pending → Running → Done / Cancelled
 4. Executor: ApplyEffectExecutor
    → EffectSystem.Apply(damageGE, target)       // 瞬时伤害
    → EffectSystem.Apply(burnBuffGE, target)     // 持续灼烧
-   → 创建 WaitDelayTask(1s) → 1s 后 CancelAbility
+   → 创建 TaskBuilder.Delay(1s) → 1s 后 CancelAbility
 5. 每帧 EffectSystem Tick burnBuffGE:
    → Duration 递减
    → Period 触发 ExecuteOnPeriod 伤害
-6. Task 1s 后 Done → AbilityTaskSystem 检测全部完成 → CancelAbility
+6. Task 1s 后 Done → TaskSchedulerSystem 检测全部完成 → CancelAbility
 7. EventBus 发出伤害/治疗事件 → UI 更新、死亡检查等系统响应
 ```
 

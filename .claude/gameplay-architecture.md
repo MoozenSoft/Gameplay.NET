@@ -66,7 +66,7 @@ ECS 原生版 GAS——无巨型中枢组件，能力通过 Component 组合标�
 | **GameplayAbility** | Component（配置） + System（逻辑） | `AbilityComponent` 存标签/消耗/CoolDown 配置；`AbilityActivationSystem` 执行激活 |
 | **GameplayEffect** | Entity + Component | 瞬时或持续 Effect 作为独立 Entity（挂 `DurationComponent`、`ModifierComponent`），`EffectSystem` 每帧遍历、修改 Attribute |
 | **GameplayTag** | Component（标签集） | `TagComponent` 存层级标签（`State.Stunned`、`Ability.Attack.Melee`），用于分类与条件 |
-| **GameplayEvent** | Entity（瞬时） | Event 触发 → 创建 Entity（挂 `EventTypeComponent` + `PayloadComponent`） → `EventSystem` 消费 → 销毁 |
+| **GameplayEvent** | POCO（事件总线） | 生产方 `GameplayEventBus.Enqueue(in record)` → `GameplayEventDispatcher.Tick()` 分发给静态 Handler / 动态 Listener，不建 Entity |
 | **AbilityTask** | Component（状态机） | 异步等待逻辑（`WaitDurationComponent`、`WaitEventComponent`），`TaskSystem` 驱动推进 |
 | **GameplayCue** | Entity + Component | 表现层特效（仅 Client 端 `CueSystem` 处理，`GP_SERVER` 剔除） |
 | **Prediction** | 复用状态同步层 | GAS 不复现预测逻辑，由状态同步层的 Bubble/预测回滚统一处理 |
@@ -87,14 +87,14 @@ Entity[Player]
 System 遍历：
   AbilityActivationSystem  → 处理输入 → 激活 Ability → 创建 Effect Entity
   EffectSystem             → 遍历 Effect Entity → 修改 Attribute
-  EventSystem              → 匹配 Event Entity → 分发到监听 System
+  GameplayEventDispatcher  → Tick 消费事件总线 → 分发到静态 Handler / 动态 Listener
   TaskSystem               → 推进 WaitDuration / WaitEvent → 触发回调
   CueSystem                → [Client only] 响应事件播放特效
 ```
 
 **Effect 即 Entity**：Buff/Debuff、Dot/HoT、一次性伤害——都是 Entity。`EffectSystem` 每帧处理：Duration 递减 → Modifier 施加 → 到期销毁。不再区分 Instant/Duration/Infinite Effect 子类，靠 Component 组合区分。
 
-**Event 即 Entity**：伤害事件、治疗事件、施法事件——瞬时 Entity，由 `EventSystem` 匹配 Tag → 分发到监听 System，消费后销毁。
+**Event 即总线**：伤害事件、治疗事件、施法事件——`GameplayEventRecord`（struct）进 `GameplayEventBus` 双缓冲队列，`GameplayEventDispatcher.Tick()` 每帧分发到静态 Handler（`IGameplayEventHandler`）与动态 Listener（Entity 上的 Handler）。不创建 Entity，Entity 仅作为 record 的 `Source`/`Target` 字段被引用。
 
 **预测由状态同步层统一处理**：Ability 激活时，Client 本地创建预测 Effect Entity；服务端权威状态到达后，由状态同步的 reconciliation 机制回滚（参见"状态同步"节）。GAS 层不做重复预测逻辑。
 
