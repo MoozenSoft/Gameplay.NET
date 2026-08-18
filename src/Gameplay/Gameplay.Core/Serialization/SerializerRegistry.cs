@@ -12,6 +12,14 @@ public static class SerializerRegistry
 
     public static void Register<T>(IComponentSerializer<T> serializer) where T : struct, IComponent
     {
+        if (ByType.TryGetValue(typeof(T), out var existing))
+        {
+            // 重复注册：替换条目但保留原 TypeId，避免 Capture 时同一组件双写
+            var replacement = new SnapshotEntry<T>(existing.TypeId, serializer);
+            Entries[existing.TypeId - 1] = replacement;
+            ByType[typeof(T)] = replacement;
+            return;
+        }
         var entry = new SnapshotEntry<T>(Entries.Count + 1, serializer);
         Entries.Add(entry);
         ByType[typeof(T)] = entry;

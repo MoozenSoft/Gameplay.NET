@@ -8,11 +8,10 @@ public sealed class TimerSystem : QuerySystem<TimerComponent>
 {
     protected override void OnUpdate()
     {
-        var dt = Tick.deltaTime;
         Query.ForEachEntity((ref TimerComponent timer, Entity _) =>
         {
             if (timer.Completed) return;
-            timer.Remaining -= dt;
+            timer.Remaining -= Tick.deltaTime;
             if (timer.Remaining <= 0f)
             {
                 timer.Completed = true;

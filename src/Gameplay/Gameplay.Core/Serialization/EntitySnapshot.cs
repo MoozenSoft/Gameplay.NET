@@ -28,7 +28,9 @@ public static class EntitySnapshot
         {
             int typeId = reader.ReadInt();
             var entry = SerializerRegistry.GetByTypeId(typeId);
-            if (entry != null) entry.Apply(entity, ref reader);
+            if (entry == null)
+                throw new System.IO.InvalidDataException($"unknown snapshot typeId {typeId}");
+            entry.Apply(entity, ref reader);
         }
     }
 }

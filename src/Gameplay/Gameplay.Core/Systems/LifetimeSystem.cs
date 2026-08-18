@@ -8,10 +8,9 @@ public sealed class LifetimeSystem : QuerySystem<LifetimeComponent>
 {
     protected override void OnUpdate()
     {
-        var dt = Tick.deltaTime;
         Query.ForEachEntity((ref LifetimeComponent lifetime, Entity entity) =>
         {
-            lifetime.Remaining -= dt;
+            lifetime.Remaining -= Tick.deltaTime;
             if (lifetime.Remaining <= 0f)
                 CommandBuffer.DeleteEntity(entity.Id);   // 经 CommandBuffer 帧末统一删除
         });

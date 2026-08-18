@@ -8,10 +8,9 @@ public sealed class MovementSystem : QuerySystem<TransformComponent, VelocityCom
 {
     protected override void OnUpdate()
     {
-        var dt = Tick.deltaTime;
         Query.ForEachEntity((ref TransformComponent transform, ref VelocityComponent velocity, Entity _) =>
         {
-            transform.Position = transform.Position + velocity.Velocity * dt;
+            transform.Position = transform.Position + velocity.Velocity * Tick.deltaTime;
         });
     }
 }
