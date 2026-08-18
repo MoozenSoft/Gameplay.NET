@@ -24,7 +24,7 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
     public EffectListenerSystem EffectListenerSystem { get; }
     public AbilityActivateListenerSystem AbilityActivateListenerSystem { get; }
     public InputListenerSystem InputListenerSystem { get; }
-    public SpawnSystem SpawnSystem { get; }
+    public Gameplay.Tasks.SpawnSystem SpawnSystem { get; }
     public MoveToSystem MoveToSystem { get; }
     public Gameplay.Tasks.TimerSystem TimerSystem { get; }
     public DelaySystem DelaySystem { get; }
@@ -65,7 +65,7 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
         EffectListenerSystem = new EffectListenerSystem(EffectSystem, store);
         AbilityActivateListenerSystem = new AbilityActivateListenerSystem(ActivationManager, store);
         InputListenerSystem = new InputListenerSystem();
-        SpawnSystem = new SpawnSystem();
+        SpawnSystem = new Gameplay.Tasks.SpawnSystem();
         MoveToSystem = new MoveToSystem();
         TimerSystem = new Gameplay.Tasks.TimerSystem(EventBus);
         DelaySystem = new DelaySystem();
