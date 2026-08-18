@@ -7,6 +7,7 @@ namespace Gameplay.Core;
 public sealed class EventBus
 {
     private readonly Dictionary<Type, object> _queues = new();
+    private IEventQueue[] _snapshot = Array.Empty<IEventQueue>();
 
     public void Enqueue<T>(in T evt) where T : struct, IEvent
         => GetQueue<T>().Pending.Add(evt);
@@ -17,11 +18,16 @@ public sealed class EventBus
     public void Unsubscribe<T>(IEventHandler<T> handler) where T : struct, IEvent
         => GetQueue<T>().Handlers.Remove(handler);
 
-    /// <summary>每帧分发：交换 pending 帧并逐个派发给订阅者。</summary>
+    /// <summary>每帧分发：先快照队列再逐个派发，分发中 Enqueue 新类型不破坏迭代。</summary>
     public void Tick()
     {
-        foreach (var box in _queues.Values)
-            ((IEventQueue)box).Dispatch();
+        int count = _queues.Count;
+        if (count == 0) return;
+        if (_snapshot.Length < count)
+            _snapshot = new IEventQueue[count];
+        _queues.Values.CopyTo(_snapshot, 0);
+        for (int i = 0; i < count; i++)
+            _snapshot[i].Dispatch();
     }
 
     private EventQueue<T> GetQueue<T>() where T : struct, IEvent
