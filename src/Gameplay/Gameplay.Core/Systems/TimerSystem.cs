@@ -1,0 +1,29 @@
+using Friflo.Engine.ECS;
+using Friflo.Engine.ECS.Systems;
+
+namespace Gameplay.Core;
+
+/// <summary>计时递减，到期置 Completed。</summary>
+public sealed class TimerSystem : QuerySystem<TimerComponent>
+{
+    protected override void OnUpdate()
+    {
+        var dt = Tick.deltaTime;
+        Query.ForEachEntity((ref TimerComponent timer, Entity _) =>
+        {
+            if (timer.Completed) return;
+            timer.Remaining -= dt;
+            if (timer.Remaining <= 0f)
+            {
+                timer.Completed = true;
+                if (timer.Loop)
+                {
+                    // while 循环处理 dt > Duration 的多圈 wrap（避免 Remaining 仍为负）
+                    while (timer.Remaining <= 0f && timer.Duration > 0f)
+                        timer.Remaining += timer.Duration;
+                    timer.Completed = false;
+                }
+            }
+        });
+    }
+}

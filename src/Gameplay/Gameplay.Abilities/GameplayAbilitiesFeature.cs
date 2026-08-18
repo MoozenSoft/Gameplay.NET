@@ -26,7 +26,7 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
     public InputListenerSystem InputListenerSystem { get; }
     public SpawnSystem SpawnSystem { get; }
     public MoveToSystem MoveToSystem { get; }
-    public TimerSystem TimerSystem { get; }
+    public Gameplay.Tasks.TimerSystem TimerSystem { get; }
     public DelaySystem DelaySystem { get; }
     public SystemRoot SystemRoot { get; }
 
@@ -67,7 +67,7 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
         InputListenerSystem = new InputListenerSystem();
         SpawnSystem = new SpawnSystem();
         MoveToSystem = new MoveToSystem();
-        TimerSystem = new TimerSystem(EventBus);
+        TimerSystem = new Gameplay.Tasks.TimerSystem(EventBus);
         DelaySystem = new DelaySystem();
 
         // ── SystemRoot — 按 Phase 注册 Friflo QuerySystem ──
