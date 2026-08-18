@@ -1,9 +1,9 @@
-namespace Gameplay;
+namespace Gameplay.Core;
 
 /// <summary>
 /// 网络运行模式。
 /// </summary>
-public enum NetMode
+public enum ENetMode
 {
     /// <summary>单机模式（无网络）。</summary>
     Standalone,

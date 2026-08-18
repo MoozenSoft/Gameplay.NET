@@ -1,6 +1,7 @@
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 using Gameplay;
+using Gameplay.Core;
 using Gameplay.Tasks;
 using Xunit;
 
@@ -10,7 +11,7 @@ public class DelaySystemTests
 {
     private static (World World, SystemRoot Root) Setup()
     {
-        var world = new World(NetMode.Standalone);
+        var world = new World(ENetMode.Standalone);
         var root = new SystemRoot(world.Store) {
             new DelaySystem(),
         };

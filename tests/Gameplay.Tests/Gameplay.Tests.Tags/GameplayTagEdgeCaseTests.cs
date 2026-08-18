@@ -1,6 +1,7 @@
 using System;
 using Friflo.Engine.ECS;
 using Gameplay;
+using Gameplay.Core;
 using Gameplay.Tags;
 using Xunit;
 
@@ -67,7 +68,7 @@ public class GameplayTagEdgeCaseTests
     public void OperateOnMultipleEntities_EachHasOwnTagSet()
     {
         GameplayTagManager.RegisterTags("Damage", "Buff");
-        var world = new World(NetMode.Standalone);
+        var world = new World(ENetMode.Standalone);
 
         var entityA = world.Store.CreateEntity();
         var entityB = world.Store.CreateEntity();

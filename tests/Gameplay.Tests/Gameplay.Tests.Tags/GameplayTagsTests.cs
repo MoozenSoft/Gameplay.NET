@@ -1,5 +1,6 @@
 using Friflo.Engine.ECS;
 using Gameplay;
+using Gameplay.Core;
 using Gameplay.Tags;
 using Xunit;
 
@@ -17,7 +18,7 @@ public class GameplayTagsTests
             "StatusEffect.Stunned",
             "Buff.Regeneration"
         );
-        return new World(NetMode.Standalone);
+        return new World(ENetMode.Standalone);
     }
 
     [Fact]

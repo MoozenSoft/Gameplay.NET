@@ -1,5 +1,6 @@
 using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
+using Gameplay.Core;
 using Gameplay.Interfaces;
 using Gameplay.Tasks;
 
@@ -36,7 +37,7 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
     public GameplayCueManager? CueManager { get; }
     public PredictionManager PredictionManager { get; }
 
-    public GameplayAbilitiesFeature(EntityStore store, NetMode netMode)
+    public GameplayAbilitiesFeature(EntityStore store, ENetMode netMode)
     {
         // ── 基础设施 ──
         AttributeAggregatorManager = new AttributeAggregatorManager();
@@ -123,7 +124,7 @@ public class GameplayAbilitiesFeature : ITaskCompletionListener
         TaskScheduler.ProcessPendingDeletions();
     }
 
-    private static GameplayCueManager? CreateCueManager(NetMode netMode)
+    private static GameplayCueManager? CreateCueManager(ENetMode netMode)
     {
 #if GP_SERVER
         return null; // DS 无表现层

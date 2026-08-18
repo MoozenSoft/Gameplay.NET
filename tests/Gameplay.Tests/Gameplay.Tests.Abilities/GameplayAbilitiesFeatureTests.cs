@@ -5,6 +5,7 @@ using Friflo.Engine.ECS;
 using Friflo.Engine.ECS.Systems;
 using Gameplay;
 using Gameplay.Abilities;
+using Gameplay.Core;
 using Xunit;
 
 public class GameplayAbilitiesFeatureTests
@@ -12,7 +13,7 @@ public class GameplayAbilitiesFeatureTests
     [Fact]
     public void Constructor_RegistersAllSystems()
     {
-        var world = new World(NetMode.Standalone);
+        var world = new World(ENetMode.Standalone);
         var feature = new GameplayAbilitiesFeature(world.Store, world.NetMode);
 
         Assert.NotNull(feature.EffectSystem);
@@ -34,7 +35,7 @@ public class GameplayAbilitiesFeatureTests
     public void Update_ExecutesSystems()
     {
         var store = new EntityStore();
-        var feature = new GameplayAbilitiesFeature(store, NetMode.Standalone);
+        var feature = new GameplayAbilitiesFeature(store, ENetMode.Standalone);
 
         var entity = store.CreateEntity();
         feature.AttributeAggregatorManager.SetAggregatorValue(entity, new GameplayAttribute(0), 100f);
