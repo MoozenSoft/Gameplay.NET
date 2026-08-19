@@ -6,10 +6,10 @@ namespace Gameplay.Core;
 /// <summary>序列化读取器（ref struct，栈语义）。</summary>
 public ref struct ByteReader
 {
-    private readonly ReadOnlySpan<byte> _buffer;
-    private int _position;
+    private readonly ReadOnlySpan<byte> buffer;
+    private int position;
 
-    public ByteReader(ReadOnlySpan<byte> buffer) { _buffer = buffer; _position = 0; }
+    public ByteReader(ReadOnlySpan<byte> buffer) { this.buffer = buffer; position = 0; }
 
     public int ReadInt() => ReadStruct<int>();
     public float ReadFloat() => ReadStruct<float>();
@@ -20,8 +20,8 @@ public ref struct ByteReader
     private T ReadStruct<T>() where T : struct
     {
         var size = Marshal.SizeOf<T>();
-        var value = MemoryMarshal.Read<T>(_buffer.Slice(_position, size));
-        _position += size;
+        var value = MemoryMarshal.Read<T>(buffer.Slice(position, size));
+        position += size;
         return value;
     }
 }

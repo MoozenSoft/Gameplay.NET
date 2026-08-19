@@ -9,15 +9,15 @@ namespace Gameplay.Core;
 /// 消费者可安全读取组件）；实体在帧末 ProcessPendingDeletions 才真正删除。</summary>
 public sealed class HealthSystem : QuerySystem<HealthComponent>
 {
-    private readonly ForEachEntity<HealthComponent> _forEach;   // 缓存委托，避免每帧 this-capturing lambda 分配
-    private readonly EventBus _events;
-    private readonly Action<Entity> _deferDelete;
+    private readonly ForEachEntity<HealthComponent> forEach;   // 缓存委托，避免每帧 this-capturing lambda 分配
+    private readonly EventBus events;
+    private readonly Action<Entity> deferDelete;
 
     public HealthSystem(EventBus events, Action<Entity> deferDelete)
     {
-        _events = events;
-        _deferDelete = deferDelete;
-        _forEach = ForEach;
+        this.events = events;
+        this.deferDelete = deferDelete;
+        forEach = ForEach;
     }
 
     private void ForEach(ref HealthComponent health, Entity entity)
@@ -25,12 +25,12 @@ public sealed class HealthSystem : QuerySystem<HealthComponent>
         // 死亡判定基于 Current（不依赖 IsAlive 初始值——IsAlive 缺省为 false 的实体也会正确判定）
         if (health.Current > 0f) return;
         health.IsAlive = false;   // 死亡中间态
-        _events.Enqueue(new EntityDeathEvent { Entity = entity });
-        _deferDelete(entity);
+        events.Enqueue(new EntityDeathEvent { Entity = entity });
+        deferDelete(entity);
     }
 
     protected override void OnUpdate()
     {
-        Query.ForEachEntity(_forEach);
+        Query.ForEachEntity(forEach);
     }
 }

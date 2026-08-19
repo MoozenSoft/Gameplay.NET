@@ -11,19 +11,19 @@ namespace Gameplay.Core;
 /// </summary>
 public class World
 {
-    private readonly EntityStore _store;
-    private readonly SystemRoot _root;
-    private readonly SystemGroup _preGroup;
-    private readonly SystemGroup _simGroup;
-    private readonly SystemGroup _postGroup;
-    private readonly Dictionary<Type, object> _services = new();
-    private readonly HashSet<Entity> _pendingDeletions = new();   // HashSet：同一实体被多 System 重复 DeferDelete 时去重
+    private readonly EntityStore store;
+    private readonly SystemRoot root;
+    private readonly SystemGroup preGroup;
+    private readonly SystemGroup simGroup;
+    private readonly SystemGroup postGroup;
+    private readonly Dictionary<Type, object> services = new();
+    private readonly HashSet<Entity> pendingDeletions = new();   // HashSet：同一实体被多 System 重复 DeferDelete 时去重
 
     /// <summary>当前网络模式。</summary>
     public ENetMode NetMode { get; }
 
     /// <summary>Friflo ECS 实体存储。</summary>
-    public EntityStore Store => _store;
+    public EntityStore Store => store;
 
     /// <summary>模拟时钟——所有 System 的时间基准。</summary>
     public GameTime Time { get; }
@@ -40,17 +40,17 @@ public class World
     public World(ENetMode netMode, ulong seed = 0UL)
     {
         NetMode = netMode;
-        _store = new EntityStore();
+        store = new EntityStore();
         Time = new GameTime(ETimeStep.Variable);
         Events = new EventBus();
         Random = new DeterministicRng(seed);
-        _root = new SystemRoot(_store);
-        _preGroup = new SystemGroup("PreSimulation");
-        _simGroup = new SystemGroup("Simulation");
-        _postGroup = new SystemGroup("PostSimulation");
-        _root.Add(_preGroup);
-        _root.Add(_simGroup);
-        _root.Add(_postGroup);
+        root = new SystemRoot(store);
+        preGroup = new SystemGroup("PreSimulation");
+        simGroup = new SystemGroup("Simulation");
+        postGroup = new SystemGroup("PostSimulation");
+        root.Add(preGroup);
+        root.Add(simGroup);
+        root.Add(postGroup);
     }
 
     /// <summary>返回当前网络模式。</summary>
@@ -71,26 +71,26 @@ public class World
     {
         var group = stage switch
         {
-            ESimulationStage.PreSimulation => _preGroup,
-            ESimulationStage.Simulation => _simGroup,
-            ESimulationStage.PostSimulation => _postGroup,
-            _ => _simGroup,
+            ESimulationStage.PreSimulation => preGroup,
+            ESimulationStage.Simulation => simGroup,
+            ESimulationStage.PostSimulation => postGroup,
+            _ => simGroup,
         };
         group.Add(system);
     }
 
     /// <summary>注册服务（按类型存储，重复注册覆盖）。</summary>
     public void RegisterService<T>(T service) where T : class
-        => _services[typeof(T)] = service;
+        => services[typeof(T)] = service;
 
     /// <summary>获取已注册的服务，未注册返回 null。</summary>
     public T? GetService<T>() where T : class
-        => _services.TryGetValue(typeof(T), out var box) ? (T)box : null;
+        => services.TryGetValue(typeof(T), out var box) ? (T)box : null;
 
     /// <summary>延迟删除——挂到队列，帧末统一执行（Query 循环内不能 DeleteEntity；HashSet 自动去重）。</summary>
     public void DeferDelete(Entity entity)
     {
-        if (!entity.IsNull) _pendingDeletions.Add(entity);
+        if (!entity.IsNull) pendingDeletions.Add(entity);
     }
 
     /// <summary>推进一帧：时间 → 事件分发 → System 执行 → 本帧事件分发 → 延迟删除。
@@ -99,17 +99,17 @@ public class World
     {
         Time.Advance(deltaTime);                    // 1. 推进时钟
         Events.Tick();                              // 2. 分发上一帧事件
-        _root.Update(new UpdateTick(Time.ScaledDeltaTime, 0));  // 3. System 执行（HealthSystem 标记死亡 + DeferDelete 入队）
+        root.Update(new UpdateTick(Time.ScaledDeltaTime, 0));  // 3. System 执行（HealthSystem 标记死亡 + DeferDelete 入队）
         Events.Tick();                              // 4. 分发本帧 enqueue 的事件（死亡事件此时实体未删）
         ProcessPendingDeletions();                  // 5. 帧末真正删除
     }
 
     private void ProcessPendingDeletions()
     {
-        foreach (var entity in _pendingDeletions)
+        foreach (var entity in pendingDeletions)
         {
             if (!entity.IsNull) entity.DeleteEntity();
         }
-        _pendingDeletions.Clear();
+        pendingDeletions.Clear();
     }
 }

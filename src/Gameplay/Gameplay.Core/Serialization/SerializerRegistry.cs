@@ -7,33 +7,33 @@ namespace Gameplay.Core;
 /// <summary>组件序列化器注册中心（static，程序级唯一映射，自增 typeId 索引）。</summary>
 public static class SerializerRegistry
 {
-    private static readonly List<ISnapshotEntry> Entries = new();
-    private static readonly Dictionary<Type, ISnapshotEntry> ByType = new();
+    private static readonly List<ISnapshotEntry> entries = new();
+    private static readonly Dictionary<Type, ISnapshotEntry> byType = new();
 
     public static void Register<T>(IComponentSerializer<T> serializer) where T : struct, IComponent
     {
-        if (ByType.TryGetValue(typeof(T), out var existing))
+        if (byType.TryGetValue(typeof(T), out var existing))
         {
             // 重复注册：替换条目但保留原 TypeId，避免 Capture 时同一组件双写
             var replacement = new SnapshotEntry<T>(existing.TypeId, serializer);
-            Entries[existing.TypeId - 1] = replacement;
-            ByType[typeof(T)] = replacement;
+            entries[existing.TypeId - 1] = replacement;
+            byType[typeof(T)] = replacement;
             return;
         }
-        var entry = new SnapshotEntry<T>(Entries.Count + 1, serializer);
-        Entries.Add(entry);
-        ByType[typeof(T)] = entry;
+        var entry = new SnapshotEntry<T>(entries.Count + 1, serializer);
+        entries.Add(entry);
+        byType[typeof(T)] = entry;
     }
 
     public static IComponentSerializer<T>? Get<T>() where T : struct, IComponent
-        => ByType.TryGetValue(typeof(T), out var box) ? ((SnapshotEntry<T>)box).Serializer : null;
+        => byType.TryGetValue(typeof(T), out var box) ? ((SnapshotEntry<T>)box).Serializer : null;
 
     /// <summary>枚举已注册的快照条目（按注册顺序，typeId = index + 1）。</summary>
-    internal static IReadOnlyList<ISnapshotEntry> EnumerateRegistered() => Entries;
+    internal static IReadOnlyList<ISnapshotEntry> EnumerateRegistered() => entries;
 
     /// <summary>按 typeId 查询快照条目（typeId 从 1 开始）。</summary>
     internal static ISnapshotEntry? GetByTypeId(int typeId)
-        => typeId >= 1 && typeId <= Entries.Count ? Entries[typeId - 1] : null;
+        => typeId >= 1 && typeId <= entries.Count ? entries[typeId - 1] : null;
 }
 
 /// <summary>内部非泛型快照条目（EntitySnapshot 经由它按 typeId 统一编解码）。</summary>

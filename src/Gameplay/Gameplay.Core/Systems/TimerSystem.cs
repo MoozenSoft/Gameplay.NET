@@ -6,9 +6,9 @@ namespace Gameplay.Core;
 /// <summary>计时递减，到期置 Completed。</summary>
 public sealed class TimerSystem : QuerySystem<TimerComponent>
 {
-    private readonly ForEachEntity<TimerComponent> _forEach;   // 缓存委托，避免每帧 this-capturing lambda 分配
+    private readonly ForEachEntity<TimerComponent> forEach;   // 缓存委托，避免每帧 this-capturing lambda 分配
 
-    public TimerSystem() => _forEach = ForEach;
+    public TimerSystem() => forEach = ForEach;
 
     private void ForEach(ref TimerComponent timer, Entity _)
     {
@@ -29,6 +29,6 @@ public sealed class TimerSystem : QuerySystem<TimerComponent>
 
     protected override void OnUpdate()
     {
-        Query.ForEachEntity(_forEach);
+        Query.ForEachEntity(forEach);
     }
 }

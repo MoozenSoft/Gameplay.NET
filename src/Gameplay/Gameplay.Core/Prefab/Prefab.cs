@@ -34,9 +34,9 @@ public sealed class PrefabBuilder
 /// <summary>Archetype 蓝图（纯数据模板）。</summary>
 public sealed class Prefab
 {
-    private readonly PrefabComponent[] _components;
+    private readonly PrefabComponent[] components;
 
-    private Prefab(PrefabComponent[] components) => _components = components;
+    private Prefab(PrefabComponent[] components) => this.components = components;
 
     public static Prefab Define(Action<PrefabBuilder> config)
     {
@@ -48,7 +48,7 @@ public sealed class Prefab
     public Entity Instantiate(EntityStore store)
     {
         var entity = store.CreateEntity();
-        foreach (var c in _components)
+        foreach (var c in components)
             c.Apply(entity);
         return entity;
     }
@@ -57,16 +57,16 @@ public sealed class Prefab
 /// <summary>Prefab 全局注册中心（模板跨 World 共享，自增 id 索引）。</summary>
 public static class PrefabRegistry
 {
-    private static readonly Dictionary<int, Prefab> ById = new();
-    private static int _nextId = 1;
+    private static readonly Dictionary<int, Prefab> byId = new();
+    private static int nextId = 1;
 
     public static int Register(Prefab prefab)
     {
-        var id = _nextId++;
-        ById[id] = prefab;
+        var id = nextId++;
+        byId[id] = prefab;
         return id;
     }
 
     public static Prefab? GetById(int id)
-        => ById.TryGetValue(id, out var p) ? p : null;
+        => byId.TryGetValue(id, out var p) ? p : null;
 }

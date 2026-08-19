@@ -32,12 +32,12 @@ public static class EntityLifecycle
         public bool Hooked;
     }
 
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<EntityStore, HandlerList> HandlerMap = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<EntityStore, HandlerList> handlerMap = new();
 
     public static void Subscribe(World world, EntityLifecycleHandler handler)
     {
         var store = world.Store;
-        var list = HandlerMap.GetOrCreateValue(store);
+        var list = handlerMap.GetOrCreateValue(store);
         list.Handlers.Add(handler);
         if (!list.Hooked)
         {
@@ -51,13 +51,13 @@ public static class EntityLifecycle
 
     public static void Unsubscribe(World world, EntityLifecycleHandler handler)
     {
-        if (!HandlerMap.TryGetValue(world.Store, out var list)) return;
+        if (!handlerMap.TryGetValue(world.Store, out var list)) return;
         list.Handlers.Remove(handler);
     }
 
     private static void Dispatch(EntityStore store, in EntityLifecycleEvent evt)
     {
-        if (!HandlerMap.TryGetValue(store, out var list)) return;
+        if (!handlerMap.TryGetValue(store, out var list)) return;
         foreach (var h in list.Handlers) h(in evt);
     }
 
