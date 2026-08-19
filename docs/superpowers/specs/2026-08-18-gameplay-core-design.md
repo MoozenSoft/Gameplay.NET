@@ -24,7 +24,7 @@
 | 确定性 | 提供**确定性随机**（`DeterministicRng`）；**不保证、不追求端到端确定性模拟（lockstep）** |
 | 组件序列化 | Core 提供底层编解码 + 快照；状态同步模块（Bubble/回滚）在 Core 之上，Core 不含网络 |
 | 现有模块迁移 | `Gameplay.Tags` / `Gameplay.Tasks` / `Gameplay.Interfaces` / `Gameplay.Utils` **全部不动**；仅 `World.cs` + `NetMode.cs` 迁入 |
-| Abilities 改造 | v1 **只做最小 using 修补**，不重构为 `IModule`（Phase 2 任务） |
+| Abilities 改造 | Phase 2 第一步已完成：`GameplayAbilitiesFeature` → `GameplayAbilitiesModule : IModule`（构造注入 World，挂三阶段调度） |
 | 多 World | 显式支持（`World` 实例可多开）；实例级状态挂 World，类型级注册（Serializer/Prefab）`static` 共享 |
 | 独立运行 | v1 用单测覆盖，不新增 samples 项目 |
 
@@ -91,11 +91,8 @@ src/Gameplay/Gameplay.Core/
 ```csharp
 namespace Gameplay.Core;
 
-/// <summary>游戏世界模块——向 World 挂载 System/Manager。Abilities、Combat、AI 都实现它。</summary>
-public interface IModule
-{
-    void Build(World world);
-}
+/// <summary>游戏世界模块标记——模块通过构造函数接收 World，构造时完成 System/Manager 挂载。</summary>
+public interface IModule { }
 ```
 
 ```csharp
@@ -107,10 +104,9 @@ public class World
     public EventBus Events { get; }       // Core 事件总线
     public DeterministicRng Random { get; } // 确定性随机（主 Rng，构造时可指定 seed）
 
-    public World AddModule<T>() where T : IModule, new();
-    public World AddModule(IModule module);
+    public World AddModule(IModule module);   // 注册模块（模块构造时已挂载，此处仅追踪）
 
-    // 模块用这两个 API 挂载行为
+    // 模块用这个 API 挂载行为
     public void AddSystem(BaseSystem system, ESimulationStage stage);
     public void RegisterService<T>(T service) where T : class;  // 注册 POCO Manager
     public T? GetService<T>() where T : class;                  // 取用已注册服务
@@ -122,12 +118,12 @@ public class World
 ```
 
 **关键设计**：
-- 一个 World 持有**唯一根调度器**；`AddModule` 立即调用 `IModule.Build(world)`，Module 把 System 挂到 World，由 World 统一排序执行
+- 一个 World 持有**唯一根调度器**；模块通过**构造函数接收 `World`**，构造时把 System 挂到 `World.AddSystem`，由 World 统一排序执行
 - 不再像现在 `GameplayAbilitiesFeature` 自己 new 一个 `SystemRoot`
 - `Update(dt)` 固定顺序：`GameTime 推进 → EventBus.Tick()（分发上一帧事件）→ SystemRoot.Update（Stage：Pre → Simulation → Post）→ EventBus.Tick()（分发本帧事件，如死亡事件——实体此刻仍存活）→ 全局延迟删除`
 - **多 World 支持**：`World` 是实例，可多开（分片/测试并行）；「实例级状态」（`DeterministicRng`、`GameTime`、Entity、调度）挂 World 实例，「类型级注册」（`SerializerRegistry`、`PrefabRegistry`）保持 `static` 共享
-- **模块依赖靠顺序**：`AddModule` 按调用顺序立即 `Build`；模块 B 若取用模块 A 的服务，A 必须先 `AddModule`（v1 不引入显式依赖声明）
-- `World` 仍暴露 `Store`（与现状一致），保证 `GameplayAbilitiesFeature` 的 `new GameplayAbilitiesFeature(store, netMode)` 最小修补后仍可用
+- **模块依赖靠构造顺序**：模块构造时挂载；模块 B 若取用模块 A 的服务，A 必须先构造（v1 不引入显式依赖声明）
+- `World` 仍暴露 `Store`（与现状一致）
 
 ## 5. GameTime 模拟时钟
 
@@ -223,7 +219,7 @@ public readonly struct EntityDeathEvent : IEvent
 **关键设计**：
 - **双缓冲**：`Enqueue` 写 pending 帧，`Tick` 交换并分发（避免分发中 Enqueue 的迭代问题）
 - **泛型 struct 事件**（类型安全）；订阅用 `IEventHandler<T>` 接口（避免委托闭包 GC）
-- `World.Update` 在 SystemRoot 之前调用 `EventBus.Tick()`（本帧事件对 System 可见，对应 GAS 的 Phase 0）
+- `World.Update` 在 SystemRoot **之前和之后各**调用一次 `EventBus.Tick()`（上一帧事件 System 前分发、本帧事件 System 后分发）
 - **与 `EntityLifecycle` 区分**：`EntityLifecycle` 是 Friflo 原生事件（Entity 创建/删除/组件增删）的即时转发；`EventBus` 是**逻辑事件**（死亡、拾取等业务语义）的双缓冲分发
 
 ## 9. DeterministicRng 确定性随机
@@ -252,7 +248,7 @@ public sealed class DeterministicRng
 public sealed class Prefab
 {
     public static Prefab Define(Action<PrefabBuilder> config);
-    public Entity Instantiate(World world, in TransformComponent? spawn = null);
+    public Entity Instantiate(EntityStore store);
 }
 
 public sealed class PrefabBuilder
@@ -265,7 +261,7 @@ public sealed class PrefabBuilder
 
 - `Prefab` 是**纯数据模板**（组件类型集合 + 默认值），`Instantiate` 按模板一次创建并写组件
 - `SpawnSystem` 依赖 `Prefab`：`SpawnPointComponent` 持有 `PrefabId`（int），经 `PrefabRegistry` 查找（组件只存标识，不存对象引用）
-- `PrefabRegistry`（name → Prefab）`static` 全局注册（模板跨 World 共享），配置层（JSON）后续接入
+- `PrefabRegistry` 用 `int` 自增 id 索引（`Register(Prefab) → int`、`GetById(int)`），`static` 全局注册（模板跨 World 共享），配置层（JSON）后续接入
 
 ## 11. 组件序列化（快照底层）
 
@@ -280,13 +276,13 @@ public interface IComponentSerializer<T> where T : struct, IComponent
 
 public static class EntitySnapshot
 {
-    public static void Capture(Entity entity, ReadOnlySpan<ComponentType> types, ref ByteWriter output);
-    public static void Apply(Entity entity, ref ByteReader reader);
+    public static void Capture(Entity entity, ref ByteWriter writer);   // 写 [count][typeId+数据]* 头
+    public static void Apply(Entity entity, ref ByteReader reader);      // 按头读；未知 typeId 抛异常（fail-fast）
 }
 ```
 
 - 序列化器按组件类型**手动注册**（`SerializerRegistry.Register<T>(serializer)`）；CodeGen 自动生成是后续增强，非 v1
-- `SerializerRegistry` 是 `static` 全局（组件类型→序列化器为程序级唯一映射，与 World 无关）
+- `SerializerRegistry` 是 `static` 全局，自增 `typeId` 索引（`Register<T>` 存 `SnapshotEntry<T>`，重复注册替换保留原 id；typeId 为注册序，跨进程同步前须改稳定 schema）
 - `ByteWriter`/`ByteReader`：`ref struct`（编译器强制栈语义，不逃逸堆）+ 三层后端——栈上 `stackalloc`（小体积零分配）、`ArrayPool` 租借（大体积 `finally` 归还）、帧级 arena（Phase 2 批量同步）
 - 未来的状态同步模块（Bubble/回滚）在 `EntitySnapshot` 之上构建
 
@@ -301,7 +297,7 @@ public static class EntitySnapshot
 | `TeamComponent` | `TeamId`（int，未组队 = 0） | 阵营，友伤过滤/目标选择 |
 | `PlayerStateComponent` | `PlayerId`（int） | 玩家身份（名字经 PlayerId 查外部表，Component 不存 string） |
 | `OwnerComponent` | `PlayerId`（int，未归属 = -1） | 归属玩家，输入路由/相关性/预测归属 |
-| `HealthComponent` | `Current` / `Max` / `IsAlive` | 通用生命值 + 存活标记（死亡中间态） |
+| `HealthComponent` | `Current` / `Max` / `IsAlive` | 通用生命值；死亡判定基于 `Current <= 0`（`IsAlive` 是死亡中间态输出标记，非判定依据） |
 | `SpawnPointComponent` | `PrefabId`（int）/ `TeamId` | 一次性生成点（生成后移除；存 Prefab 标识，非对象引用） |
 | `TimerComponent` | `Remaining` / `Duration` / `Loop` / `Completed` | 通用计时/冷却 |
 | `LifetimeComponent` | `Remaining` | 存活倒计时，到期自动销毁 |
@@ -314,9 +310,9 @@ public static class EntitySnapshot
 |------|-------|------|
 | `MovementSystem` | `Velocity + Transform` | 速度积分（`pos += vel * dt`） |
 | `TimerSystem` | `Timer` | 递减，到期置 `Completed = true`（数据驱动，消费方 System 检测，无 delegate 回调） |
-| `SpawnSystem` | `SpawnPoint` | 按 `PrefabId` 实例化 Entity，一次性生成后移除 SpawnPoint |
-| `HealthSystem` | `Health` | `Current <= 0` → 置 `IsAlive = false`（死亡中间态）→ `EventBus.Enqueue(EntityDeathEvent)` → `World.DeferDelete` → 帧末真正删除 |
-| `LifetimeSystem` | `Lifetime` | 递减 `Remaining`，到期入延迟删除队列 → 帧末销毁 |
+| `SpawnSystem` | `SpawnPoint + Transform` | 按 `PrefabId` 实例化，传 SpawnPoint 的 `Position` 给新实体；`CommandBuffer.RemoveComponent` 移除 SpawnPoint（遍历后延迟实例化） |
+| `HealthSystem` | `Health` | 构造注入 `EventBus` + `deferDelete` 委托；`Current <= 0` → 置 `IsAlive = false` → `Enqueue(EntityDeathEvent)` → `deferDelete(entity)`（World 去重） |
+| `LifetimeSystem` | `Lifetime` | 构造注入 `deferDelete` 委托；递减 `Remaining`，到期 `deferDelete(entity)` |
 
 > 注意：Core 的 `MovementSystem`/`TimerSystem`/`SpawnSystem` 是**全新实现**，与 `Gameplay.Tasks` 里既有的 `MoveToSystem`/`TimerSystem`/`SpawnSystem`/`DelaySystem` **并存、互不依赖**（Tasks 一个文件不动）。
 
@@ -326,7 +322,7 @@ public static class EntitySnapshot
 |------|------|
 | `src/Gameplay/World.cs`（`namespace Gameplay`） | **迁入** `Gameplay.Core/World.cs`（`namespace Gameplay.Core`） |
 | `src/Gameplay/NetMode.cs`（`namespace Gameplay`） | **迁入** `Gameplay.Core/NetMode.cs`（`namespace Gameplay.Core`） |
-| `Gameplay.Abilities`（`GameplayAbilitiesFeature` 等） | **v1 不动**，仅因 ENetMode 迁 namespace 补 `using Gameplay.Core;` |
+| `Gameplay.Abilities`（`GameplayAbilitiesFeature`） | Phase 2 已重构为 `GameplayAbilitiesModule : IModule`（构造注入 World，挂三阶段调度） |
 | `Gameplay.Tasks` | **一个文件都不动** |
 | `Gameplay.Tags` | 不动 |
 | `Gameplay.Interfaces`（`IInputService`） | 不动 |
@@ -343,8 +339,7 @@ public static class EntitySnapshot
 
 ```
 tests/Gameplay.Tests/Gameplay.Tests.Core/   ← 新目录
-    WorldTests.cs            → World 构造、AddModule、Update 生命周期
-    IModuleTests.cs          → 模块挂载 + System 分区
+    WorldTests.cs            → World 构造、AddModule 注册、Update 生命周期
     GameTimeTests.cs
     EventBusTests.cs         → 双缓冲 + 订阅分发 + EntityDeathEvent
     DeterministicRngTests.cs → 确定性（同 seed 同序列）、Fork 独立性
@@ -357,7 +352,7 @@ tests/Gameplay.Tests/Gameplay.Tests.Core/   ← 新目录
     LifetimeSystemTests.cs
 ```
 
-**独立运行验证**（同日证明「Core 不带 GAS 可独立跑」）：单测里建 `World(ENetMode.Standalone).AddModule<MovementModule>()`，手动 `Update` N 帧断言位置变化。
+**独立运行验证**（同日证明「Core 不带 GAS 可独立跑」）：单测里建 `World(ENetMode.Standalone)`，`new MovementModule(world)` 构造挂载，手动 `Update` N 帧断言位置变化。
 
 ## 16. v1 范围边界
 
@@ -375,7 +370,6 @@ tests/Gameplay.Tests/Gameplay.Tests.Core/   ← 新目录
 - 补齐 `Gameplay.Tests.Core` 单测
 
 **不做（Phase 2 或后续）**：
-- `GameplayAbilitiesFeature` 重构为 `IModule`
 - `ETimeStep.Fixed` 完整实现（v1 仅接口）
 - 序列化 CodeGen 自动生成
 - 状态同步（Bubble/预测回滚）——Core 之上的独立模块

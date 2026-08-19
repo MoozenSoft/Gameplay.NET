@@ -4,7 +4,7 @@
 
 **Goal:** 构建 `Gameplay.Core` —— 纯 ECS Gameplay Runtime Kernel（World 中心化 + IModule + 调度 + 生命周期 + 事件总线 + 状态层 + 通用玩法）。
 
-**Architecture:** 单程序集内的 `namespace Gameplay.Core`；`World` 聚合 `Store`/`ENetMode`/`Time`/`Events`/`Random` 五要素与唯一根调度器（`SystemRoot` 按 `ESimulationStage` 分组），模块经 `IModule.Build(World)` 挂载 System/Manager；通用玩法组件（纯数据 struct）+ 系统（`QuerySystem`）分列 `Components/` 与 `Systems/`。
+**Architecture:** 单程序集内的 `namespace Gameplay.Core`；`World` 聚合 `Store`/`ENetMode`/`Time`/`Events`/`Random` 五要素与唯一根调度器（`SystemRoot` 按 `ESimulationStage` 分组），模块经构造函数注入 `World` 挂载 System/Manager（`IModule` 为标记接口）；通用玩法组件（纯数据 struct）+ 系统（`QuerySystem`）分列 `Components/` 与 `Systems/`。
 
 **Tech Stack:** .NET（`netstandard2.1` + `net10.0`）、Friflo.Engine.ECS 3.x、xUnit。
 
@@ -12,7 +12,8 @@
 
 ## Global Constraints
 
-- 文档/注释用**中文**，专业术语英文；枚举以 `E` 打头（`ETimeStep`、`ESimulationStage`、`EEntityLifecycleType`、`ENetMode` 均加 `E` 前缀）。
+- 文档/注释用**中文**，专业术语英文；枚举以 `E` 打头（`ETimeStep`、`ESimulationStage`、`EEntityLifecycleType`、`ENetMode` 均加 `E` 前缀）；枚举文件名不带 `E`（`NetMode.cs`/`TimeStep.cs`/`SimulationStage.cs`）。
+- 私有字段 camelCase 无下划线前缀（`store` 而非 `_store`）；公开成员 PascalCase。
 - 文件范围命名空间：`src/Gameplay/Gameplay.Core/` 下用 `namespace Gameplay.Core;`，子目录 `Components/`、`Systems/` 也用 `namespace Gameplay.Core;`（组件与系统都是 Core 顶层公开类型，不进子命名空间）。
 - **Friflo IComponent 修改必须走 ref**：`entity.GetComponent<T>()` 返回 `ref`，`TryGetComponent<T>(out var)` 是值拷贝陷阱。
 - **`QuerySystem.Query` 只在 `OnUpdate` 生命周期内有效**；事件回调（`EntityLifecycle`、`EventBus` handler）内用 `store.Query<>()` 遍历，禁止访问 `Query`。
@@ -2312,3 +2313,22 @@ git commit -m "添加 World 独立运行验证测试"
 - **Spec 覆盖**：17 节 spec 的每个可交付项均有对应 Task —— 迁移（§14→Task1）、Vector3/Quaternion（§3→Task2）、GameTime（§5→Task3）、Rng（§9→Task4）、EventBus（§8→Task5）、EntityLifecycle（§7→Task6）、组件（§12→Task7）、IModule/调度/多 World（§4/§6→Task8）、系统（§13→Task9）、Prefab（§10→Task10）、序列化（§11→Task11）、World 集成+独立运行（§4/§15→Task12）。
 - **已知 Friflo API 需执行时核实**（已标注在对应 Task 的「注意」）：`Tick.deltaTime` 字段名、`ComponentType<T>` 形态、`CommandBuffer` 删除语义。执行者若遇 API 名不符，以 Friflo 源码（`../Friflo.Engine.ECS/src/ECS/`）为准微调，不改变设计。
 - **类型一致性**：`World`（`Store`/`ENetMode`/`Time`/`Events`/`Random` + `AddModule`/`AddSystem`/`RegisterService`/`GetService`/`DeferDelete`/`Update`）在 **Task 8 一次构建完整**，最终形态与 spec 第 4 节一致；组件字段名（`Position`/`Velocity`/`TeamId`/`PlayerId`/`Current`/`Max`/`IsAlive`/`PrefabId`/`Remaining`/`Duration`/`Loop`/`Completed`）跨 Task 一致；`SpawnSystem` 在 Task 10（依赖 `PrefabRegistry`）实现，非 Task 9。
+
+---
+
+## 实现演进记录（执行中偏离本 plan 原文的修正）
+
+以下为实现阶段（task-review、final-review、`/code-review high`、命名规范审查）对 plan 原文的演进，spec 已同步。plan 的 TDD 步骤保留为历史记录，此处标注最终实现与原文的差异：
+
+1. **IModule 接口**：plan 写「无参构造 + `Build(World)`」，实现改为「构造函数注入 `World`」的空标记接口（消除 `= null!` hack；`World.AddModule(IModule)` 只注册，去泛型 `AddModule<T>`）。
+2. **World 双 Tick**：plan 写单 Tick，实现为双 Tick（`_root.Update` 后再 `Events.Tick()` 一次），死亡事件本帧分发、实体帧末才删（防 id 回收别名）。
+3. **HealthSystem/LifetimeSystem 删除**：plan 写 `CommandBuffer.DeleteEntity`，实现改为构造注入 `Action<Entity> deferDelete`（指向 `World.DeferDelete`，`HashSet` 去重），防「一实体挂两个删除组件」时的双重删除崩溃。
+4. **SpawnSystem 位置**：plan 只读 `PrefabId`/`TeamId`，实现 Query 加 `TransformComponent`，把 SpawnPoint 的 `Position` 传给新实体。
+5. **HealthSystem 死亡判定**：plan 的 guard 依赖 `IsAlive`，实现改为 `Current <= 0`（`IsAlive` 是死亡中间态输出标记，非判定依据——消除「IsAlive 默认 false」footgun）。
+6. **PlayerStateComponent**：plan 写 `PlayerId / Name`（string），实现仅 `PlayerId`（纯数据 struct，无 string）。
+7. **序列化**：plan 写按注册顺序回放，实现写 `[count][typeId+数据]*` 头 + `Apply` 未知 typeId 抛异常（fail-fast）+ 重复 `Register` 替换保留原 id。
+8. **每帧委托分配**：plan 写内联 lambda，实现改 `readonly ForEachEntity<...>` 字段缓存（64B/帧 → 0）。
+9. **私有字段命名**：plan 原文用下划线前缀（`_store`），实现改 camelCase 无下划线（`store`），CLAUDE.md 已补「变量名/字段名不以 `_` 打头」。
+10. **Abilities → Module**：plan 说 Phase 2 才重构，实际已完成（`GameplayAbilitiesFeature` → `GameplayAbilitiesModule : IModule`，构造注入 World，挂三阶段调度）。
+
+**deferred（明确未做）**：`ETimeStep.Fixed` 完整实现、序列化 CodeGen、`SerializerRegistry` typeId 稳定 schema（跨进程同步前置）、`TimerComponent` 与 Tasks 同名并存（接受并存）。
