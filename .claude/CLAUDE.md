@@ -104,7 +104,7 @@ dotnet run --project samples/Gameplay.Host/Gameplay.Host.csproj   -p:GameplayMod
 ## 编码约定
 
 - 文档和注释使用**中文**，专业术语使用英文；XML 文档注释规范见 `.claude/xml-doc-comment-guidelines.md`
-- C# 命名遵循 .NET 惯例（PascalCase 公开成员，camelCase 私有成员）
+- C# 命名遵循 .NET 惯例（PascalCase 公开成员，camelCase 私有成员，变量名/字段名不以 `_` 打头）
 - 枚举以 `E` 打头
 - **Friflo IComponent 修改必须走 ref**——`TryGetComponent<T>(out var x)` 返回的是栈上拷贝，修改后不写回则静默丢失。修改 Component 的标准模式：
   ```csharp
