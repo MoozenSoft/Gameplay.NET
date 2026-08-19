@@ -9,7 +9,7 @@ using Xunit;
 
 public class TaskSchedulerSystemTests
 {
-    /// <summary>测试监听器——Owner 全部 Task 完成 → CancelAbility（模拟 GameplayAbilitiesFeature）。</summary>
+    /// <summary>测试监听器——Owner 全部 Task 完成 → CancelAbility（模拟 GameplayAbilitiesModule）。</summary>
     private sealed class TestCompletionListener : ITaskCompletionListener
     {
         private readonly AbilityActivationManager mgr;
