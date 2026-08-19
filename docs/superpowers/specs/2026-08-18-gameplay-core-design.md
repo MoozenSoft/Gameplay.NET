@@ -130,17 +130,24 @@ public class World
 ```csharp
 public sealed class GameTime
 {
-    public float DeltaTime { get; }          // 本帧（未缩放）步长
-    public float ScaledDeltaTime { get; }    // 时间缩放后
+    public ETimeStep Mode { get; }
+    public float DeltaTime { get; private set; }          // 本步（未缩放）步长
+    public float ScaledDeltaTime { get; private set; }    // 时间缩放后
     public float TimeScale { get; set; } = 1f;
     public bool IsPaused { get; set; }
-    public long Tick { get; }                // 递增帧号
-    public ETimeStep Mode { get; }            // Variable（每帧一次）| Fixed（固定步长，累积器 + 可能多子步）
+    public long Tick { get; private set; }                // 已执行步数（Fixed = 子步数）
+    public float ElapsedTime { get; private set; }        // 累计模拟时间（缩放后，跨步累加）
+    // Fixed 模式专用：
+    public float FixedDeltaTime { get; set; } = 1f / 60f; // 固定步长（默认 60 Hz）
+    public int   MaxSubSteps    { get; set; } = 8;        // 单帧最多子步（防「螺旋死亡」）
+    public float Accumulator    { get; private set; }     // 未消费的真实时间
+    public void Feed(float deltaTime);                     // Fixed：累积；Variable：推进一步
+    public bool TryConsumeFixedStep(out float scaledDeltaTime); // Fixed：消费一个固定子步
 }
 ```
 
 - `World.Update(dt)` 开头推进 `GameTime`；System 从 `World.Time` 读时间，不再各自收 `UpdateTick`
-- `ETimeStep.Fixed` 用**累积器**模式：逻辑固定步长（如 60 Hz），渲染帧可变，一帧内可能执行 0..N 个子步；v1 先实现 `Variable`，`Fixed` 提供接口但实现可后置
+- `ETimeStep.Fixed` 用**累积器**模式：逻辑固定步长（如 60 Hz），渲染帧可变，一帧内可能执行 0..N 个子步。`GameTime.Feed(dt)` 累积真实时间并 clamp 到 `FixedDeltaTime * MaxSubSteps`（溢出丢弃，模拟变慢而非雪崩），`TryConsumeFixedStep(out dt)` 消费一个固定子步；`World.Update` 在 Fixed 模式循环消费子步、每子步执行一次 System，事件仍每帧分发一次
 
 ## 6. System 调度：ESimulationStage
 
@@ -282,7 +289,7 @@ public static class EntitySnapshot
 ```
 
 - 序列化器按组件类型**手动注册**（`SerializerRegistry.Register<T>(serializer)`）；CodeGen 自动生成是后续增强，非 v1
-- `SerializerRegistry` 是 `static` 全局，自增 `typeId` 索引（`Register<T>` 存 `SnapshotEntry<T>`，重复注册替换保留原 id；typeId 为注册序，跨进程同步前须改稳定 schema）
+- `SerializerRegistry` 是 `static` 全局，`typeId` = **FNV-1a 32-bit 哈希 `typeof(T).FullName`**（跨进程稳定、与注册顺序无关；`Register<T>` 存 `SnapshotEntry<T>`，重复注册替换保留原 id，哈希冲突抛异常 fail-fast）；枚举按 typeId（uint 序）升序 → `Capture` 字节流确定
 - `ByteWriter`/`ByteReader`：`ref struct`（编译器强制栈语义，不逃逸堆）+ 三层后端——栈上 `stackalloc`（小体积零分配）、`ArrayPool` 租借（大体积 `finally` 归还）、帧级 arena（Phase 2 批量同步）
 - 未来的状态同步模块（Bubble/回滚）在 `EntitySnapshot` 之上构建
 
@@ -359,7 +366,7 @@ tests/Gameplay.Tests/Gameplay.Tests.Core/   ← 新目录
 **做**：
 - 迁 `World` + `ENetMode` 到 `Gameplay.Core`，补引用 using
 - 实现 `IModule` + `World`（AddModule/AddSystem/AddService/Update）
-- 实现 `GameTime`（Variable 步长；Fixed 提供接口）
+- 实现 `GameTime`（Variable + Fixed 完整实现，累积器 + 子步 + clamp）
 - 实现 `ESimulationStage` 调度
 - 实现 `EntityLifecycle` 钩子封装
 - 实现 `EventBus`（通用事件总线，含 `EntityDeathEvent`）
@@ -370,7 +377,6 @@ tests/Gameplay.Tests/Gameplay.Tests.Core/   ← 新目录
 - 补齐 `Gameplay.Tests.Core` 单测
 
 **不做（Phase 2 或后续）**：
-- `ETimeStep.Fixed` 完整实现（v1 仅接口）
 - 序列化 CodeGen 自动生成
 - 状态同步（Bubble/预测回滚）——Core 之上的独立模块
 - 对象池、GameMode/GameState、RPC、Console

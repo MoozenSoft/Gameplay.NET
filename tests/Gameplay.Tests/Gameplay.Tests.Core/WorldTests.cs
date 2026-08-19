@@ -60,4 +60,16 @@ public class WorldTests
         world.Update(0.16f);
         Assert.True(world.Store.GetEntityById(entity.Id).IsNull);
     }
+
+    [Fact]
+    public void Update_Fixed_RunsMultipleSubSteps()
+    {
+        var world = new World(ENetMode.Standalone, timeStep: ETimeStep.Fixed);
+        var system = new TestSystem();
+        world.AddSystem(system, ESimulationStage.Simulation);
+
+        world.Update(world.Time.FixedDeltaTime * 2f);
+
+        Assert.Equal(2, system.RunCount);
+    }
 }

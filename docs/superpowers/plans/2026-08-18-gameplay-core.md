@@ -2330,5 +2330,7 @@ git commit -m "添加 World 独立运行验证测试"
 8. **每帧委托分配**：plan 写内联 lambda，实现改 `readonly ForEachEntity<...>` 字段缓存（64B/帧 → 0）。
 9. **私有字段命名**：plan 原文用下划线前缀（`_store`），实现改 camelCase 无下划线（`store`），CLAUDE.md 已补「变量名/字段名不以 `_` 打头」。
 10. **Abilities → Module**：plan 说 Phase 2 才重构，实际已完成（`GameplayAbilitiesFeature` → `GameplayAbilitiesModule : IModule`，构造注入 World，挂三阶段调度）。
+11. **ETimeStep.Fixed 完整实现（原 deferred，已做）**：`GameTime` 增 `FixedDeltaTime`（默认 1/60）、`MaxSubSteps`（默认 8，防「螺旋死亡」）、`Accumulator`、`ElapsedTime`，拆分 `Feed(deltaTime)`（累积并 clamp 到 `FixedDeltaTime*MaxSubSteps`）与 `TryConsumeFixedStep(out dt)`（消费一个固定子步）；`World.Update` 在 Fixed 模式循环消费子步、每子步执行一次 `root.Update`，事件仍每帧分发一次；`World` 构造函数加 `ETimeStep timeStep` 参数选模式。
+12. **SerializerRegistry typeId 稳定 schema（原 deferred，已做）**：typeId 由「注册顺序自增」改为 **FNV-1a 32-bit 哈希 `typeof(T).FullName`**（跨进程稳定、与注册顺序无关）；存储改 `Dictionary<int, ISnapshotEntry> byId` + 按 typeId（uint 序）升序列表 → `EntitySnapshot.Capture` 字节流确定；哈希冲突注册时抛异常 fail-fast；`GetByTypeId` 改字典查找。
 
-**deferred（明确未做）**：`ETimeStep.Fixed` 完整实现、序列化 CodeGen、`SerializerRegistry` typeId 稳定 schema（跨进程同步前置）、`TimerComponent` 与 Tasks 同名并存（接受并存）。
+**deferred（明确未做）**：序列化 CodeGen、`TimerComponent` 与 Tasks 同名并存（接受并存）。

@@ -38,11 +38,11 @@ public class World
     /// <summary>
     /// 创建指定网络模式下的游戏世界。
     /// </summary>
-    public World(ENetMode netMode, ulong seed = 0UL)
+    public World(ENetMode netMode, ulong seed = 0UL, ETimeStep timeStep = ETimeStep.Variable)
     {
         NetMode = netMode;
         store = new EntityStore();
-        Time = new GameTime(ETimeStep.Variable);
+        Time = new GameTime(timeStep);
         Events = new EventBus();
         Random = new DeterministicRng(seed);
         root = new SystemRoot(store);
@@ -93,13 +93,25 @@ public class World
     }
 
     /// <summary>推进一帧：时间 → 事件分发 → System 执行 → 本帧事件分发 → 延迟删除。
-    /// 双 Tick：第一发处理上一帧事件；System 入队本帧事件后第二次 Tick 立即分发（此时实体仍存活，可安全读组件），帧末才删除。</summary>
+    /// 双 Tick：第一发处理上一帧事件；System 入队本帧事件后第二次 Tick 立即分发（此时实体仍存活，可安全读组件），帧末才删除。
+    /// Fixed 模式：先 Feed 累积，再循环消费 0..MaxSubSteps 个固定子步（每子步执行一次 System），事件仍每帧分发一次。</summary>
     public void Update(float deltaTime)
     {
-        Time.Advance(deltaTime);                    // 1. 推进时钟
-        Events.Tick();                              // 2. 分发上一帧事件
-        root.Update(new UpdateTick(Time.ScaledDeltaTime, 0));  // 3. System 执行（HealthSystem 标记死亡 + DeferDelete 入队）
-        Events.Tick();                              // 4. 分发本帧 enqueue 的事件（死亡事件此时实体未删）
+        if (Time.Mode == ETimeStep.Fixed)
+        {
+            Time.Feed(deltaTime);                   // 1. 累积（内部 clamp 到 FixedDeltaTime*MaxSubSteps）
+            Events.Tick();                          // 2. 分发上一帧事件
+            while (Time.TryConsumeFixedStep(out var stepDt))
+                root.Update(new UpdateTick(stepDt, Time.ElapsedTime));  // 3. 每子步执行 System
+            Events.Tick();                          // 4. 分发本帧 enqueue 的事件（死亡事件此时实体未删）
+        }
+        else
+        {
+            Time.Advance(deltaTime);                // 1. 推进时钟
+            Events.Tick();                          // 2. 分发上一帧事件
+            root.Update(new UpdateTick(Time.ScaledDeltaTime, Time.ElapsedTime));  // 3. System 执行
+            Events.Tick();                          // 4. 分发本帧 enqueue 的事件（死亡事件此时实体未删）
+        }
         ProcessPendingDeletions();                  // 5. 帧末真正删除
     }
 

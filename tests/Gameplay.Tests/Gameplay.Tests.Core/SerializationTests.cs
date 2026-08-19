@@ -94,6 +94,46 @@ public class SerializationTests
         Assert.Equal(1, reader.ReadInt());   // 组件只写一遍
     }
 
+    [Fact]
+    public void EntitySnapshot_Capture_WritesStableTypeId()
+    {
+        SerializerRegistry.Register(new HealthComponentSerializer());
+
+        var world = new World(ENetMode.Standalone);
+        var entity = world.Store.CreateEntity();
+        entity.AddComponent(new HealthComponent { Current = 1f, Max = 2f, IsAlive = true });
+
+        Span<byte> buf = stackalloc byte[256];
+        var writer = new ByteWriter(buf);
+        EntitySnapshot.Capture(entity, ref writer);
+
+        var reader = new ByteReader(buf[..writer.BytesWritten]);
+        Assert.Equal(1, reader.ReadInt());                    // count
+        Assert.Equal(1932327161, reader.ReadInt());           // FNV-1a("Gameplay.Core.HealthComponent")，锁死 schema
+    }
+
+    [Fact]
+    public void EntitySnapshot_Capture_OrdersByStableTypeId()
+    {
+        SerializerRegistry.Register(new HealthComponentSerializer());        // uint 1932327161
+        SerializerRegistry.Register(new TransformComponentSerializer());     // uint 2343681079
+
+        var world = new World(ENetMode.Standalone);
+        var entity = world.Store.CreateEntity();
+        entity.AddComponent(new TransformComponent { Scale = 1f });
+        entity.AddComponent(new HealthComponent { Current = 1f, Max = 2f, IsAlive = true });
+
+        Span<byte> buf = stackalloc byte[256];
+        var writer = new ByteWriter(buf);
+        EntitySnapshot.Capture(entity, ref writer);
+
+        var reader = new ByteReader(buf[..writer.BytesWritten]);
+        Assert.Equal(2, reader.ReadInt());                    // count
+        Assert.Equal(1932327161, reader.ReadInt());           // HealthComponent（uint 更小，排前）
+        reader.ReadFloat(); reader.ReadFloat(); reader.ReadBool();  // 跳过 Health 载荷（Current/Max/IsAlive）
+        Assert.Equal(-1951286217, reader.ReadInt());          // TransformComponent（int 表示负值）
+    }
+
     private sealed class HealthComponentSerializer : IComponentSerializer<HealthComponent>
     {
         public void Write(in HealthComponent c, ref ByteWriter w)
@@ -108,5 +148,11 @@ public class SerializationTests
             c.Max = r.ReadFloat();
             c.IsAlive = r.ReadBool();
         }
+    }
+
+    private sealed class TransformComponentSerializer : IComponentSerializer<TransformComponent>
+    {
+        public void Write(in TransformComponent c, ref ByteWriter w) => w.Write(c.Scale);
+        public void Read(ref TransformComponent c, ref ByteReader r) => c.Scale = r.ReadFloat();
     }
 }
