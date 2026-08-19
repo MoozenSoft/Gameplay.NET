@@ -124,7 +124,7 @@ public class World
 **关键设计**：
 - 一个 World 持有**唯一根调度器**；`AddModule` 立即调用 `IModule.Build(world)`，Module 把 System 挂到 World，由 World 统一排序执行
 - 不再像现在 `GameplayAbilitiesFeature` 自己 new 一个 `SystemRoot`
-- `Update(dt)` 固定顺序：`GameTime 推进 → EventBus.Tick()（事件分发）→ SystemRoot.Update（Stage：Pre → Simulation → Post）→ 全局延迟删除`
+- `Update(dt)` 固定顺序：`GameTime 推进 → EventBus.Tick()（分发上一帧事件）→ SystemRoot.Update（Stage：Pre → Simulation → Post）→ EventBus.Tick()（分发本帧事件，如死亡事件——实体此刻仍存活）→ 全局延迟删除`
 - **多 World 支持**：`World` 是实例，可多开（分片/测试并行）；「实例级状态」（`DeterministicRng`、`GameTime`、Entity、调度）挂 World 实例，「类型级注册」（`SerializerRegistry`、`PrefabRegistry`）保持 `static` 共享
 - **模块依赖靠顺序**：`AddModule` 按调用顺序立即 `Build`；模块 B 若取用模块 A 的服务，A 必须先 `AddModule`（v1 不引入显式依赖声明）
 - `World` 仍暴露 `Store`（与现状一致），保证 `GameplayAbilitiesFeature` 的 `new GameplayAbilitiesFeature(store, netMode)` 最小修补后仍可用
