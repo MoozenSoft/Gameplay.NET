@@ -12,18 +12,23 @@ public sealed class TimerSystem : QuerySystem<TimerComponent>
 
     private void ForEach(ref TimerComponent timer, Entity _)
     {
-        if (timer.Completed) return;
-        timer.Remaining -= Tick.deltaTime;
-        if (timer.Remaining <= 0f)
+        if (timer.Completed)
         {
-            timer.Completed = true;
-            if (timer.Loop)
+            // 已完成：Loop 且 Duration>0 时，下一圈从这里开始重置（Completed 已保持一帧供消费方观察）
+            if (timer.Loop && timer.Duration > 0f)
             {
-                // while 循环处理 dt > Duration 的多圈 wrap（避免 Remaining 仍为负）
+                // 多圈 wrap：把超时量折入下一圈，避免 Remaining 仍为负（一次 dt 可能跨多圈）
                 while (timer.Remaining <= 0f && timer.Duration > 0f)
                     timer.Remaining += timer.Duration;
                 timer.Completed = false;
             }
+            return;   // 非 Loop 或 Duration<=0：保持 Completed，不再处理
+        }
+
+        timer.Remaining -= Tick.deltaTime;
+        if (timer.Remaining <= 0f)
+        {
+            timer.Completed = true;   // 保持一帧，供消费方观察「一圈完成」；下一圈下一帧重置
         }
     }
 

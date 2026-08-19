@@ -29,6 +29,7 @@ public static class EntityLifecycle
     private sealed class HandlerList
     {
         public readonly List<EntityLifecycleHandler> Handlers = new();
+        public readonly List<EntityLifecycleHandler> Snapshot = new();   // 分发快照：reentrant Subscribe/Unsubscribe 不影响本次迭代
         public bool Hooked;
     }
 
@@ -58,7 +59,9 @@ public static class EntityLifecycle
     private static void Dispatch(EntityStore store, in EntityLifecycleEvent evt)
     {
         if (!handlerMap.TryGetValue(store, out var list)) return;
-        foreach (var h in list.Handlers) h(in evt);
+        list.Snapshot.Clear();
+        list.Snapshot.AddRange(list.Handlers);   // 快照，分发中 Subscribe/Unsubscribe 不影响本次迭代
+        foreach (var h in list.Snapshot) h(in evt);
     }
 
     private static void OnEntityCreate(EntityCreate args)

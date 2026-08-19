@@ -46,4 +46,22 @@ public class EntityLifecycleTests
 
         Assert.Equal(0, count);
     }
+
+    [Fact]
+    public void Dispatch_ReentrantUnsubscribe_DoesNotThrow()
+    {
+        var world = new World(ENetMode.Standalone);
+        int count = 0;
+        EntityLifecycleHandler handler = null!;
+        handler = (in EntityLifecycleEvent evt) =>
+        {
+            count++;
+            EntityLifecycle.Unsubscribe(world, handler);   // 分发中退订——快照保证本次分发不受影响
+        };
+        EntityLifecycle.Subscribe(world, handler);
+
+        world.Store.CreateEntity();
+
+        Assert.Equal(1, count);
+    }
 }
