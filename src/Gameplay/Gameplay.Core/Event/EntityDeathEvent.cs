@@ -3,11 +3,11 @@ using Friflo.Engine.ECS;
 namespace Gameplay.Core;
 
 /// <summary>实体死亡事件。</summary>
-/// <remarks>死亡事件在 Simulation 入队、下一帧 Events.Tick 分发；但实体删除已通过 CommandBuffer 在入队当帧回放，
-/// 消费者收到事件时 Entity 已被删除——应只读 Entity.Id，不得读取组件。</remarks>
+/// <remarks>World 采用双 Tick——死亡事件在 Simulation 入队、本帧第二次 Events.Tick 即分发，此时实体仍存活
+/// （尚未删除），消费者可安全读取组件；实体在帧末 ProcessPendingDeletions 才真正删除。</remarks>
 public struct EntityDeathEvent : IEvent
 {
-    /// <summary>死亡的实体（分发时已被删除，仅可读取 Id）。</summary>
+    /// <summary>死亡的实体（分发时仍存活，可读取组件）。</summary>
     public Entity Entity;
 
     /// <summary>击杀者（无击杀者为 null）。</summary>

@@ -17,7 +17,7 @@ public class World
     private readonly SystemGroup _simGroup;
     private readonly SystemGroup _postGroup;
     private readonly Dictionary<Type, object> _services = new();
-    private readonly List<Entity> _pendingDeletions = new();
+    private readonly HashSet<Entity> _pendingDeletions = new();   // HashSet：同一实体被多 System 重复 DeferDelete 时去重
 
     /// <summary>当前网络模式。</summary>
     public ENetMode NetMode { get; }
@@ -87,26 +87,27 @@ public class World
     public T? GetService<T>() where T : class
         => _services.TryGetValue(typeof(T), out var box) ? (T)box : null;
 
-    /// <summary>延迟删除——挂到队列，下次 Update 统一执行（Query 循环内不能 DeleteEntity）。</summary>
+    /// <summary>延迟删除——挂到队列，帧末统一执行（Query 循环内不能 DeleteEntity；HashSet 自动去重）。</summary>
     public void DeferDelete(Entity entity)
     {
         if (!entity.IsNull) _pendingDeletions.Add(entity);
     }
 
-    /// <summary>推进一帧：时间 → 事件分发 → System 执行 → 延迟删除。</summary>
+    /// <summary>推进一帧：时间 → 事件分发 → System 执行 → 本帧事件分发 → 延迟删除。
+    /// 双 Tick：第一发处理上一帧事件；System 入队本帧事件后第二次 Tick 立即分发（此时实体仍存活，可安全读组件），帧末才删除。</summary>
     public void Update(float deltaTime)
     {
         Time.Advance(deltaTime);                    // 1. 推进时钟
-        Events.Tick();                              // 2. 分发事件（System 之前，本帧事件可见）
-        _root.Update(new UpdateTick(Time.ScaledDeltaTime, 0)); // 3. 执行 System（Pre → Simulation → Post）
-        ProcessPendingDeletions();                  // 4. 全局延迟删除
+        Events.Tick();                              // 2. 分发上一帧事件
+        _root.Update(new UpdateTick(Time.ScaledDeltaTime, 0));  // 3. System 执行（HealthSystem 标记死亡 + DeferDelete 入队）
+        Events.Tick();                              // 4. 分发本帧 enqueue 的事件（死亡事件此时实体未删）
+        ProcessPendingDeletions();                  // 5. 帧末真正删除
     }
 
     private void ProcessPendingDeletions()
     {
-        for (int i = 0; i < _pendingDeletions.Count; i++)
+        foreach (var entity in _pendingDeletions)
         {
-            var entity = _pendingDeletions[i];
             if (!entity.IsNull) entity.DeleteEntity();
         }
         _pendingDeletions.Clear();

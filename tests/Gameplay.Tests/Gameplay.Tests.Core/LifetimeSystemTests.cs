@@ -9,7 +9,7 @@ public class LifetimeSystemTests
     public void Update_ExpiredLifetime_DeletesEntity()
     {
         var world = new World(ENetMode.Standalone);
-        world.AddSystem(new LifetimeSystem(), ESimulationStage.Simulation);
+        world.AddSystem(new LifetimeSystem(world.DeferDelete), ESimulationStage.Simulation);
         var entity = world.Store.CreateEntity();
         entity.AddComponent(new LifetimeComponent { Remaining = 0.5f });
 

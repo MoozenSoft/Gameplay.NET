@@ -60,13 +60,20 @@ public sealed class EventBus
             Pending.Clear();
             _snapshot.Clear();
             _snapshot.AddRange(Handlers);   // 快照，分发中 Subscribe/Unsubscribe 不影响本次迭代
-            for (int i = 0; i < Processing.Count; i++)
+            try
             {
-                T evt = Processing[i];
-                for (int h = 0; h < _snapshot.Count; h++)
-                    _snapshot[h].Handle(in evt);
+                for (int i = 0; i < Processing.Count; i++)
+                {
+                    T evt = Processing[i];
+                    for (int h = 0; h < _snapshot.Count; h++)
+                        _snapshot[h].Handle(in evt);
+                }
             }
-            Processing.Clear();
+            finally
+            {
+                // handler 抛异常也清空 Processing，避免残留 stale 事件下次误重发
+                Processing.Clear();
+            }
         }
     }
 }
