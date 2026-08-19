@@ -11,7 +11,7 @@ public class GameplayAbilitiesModuleTests
     public void Build_RegistersAllSystems()
     {
         var world = new World(ENetMode.Standalone);
-        var module = new GameplayAbilitiesModule();
+        var module = new GameplayAbilitiesModule(world);
         world.AddModule(module);
 
         Assert.NotNull(module.EffectSystem);
@@ -32,7 +32,7 @@ public class GameplayAbilitiesModuleTests
     public void Update_ExecutesSystems()
     {
         var world = new World(ENetMode.Standalone);
-        var module = new GameplayAbilitiesModule();
+        var module = new GameplayAbilitiesModule(world);
         world.AddModule(module);
 
         var entity = world.Store.CreateEntity();

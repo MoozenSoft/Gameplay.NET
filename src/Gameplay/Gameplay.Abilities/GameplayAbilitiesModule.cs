@@ -11,36 +11,36 @@ namespace Gameplay.Abilities;
 /// 全部 System 和 Manager 组织起来，作为 <see cref="IModule"/> 挂到 Gameplay.Core 的
 /// World 三阶段调度（PreSimulation / Simulation / PostSimulation）。
 /// </summary>
-public class GameplayAbilitiesModule : ITaskCompletionListener, IModule
+public class GameplayAbilitiesModule : IModule, ITaskCompletionListener
 {
     // ── Friflo QuerySystems（挂到 World Simulation 阶段）──
-    public AttributeAggregatorManager AttributeAggregatorManager { get; private set; } = null!;
-    public EffectSystem EffectSystem { get; private set; } = null!;
-    public TaskSchedulerSystem TaskScheduler { get; private set; } = null!;
-    public GameplayEventSystem GameplayEventSystem { get; private set; } = null!;
-    public AttributeListenerSystem AttributeListenerSystem { get; private set; } = null!;
-    public TagListenerSystem TagListenerSystem { get; private set; } = null!;
-    public CommitPhaseListenerSystem CommitPhaseListenerSystem { get; private set; } = null!;
-    public EffectListenerSystem EffectListenerSystem { get; private set; } = null!;
-    public AbilityActivateListenerSystem AbilityActivateListenerSystem { get; private set; } = null!;
-    public InputListenerSystem InputListenerSystem { get; private set; } = null!;
-    public Gameplay.Tasks.SpawnSystem SpawnSystem { get; private set; } = null!;
-    public MoveToSystem MoveToSystem { get; private set; } = null!;
-    public Gameplay.Tasks.TimerSystem TimerSystem { get; private set; } = null!;
-    public DelaySystem DelaySystem { get; private set; } = null!;
+    public AttributeAggregatorManager AttributeAggregatorManager { get; }
+    public EffectSystem EffectSystem { get; }
+    public TaskSchedulerSystem TaskScheduler { get; }
+    public GameplayEventSystem GameplayEventSystem { get; }
+    public AttributeListenerSystem AttributeListenerSystem { get; }
+    public TagListenerSystem TagListenerSystem { get; }
+    public CommitPhaseListenerSystem CommitPhaseListenerSystem { get; }
+    public EffectListenerSystem EffectListenerSystem { get; }
+    public AbilityActivateListenerSystem AbilityActivateListenerSystem { get; }
+    public InputListenerSystem InputListenerSystem { get; }
+    public Gameplay.Tasks.SpawnSystem SpawnSystem { get; }
+    public MoveToSystem MoveToSystem { get; }
+    public Gameplay.Tasks.TimerSystem TimerSystem { get; }
+    public DelaySystem DelaySystem { get; }
 
     // ── POCO Manager / System（外部调用）──
-    public GameplayEventBus EventBus { get; private set; } = null!;
-    public GameplayEventDispatcher EventDispatcher { get; private set; } = null!;
-    public AbilityActivationManager ActivationManager { get; private set; } = null!;
-    public GameplayCueManager? CueManager { get; private set; }
-    public PredictionManager PredictionManager { get; private set; } = null!;
+    public GameplayEventBus EventBus { get; }
+    public GameplayEventDispatcher EventDispatcher { get; }
+    public AbilityActivationManager ActivationManager { get; }
+    public GameplayCueManager? CueManager { get; }
+    public PredictionManager PredictionManager { get; }
 
     /// <summary>
-    /// IModule 入口——World 挂载时调用。从 world 取 Store / NetMode，
+    /// 构造函数——接收 World 并在构造时完成全部挂载。从 world 取 Store / NetMode，
     /// 构造全部 Manager/System，并按原 Phase 顺序挂到三阶段调度。
     /// </summary>
-    public void Build(World world)
+    public GameplayAbilitiesModule(World world)
     {
         var store = world.Store;
         var netMode = world.NetMode;

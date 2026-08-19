@@ -18,6 +18,7 @@ public class World
     private readonly SystemGroup postGroup;
     private readonly Dictionary<Type, object> services = new();
     private readonly HashSet<Entity> pendingDeletions = new();   // HashSet：同一实体被多 System 重复 DeferDelete 时去重
+    private readonly List<IModule> modules;
 
     /// <summary>当前网络模式。</summary>
     public ENetMode NetMode { get; }
@@ -51,18 +52,16 @@ public class World
         root.Add(preGroup);
         root.Add(simGroup);
         root.Add(postGroup);
+        modules = new List<IModule>();
     }
 
     /// <summary>返回当前网络模式。</summary>
     public ENetMode GetNetMode() => NetMode;
 
-    /// <summary>挂载模块（泛型便捷版，模块需有无参构造）。</summary>
-    public World AddModule<T>() where T : IModule, new() => AddModule(new T());
-
-    /// <summary>挂载模块——调用其 Build 完成 System/Manager 注册。</summary>
+    /// <summary>注册模块（模块构造时已通过构造函数接收 World 完成挂载，此处仅追踪）。</summary>
     public World AddModule(IModule module)
     {
-        module.Build(this);
+        modules.Add(module);
         return this;
     }
 

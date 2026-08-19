@@ -16,24 +16,30 @@ public class WorldTests
     private sealed class TestModule : IModule
     {
         public readonly TestSystem System = new();
-        public void Build(World world) => world.AddSystem(System, ESimulationStage.Simulation);
+        public TestModule(World world) => world.AddSystem(System, ESimulationStage.Simulation);
     }
 
     [Fact]
-    public void AddModule_InvokesBuild()
+    public void AddModule_RegistersModule()
     {
         var world = new World(ENetMode.Standalone);
-        var module = new TestModule();
+        var module = new TestModule(world);
         world.AddModule(module);
+        // 模块构造时已通过构造函数挂载 System，注册不抛异常即通过
         Assert.NotNull(module.System);
     }
 
     [Fact]
-    public void AddModuleGeneric_CreatesAndBuilds()
+    public void AddModule_ModuleSystemRunsOnUpdate()
     {
         var world = new World(ENetMode.Standalone);
-        world.AddModule<TestModule>();
-        // 不抛异常即通过
+        var module = new TestModule(world);
+        world.AddModule(module);
+
+        world.Update(0.16f);
+
+        // 构造函数已把 System 挂到 Simulation 阶段，Update 应驱动其执行
+        Assert.Equal(1, module.System.RunCount);
     }
 
     [Fact]

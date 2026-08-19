@@ -7,7 +7,7 @@ public class WorldLifecycleTests
 {
     private sealed class MovementModule : IModule
     {
-        public void Build(World world)
+        public MovementModule(World world)
             => world.AddSystem(new MovementSystem(), ESimulationStage.Simulation);
     }
 
@@ -16,7 +16,7 @@ public class WorldLifecycleTests
     {
         // 独立运行验证：Core 不带 GAS 可跑一个纯 ECS 世界
         var world = new World(ENetMode.Standalone);
-        world.AddModule<MovementModule>();
+        world.AddModule(new MovementModule(world));
 
         var entity = world.Store.CreateEntity();
         entity.AddComponent(new TransformComponent { Scale = 1f });
