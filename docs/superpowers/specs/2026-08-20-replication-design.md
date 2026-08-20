@@ -289,6 +289,14 @@ Gameplay.Replication ──► Gameplay.Core ──► Friflo.Engine.ECS
 - `Gameplay.Replication` 不依赖任何 socket / 具体传输实现（依赖倒置：传输经接口注入）。
 - `Gameplay.Core` 不引用 `Gameplay.Replication`（Core 不含网络）。
 
+### 8.1 同程序集决策（显式记录）
+
+`Gameplay.Replication` 与 `Gameplay.Core` **同在 `Gameplay.dll` 一个程序集内**——`Gameplay.Replication` 是 namespace，非独立 dll（沿 Gameplay.Core 设计文档「同程序集 namespace、不拆独立 dll」先例，`AssemblyName = Gameplay`）。
+
+**后果**：因为同程序集，编译器**无法**阻止 `Gameplay.Core` 源码引用 `Gameplay.Replication` 的类型（同程序集内部引用天然合法），所以「Core 不引用 Replication」这条单向依赖**不是编译期程序集边界强制，而是源码层的单向引用纪律**——靠 CLAUDE.md「依赖方向（禁止倒置）」约定 + 目录纪律 + code review 维护。
+
+**权衡**：若将来需要编译器硬性兜底「Core 永不引用 Replication」，唯一办法是把 `Gameplay.Replication` 拆成独立的 `Gameplay.Replication.dll`。v1 决策是**不拆**——多一个程序集带来部署/引用成本，而当前单向依赖靠纪律即可维持；此点留作未来若违反频发时的备选方案。
+
 ## 9. 测试与成功标准
 
 测试目录 `tests/Gameplay.Tests/Gameplay.Tests.Replication/`，用 `LoopbackServerTransport` + N 个 `LoopbackClientTransport` 建「一个 `DedicatedServer` 权威 World + N 个 `Client` 镜像 World」：
