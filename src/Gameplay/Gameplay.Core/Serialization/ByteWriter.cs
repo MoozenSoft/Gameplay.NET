@@ -15,6 +15,7 @@ public ref struct ByteWriter
     public int BytesWritten => position;
 
     public void Write(int value) => WriteStruct(value);
+    public void Write(byte value) => WriteStruct(value);
     public void Write(float value) => WriteStruct(value);
     public void Write(bool value) => WriteStruct(value ? (byte)1 : (byte)0);
     public void Write(in Vector3 v) { Write(v.X); Write(v.Y); Write(v.Z); }

@@ -12,6 +12,7 @@ public ref struct ByteReader
     public ByteReader(ReadOnlySpan<byte> buffer) { this.buffer = buffer; position = 0; }
 
     public int ReadInt() => ReadStruct<int>();
+    public byte ReadByte() => ReadStruct<byte>();
     public float ReadFloat() => ReadStruct<float>();
     public bool ReadBool() => ReadStruct<byte>() != 0;
     public Vector3 ReadVector3() => new(ReadFloat(), ReadFloat(), ReadFloat());
