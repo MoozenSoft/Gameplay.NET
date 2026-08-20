@@ -15,6 +15,15 @@ public class ReplicationGenerator : IIncrementalGenerator
     private const string ReplicatedFullName = "ReplicatedAttribute";
     private const string RegistryFullName = "Gameplay.Replication.ReplicationRegistry";
 
+    /// <summary>不支持字段类型的编译诊断（spec §4.1 fail-fast）。</summary>
+    private static readonly DiagnosticDescriptor UnsupportedFieldTypeDescriptor = new(
+        id: "GP_REPL001",
+        title: "复制组件包含不支持的字段类型",
+        messageFormat: "组件 {0} 的字段 {1} 类型不支持复制（仅支持 primitive / Vector3 / Quaternion / enum）",
+        category: "Gameplay.Replication",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var compilation = context.CompilationProvider;
@@ -47,13 +56,20 @@ public class ReplicationGenerator : IIncrementalGenerator
             return default;
 
         var fields = new List<FieldInfo>();
+        string? unsupportedField = null;
+        Location? unsupportedLocation = null;
         foreach (var member in typeSymbol.GetMembers())
         {
             if (member is not IFieldSymbol field || field.IsStatic || field.IsImplicitlyDeclared)
                 continue;
             var kind = Classify(field.Type);
             if (kind == FieldKind.Unsupported)
-                return default;   // 不支持的字段类型 → 跳过该组件（诊断由编译期缺失序列化器暴露）
+            {
+                // 记录首个不支持字段，组件仍保留流转到 GenerateCode → 报编译诊断并跳过代码生成（spec §4.1）
+                unsupportedField ??= field.Name;
+                unsupportedLocation ??= field.Locations.Length > 0 ? field.Locations[0] : Location.None;
+                continue;
+            }
             fields.Add(new FieldInfo { Name = field.Name, Kind = kind, TypeName = field.Type.Name });
         }
 
@@ -62,6 +78,9 @@ public class ReplicationGenerator : IIncrementalGenerator
             StructNamespace = typeSymbol.ContainingNamespace?.ToDisplayString() ?? string.Empty,
             StructName = typeSymbol.Name,
             Fields = fields,
+            HasUnsupportedField = unsupportedField != null,
+            UnsupportedFieldName = unsupportedField ?? string.Empty,
+            Location = unsupportedLocation ?? Location.None,
         };
     }
 
@@ -88,9 +107,15 @@ public class ReplicationGenerator : IIncrementalGenerator
         if (components.IsDefaultOrEmpty) return;
         var sorted = components.Sort(static (a, b) => string.CompareOrdinal(a.StructName, b.StructName));
 
-        // 每个组件生成 XxxSerializer + XxxReplication（任何程序集，只要组件标了 [Replicated]）
+        // 每个组件生成 XxxSerializer + XxxReplication（任何程序集，只要组件标了 [Replicated]）；
+        // 含不支持字段的组件：报编译诊断并跳过代码生成（spec §4.1 fail-fast）
         foreach (var c in sorted)
         {
+            if (c.HasUnsupportedField)
+            {
+                spc.ReportDiagnostic(Diagnostic.Create(UnsupportedFieldTypeDescriptor, c.Location, c.StructName, c.UnsupportedFieldName));
+                continue;
+            }
             spc.AddSource($"{c.StructNamespace}.{c.StructName}.Replication.g.cs", GeneratePerComponent(c));
         }
 
@@ -157,6 +182,7 @@ public class ReplicationGenerator : IIncrementalGenerator
         sb.AppendLine("    {");
         foreach (var c in sorted)
         {
+            if (c.HasUnsupportedField) continue;   // 未生成 serializer/diff，跳过注册
             sb.AppendLine($"        SerializerRegistry.Register(new {c.StructName}Serializer());");
             sb.AppendLine($"        ReplicationRegistry.Register<{c.StructName}>(new {c.StructName}Replication());");
         }
@@ -218,5 +244,8 @@ public class ReplicationGenerator : IIncrementalGenerator
         public string StructNamespace;
         public string StructName;
         public List<FieldInfo> Fields;
+        public bool HasUnsupportedField;
+        public string UnsupportedFieldName;
+        public Location Location;
     }
 }

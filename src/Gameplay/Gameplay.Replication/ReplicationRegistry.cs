@@ -12,16 +12,27 @@ public static class ReplicationRegistry
     private static readonly Dictionary<ComponentType, IReplicationEntry> byComponentType = new();
     private static readonly List<IReplicationEntry> entries = new();
 
-    /// <summary>注册复制组件（须先在 SerializerRegistry 注册序列化器，否则 fail-fast）。</summary>
+    /// <summary>注册复制组件（须先在 SerializerRegistry 注册序列化器，否则 fail-fast）。幂等：重复注册替换而非追加。</summary>
     public static void Register<T>(IReplicationDiff<T> diff) where T : struct, IComponent
     {
         var type = typeof(T);
         var serializer = SerializerRegistry.Get<T>()
             ?? throw new InvalidOperationException($"组件 {type.FullName} 未注册序列化器，无法复制（先 SerializerRegistry.Register）");
         int typeId = SerializerRegistry.ComputeTypeId(type);
-        var entry = new ReplicationEntry<T>(typeId, EntityStore.GetEntitySchema().GetComponentType<T>(), serializer, diff);
+        var componentType = EntityStore.GetEntitySchema().GetComponentType<T>();
+        if (byTypeId.ContainsKey(typeId))
+        {
+            // 重复注册：替换条目保留原 TypeId（对齐 SerializerRegistry.Register 的幂等语义）
+            var replacement = new ReplicationEntry<T>(typeId, componentType, serializer, diff);
+            byTypeId[typeId] = replacement;
+            byComponentType[componentType] = replacement;
+            for (int i = 0; i < entries.Count; i++)
+                if (entries[i].TypeId == typeId) entries[i] = replacement;
+            return;
+        }
+        var entry = new ReplicationEntry<T>(typeId, componentType, serializer, diff);
         byTypeId[typeId] = entry;
-        byComponentType[entry.ComponentType] = entry;
+        byComponentType[componentType] = entry;
         entries.Add(entry);
     }
 

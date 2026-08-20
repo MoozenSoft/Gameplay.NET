@@ -22,6 +22,7 @@ public sealed class ReplicationServer
     private readonly Dictionary<int, NetworkId> entityToNetId = new();
     private readonly Dictionary<NetworkId, int> netIdToEntity = new();
     private readonly Dictionary<int, IShadowStore> shadowStores = new();
+    private readonly List<ReplicationDelta> deltas = new();   // 每帧复用，避免热路径分配（0 GC）
     private int nextNetworkId = 1;
 
     public ReplicationServer(EntityStore store, IReplicationServerTransport transport)
@@ -36,7 +37,16 @@ public sealed class ReplicationServer
     public void AddClient(int clientId)
     {
         if (clients.ContainsKey(clientId)) return;
-        clients[clientId] = new ClientState { NeedsSnapshot = true };
+        var state = new ClientState { NeedsSnapshot = true };
+        clients[clientId] = state;
+        // 晚加入回填：把已存在且对 clientId 可见的实体补进 Bubble（spec §5.1 新客户端加入触发全量快照）
+        foreach (var (netId, entityId) in netIdToEntity)
+        {
+            var entity = store.GetEntityById(entityId);
+            if (entity.IsNull) continue;
+            if (IsVisibleTo(entity, clientId))
+                state.Bubble.Add(netId);
+        }
     }
 
     public void RemoveClient(int clientId) => clients.Remove(clientId);
@@ -69,14 +79,20 @@ public sealed class ReplicationServer
 
     private void AddToBubbles(Entity entity, NetworkId netId)
     {
+        foreach (var (clientId, state) in clients)
+        {
+            if (IsVisibleTo(entity, clientId))
+                state.Bubble.Add(netId);
+        }
+    }
+
+    /// <summary>Owner-based 可见性规则：无 Owner 或 owner == clientId 才可见（spec §5.2）。</summary>
+    private static bool IsVisibleTo(Entity entity, int clientId)
+    {
         int owner = entity.HasComponent<OwnerComponent>()
             ? entity.GetComponent<OwnerComponent>().PlayerId
             : -1;
-        foreach (var (clientId, state) in clients)
-        {
-            if (owner == -1 || owner == clientId)
-                state.Bubble.Add(netId);
-        }
+        return owner == -1 || owner == clientId;
     }
 
     private void OnEntityDeleted(Entity entity)
@@ -84,18 +100,19 @@ public sealed class ReplicationServer
         if (!entityToNetId.TryGetValue(entity.Id, out var netId)) return;
         entityToNetId.Remove(entity.Id);
         netIdToEntity.Remove(netId);
-        foreach (var state in clients.Values)
-        {
-            state.Bubble.Remove(netId);
-            state.Mirrored.Remove(netId);
-        }
-        // 广播 despawn
+
+        // 只给 Bubble/Mirrored 含该实体的客户端发 despawn（其余客户端从未收到，无需通知）
         Span<byte> buf = stackalloc byte[16];
         var writer = new ByteWriter(buf);
         ReplicationPacket.WriteType(EReplicationPacketType.Despawn, ref writer);
         ReplicationPacket.WriteNetworkId(netId, ref writer);
-        foreach (var clientId in clients.Keys)
-            transport.SendToClient(clientId, buf[..writer.BytesWritten]);
+        foreach (var (clientId, state) in clients)
+        {
+            bool inBubble = state.Bubble.Remove(netId);
+            bool inMirrored = state.Mirrored.Remove(netId);
+            if (inBubble || inMirrored)
+                transport.SendToClient(clientId, buf[..writer.BytesWritten]);
+        }
         // 清理 shadow——Friflo 复用被删实体 id 时，新实体不会被误判为"已有 shadow"而跳过 spawn
         foreach (var shadowStore in shadowStores.Values)
             shadowStore.RemoveEntity(entity.Id);
@@ -109,7 +126,7 @@ public sealed class ReplicationServer
             if (!shadowStores.ContainsKey(entry.TypeId))
                 shadowStores[entry.TypeId] = entry.CreateShadowStore();
 
-        var deltas = new List<ReplicationDelta>();
+        deltas.Clear();
         foreach (var entry in ReplicationRegistry.Entries)
             entry.Diff(shadowStores[entry.TypeId], store, deltas);
 
@@ -143,22 +160,29 @@ public sealed class ReplicationServer
         var writer = new ByteWriter(buf);
         ReplicationPacket.WriteType(EReplicationPacketType.Update, ref writer);
         ReplicationPacket.WriteNetworkId(netId, ref writer);
-        var entry = ReplicationRegistry.GetEntry(typeId)!;
-        writer.Write(1);               // count
-        writer.Write(typeId);
-        entry.Capture(entity, ref writer);
+        ReplicationPacket.WriteSingleComponent(entity, typeId, ref writer);
         transport.SendToClient(clientId, buf[..writer.BytesWritten]);
     }
 
     private void SendSnapshot(int clientId, ClientState state)
     {
-        // v1 全量快照：Bubble 内全部实体组件全量（简化实现，实体少时直接逐实体发 Spawn）
+        // 全量快照：Bubble 内全部实体组件全量打包为一条 EFullSnapshot（spec §5.4），发送后重建 Mirrored
+        var entries = new List<(NetworkId Id, Entity Entity)>(state.Bubble.Count);
         foreach (var netId in state.Bubble)
         {
-            var entity = store.GetEntityById(netIdToEntity[netId]);
+            if (!netIdToEntity.TryGetValue(netId, out var entityId)) continue;
+            var entity = store.GetEntityById(entityId);
             if (entity.IsNull) continue;
-            SendSpawn(clientId, state, entity, netId);
+            entries.Add((netId, entity));
         }
+
+        Span<byte> buf = stackalloc byte[2048];
+        var writer = new ByteWriter(buf);
+        ReplicationPacket.WriteFullSnapshot(entries, ref writer);
+        transport.SendToClient(clientId, buf[..writer.BytesWritten]);
+
+        foreach (var (id, _) in entries)
+            state.Mirrored.Add(id);
         state.NeedsSnapshot = false;
     }
 }

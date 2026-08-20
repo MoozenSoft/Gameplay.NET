@@ -122,4 +122,73 @@ public class ReplicationSyncTests
         Assert.False(clientModule0.Client!.GetMirror(netId).IsNull);   // 归属客户端 0 → 收到
         Assert.True(clientModule1.Client!.GetMirror(netId).IsNull);    // 非归属客户端 1 → 不收到
     }
+
+    [Fact]
+    public void LateJoin_ReceivesFullSnapshot()
+    {
+        SerializerRegistry.Register(new SyncTestSerializer());
+        ReplicationRegistry.Register<SyncTestComponent>(new SyncTestDiff());
+
+        var serverWorld = new World(ENetMode.DedicatedServer);
+        var serverTransport = new LoopbackServerTransport();
+
+        var clientWorld = new World(ENetMode.Client);
+        var clientTransport = new LoopbackClientTransport();
+        serverTransport.RegisterClient(0, clientTransport.Queue);
+
+        var serverModule = new ReplicationModule(serverWorld, serverTransport, null);
+        var clientModule = new ReplicationModule(clientWorld, null, clientTransport);
+
+        // 晚加入：先创建实体，再 AddClient（AddClient 时实体已存在 → 需回填 Bubble 并全量快照）
+        var serverEntity = serverWorld.Store.CreateEntity();
+        serverEntity.AddComponent(new SyncTestComponent { Value = 30 });
+
+        serverModule.Server!.AddClient(0);
+
+        serverWorld.Update(0.16f);
+        clientWorld.Update(0.16f);
+
+        var mirror = clientModule.Client!.GetMirror(serverModule.Server!.GetNetworkId(serverEntity.Id));
+        Assert.False(mirror.IsNull);
+        Assert.Equal(30, mirror.GetComponent<SyncTestComponent>().Value);
+    }
+
+    [Fact]
+    public void Reconnect_PrunesStaleMirrorViaFullSnapshot()
+    {
+        SerializerRegistry.Register(new SyncTestSerializer());
+        ReplicationRegistry.Register<SyncTestComponent>(new SyncTestDiff());
+
+        var serverWorld = new World(ENetMode.DedicatedServer);
+        var serverTransport = new LoopbackServerTransport();
+
+        var clientWorld = new World(ENetMode.Client);
+        var clientTransport = new LoopbackClientTransport();
+        serverTransport.RegisterClient(0, clientTransport.Queue);
+
+        var serverModule = new ReplicationModule(serverWorld, serverTransport, null);
+        var clientModule = new ReplicationModule(clientWorld, null, clientTransport);
+        serverModule.Server!.AddClient(0);
+
+        // 服务端创建实体 → 客户端首帧全量快照收到
+        var serverEntity = serverWorld.Store.CreateEntity();
+        serverEntity.AddComponent(new SyncTestComponent { Value = 5 });
+        serverWorld.Update(0.16f);
+        clientWorld.Update(0.16f);
+
+        var netId = serverModule.Server!.GetNetworkId(serverEntity.Id);
+        Assert.False(clientModule.Client!.GetMirror(netId).IsNull);
+
+        // 断开连接 → 服务端删除实体（已移除的客户端收不到 despawn，留下陈旧镜像）
+        serverModule.Server!.RemoveClient(0);
+        serverEntity.DeleteEntity();
+        while (clientTransport.Queue.Count > 0) clientTransport.Queue.Dequeue();
+
+        // 重连 → 空全量快照 → 客户端 reconcile 删多余清除陈旧镜像
+        serverModule.Server!.AddClient(0);
+        serverWorld.Update(0.16f);
+        clientWorld.Update(0.16f);
+
+        Assert.True(clientModule.Client!.GetMirror(netId).IsNull);
+    }
 }

@@ -80,7 +80,9 @@ public class ReplicationServerTests
         EntityLifecycle.Subscribe(world, server.HandleLifecycle);
         server.AddClient(0);
         server.AddClient(1);
+        server.Tick();   // 首帧空全量快照，清 NeedsSnapshot
 
+        // 加入之后创建的实体 → 增量 Spawn，按 Owner 只进客户端 1 的 Bubble
         var entity = world.Store.CreateEntity();
         entity.AddComponent(new OwnerComponent { PlayerId = 1 });
         entity.AddComponent(new SyncTestComponent { Value = 1 });
@@ -101,6 +103,7 @@ public class ReplicationServerTests
         var server = new ReplicationServer(world.Store, transport);
         EntityLifecycle.Subscribe(world, server.HandleLifecycle);
         server.AddClient(0);
+        server.Tick();   // 首帧空全量快照，清 NeedsSnapshot
 
         var e1 = world.Store.CreateEntity();
         e1.AddComponent(new SyncTestComponent { Value = 1 });
@@ -172,13 +175,14 @@ public class ReplicationServerTests
         var server = new ReplicationServer(world.Store, transport);
         EntityLifecycle.Subscribe(world, server.HandleLifecycle);
         server.AddClient(0);
+        server.Tick();                                   // 首帧空全量快照，清 NeedsSnapshot
 
         var entity = world.Store.CreateEntity();
         entity.AddComponent(new SyncTestComponent { Value = 5 });
-        server.Tick();                                   // 首次 spawn
+        server.Tick();                                   // 增量 spawn
         Assert.Equal(1, transport.CountSpawns(0));
 
-        entity.DeleteEntity();                           // → despawn 广播 + shadow 清理
+        entity.DeleteEntity();                           // → despawn 只发给含该实体的客户端 + shadow 清理
         Assert.Equal(1, transport.CountDespawns(0));
 
         var recreated = world.Store.CreateEntity();      // Friflo 复用被删实体的 id

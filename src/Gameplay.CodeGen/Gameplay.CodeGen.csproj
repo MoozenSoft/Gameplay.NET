@@ -7,7 +7,7 @@
     <LangVersion>12</LangVersion>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <NoWarn>$(NoWarn);RS1041</NoWarn>
+    <NoWarn>$(NoWarn);RS1041;RS2008</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

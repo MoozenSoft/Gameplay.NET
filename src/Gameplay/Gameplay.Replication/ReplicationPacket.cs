@@ -42,6 +42,15 @@ public static class ReplicationPacket
         }
     }
 
+    private static readonly int[] singleTypeId = new int[1];   // WriteSingleComponent 共享单元素缓冲（0 GC）
+
+    /// <summary>写单组件负载（复用 WriteComponents 容器格式）：[count=1][typeId][data]。</summary>
+    public static void WriteSingleComponent(Entity entity, int typeId, ref ByteWriter writer)
+    {
+        singleTypeId[0] = typeId;
+        WriteComponents(entity, singleTypeId, ref writer);
+    }
+
     /// <summary>写 Spawn（组件全量）：NetworkId + [count][typeId+data]*。</summary>
     public static void WriteSpawn(Entity entity, NetworkId id, ref ByteWriter writer)
     {
@@ -49,6 +58,19 @@ public static class ReplicationPacket
         WriteNetworkId(id, ref writer);
         var ids = GatherReplicatedTypeIds(entity);
         WriteComponents(entity, ids, ref writer);
+    }
+
+    /// <summary>写全量快照包（某 Bubble 全量）：Type=FullSnapshot + [count]{NetworkId + [count][typeId+data]*}*。</summary>
+    public static void WriteFullSnapshot(IReadOnlyList<(NetworkId Id, Entity Entity)> entries, ref ByteWriter writer)
+    {
+        WriteType(EReplicationPacketType.FullSnapshot, ref writer);
+        writer.Write(entries.Count);
+        for (int i = 0; i < entries.Count; i++)
+        {
+            var (id, entity) = entries[i];
+            WriteNetworkId(id, ref writer);
+            WriteComponents(entity, GatherReplicatedTypeIds(entity), ref writer);
+        }
     }
 
     /// <summary>读组件负载到实体（按 typeId 查 entry 应用，未知 typeId 抛异常 fail-fast）。</summary>
