@@ -63,6 +63,7 @@ public sealed class ReplicationClient
     private void ApplySnapshot(ref ByteReader reader)
     {
         int count = reader.ReadInt();
+        var seen = new HashSet<NetworkId>();
         for (int i = 0; i < count; i++)
         {
             var id = ReplicationPacket.ReadNetworkId(ref reader);
@@ -73,6 +74,18 @@ public sealed class ReplicationClient
                 mirror[id] = entity;
             }
             ReplicationPacket.ReadComponents(entity, ref reader);
+            seen.Add(id);
+        }
+
+        // 删多余：快照未涵盖的本地镜像 → 服务端已不存在 → 删除镜像实体并移除映射
+        var stale = new List<KeyValuePair<NetworkId, Entity>>();
+        foreach (var kv in mirror)
+            if (!seen.Contains(kv.Key))
+                stale.Add(kv);
+        foreach (var kv in stale)
+        {
+            mirror.Remove(kv.Key);
+            if (!kv.Value.IsNull) kv.Value.DeleteEntity();
         }
     }
 }
