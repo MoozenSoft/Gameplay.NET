@@ -41,6 +41,35 @@ public class ReplicationServerTests
             => Sent.Count(x => x.ClientId == clientId && x.Type == EReplicationPacketType.Despawn);
     }
 
+    /// <summary>大负载复制组件：内嵌大数组，序列化体积远超旧版固定栈缓冲（spawn 512B / update 128B）。</summary>
+    private struct BigSyncTestComponent : IComponent
+    {
+        public int[]? Data;
+    }
+
+    /// <summary>BigSyncTestComponent 手写序列化器（[len][value]*）。</summary>
+    private sealed class BigSyncTestSerializer : IComponentSerializer<BigSyncTestComponent>
+    {
+        public void Write(in BigSyncTestComponent c, ref ByteWriter w)
+        {
+            w.Write(c.Data!.Length);
+            foreach (var v in c.Data!) w.Write(v);
+        }
+
+        public void Read(ref BigSyncTestComponent c, ref ByteReader r)
+        {
+            int len = r.ReadInt();
+            c.Data = new int[len];
+            for (int i = 0; i < len; i++) c.Data[i] = r.ReadInt();
+        }
+    }
+
+    /// <summary>BigSyncTestComponent 手写 diff（引用相等判定变更——测试中通过换新数组触发 update）。</summary>
+    private readonly struct BigSyncTestDiff : IReplicationDiff<BigSyncTestComponent>
+    {
+        public bool Equals(in BigSyncTestComponent a, in BigSyncTestComponent b) => ReferenceEquals(a.Data, b.Data);
+    }
+
     [Fact]
     public void ComponentAdded_AssignsNetworkId()
     {
@@ -191,6 +220,36 @@ public class ReplicationServerTests
 
         server.Tick();                                   // 若 shadow 未清理 → 新实体被误判"已有 shadow"→ 不 spawn
         Assert.Equal(2, transport.CountSpawns(0));
+    }
+
+    [Fact]
+    public void LargeComponent_SpawnAndUpdate_DoNotOverflowFixedBuffers()
+    {
+        SerializerRegistry.Register(new BigSyncTestSerializer());
+        ReplicationRegistry.Register<BigSyncTestComponent>(new BigSyncTestDiff());
+
+        var world = new World(ENetMode.DedicatedServer);
+        var transport = new RecordingTransport();
+        var server = new ReplicationServer(world.Store, transport);
+        EntityLifecycle.Subscribe(world, server.HandleLifecycle);
+        server.AddClient(0);
+        server.Tick();   // 首帧空全量快照，清 NeedsSnapshot
+
+        // 组件负载 512B + 包帧头 ≈ 529B → 超过旧版固定栈缓冲（spawn 512B / update 128B）
+        var big = new int[128];
+        for (int i = 0; i < big.Length; i++) big[i] = i;
+        var entity = world.Store.CreateEntity();
+        entity.AddComponent(new BigSyncTestComponent { Data = big });
+        server.Tick();   // 修复前：SendSpawn 固定 stackalloc[512] 溢出 → ArgumentOutOfRangeException 崩溃
+
+        Assert.Equal(1, transport.CountSpawns(0));
+
+        // 换新大数组（新引用 → diff 判定变更 → 增量 update），负载仍超旧版固定缓冲
+        ref var comp = ref entity.GetComponent<BigSyncTestComponent>();
+        comp.Data = new int[128];
+        server.Tick();   // 修复前：SendUpdate 固定 stackalloc[128] 溢出 → ArgumentOutOfRangeException 崩溃
+
+        Assert.Contains(transport.Sent, x => x.ClientId == 0 && x.Type == EReplicationPacketType.Update);
     }
 
     [Fact]

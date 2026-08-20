@@ -8,6 +8,11 @@ using System.Text;
 namespace Gameplay.CodeGen;
 
 /// <summary>扫描 [Replicated] 组件，生成 serializer + diff + RegisterAll 三件套。</summary>
+/// <remarks>
+/// 生成的 <c>ReplicatedComponentRegistration.RegisterAll()</c> 须由使用方在启动阶段、首次
+/// World.Update 之前调用一次（World 即 Gameplay 的运行时入口），一次性注册全部 [Replicated] 组件的
+/// serializer + diff；遗漏调用会导致复制集为空、静默无复制。
+/// </remarks>
 [Generator]
 public class ReplicationGenerator : IIncrementalGenerator
 {
@@ -167,6 +172,8 @@ public class ReplicationGenerator : IIncrementalGenerator
         return sb.ToString();
     }
 
+    /// <summary>生成 ReplicatedComponentRegistration.RegisterAll：一次性注册全部 [Replicated] 组件。
+    /// 使用方须在启动阶段、首次 World.Update 之前调用一次 RegisterAll()，否则复制集为空、静默无复制。</summary>
     private static string GenerateRegisterAll(ImmutableArray<ComponentInfo> sorted)
     {
         var sb = new StringBuilder();
@@ -178,6 +185,7 @@ public class ReplicationGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine("public static class ReplicatedComponentRegistration");
         sb.AppendLine("{");
+        sb.AppendLine("    /// <summary>一次性注册全部 [Replicated] 组件的 serializer + diff（须在首次 World.Update 之前调用一次）。</summary>");
         sb.AppendLine("    public static void RegisterAll()");
         sb.AppendLine("    {");
         foreach (var c in sorted)

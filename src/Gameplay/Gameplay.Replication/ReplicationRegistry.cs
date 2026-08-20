@@ -6,6 +6,11 @@ using Gameplay.Core;
 namespace Gameplay.Replication;
 
 /// <summary>复制集注册中心（static，类型级，跨 World 共享）——装配「序列化器 + diff」。</summary>
+/// <remarks>
+/// 使用方必须在首次 <see cref="World.Update"/> 之前于启动阶段调用一次
+/// <c>ReplicatedComponentRegistration.RegisterAll()</c>（源生成器生成，覆盖全部 [Replicated] 组件的
+/// serializer + diff 注册），否则复制集为空、静默无复制。
+/// </remarks>
 public static class ReplicationRegistry
 {
     private static readonly Dictionary<int, IReplicationEntry> byTypeId = new();

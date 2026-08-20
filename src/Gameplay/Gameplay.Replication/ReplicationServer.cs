@@ -25,6 +25,8 @@ public sealed class ReplicationServer
     private readonly Dictionary<int, IShadowStore> shadowStores = new();
     private readonly List<ReplicationDelta> deltas = new();   // 每帧复用，避免热路径分配（0 GC）
     private byte[] snapshotBuffer = Array.Empty<byte>();      // 全量快照包缓冲（ArrayPool 租用，越界翻倍扩容，跨帧复用）
+    private byte[] spawnBuffer = Array.Empty<byte>();         // spawn 包缓冲（同上，组件负载可能超固定栈缓冲）
+    private byte[] updateBuffer = Array.Empty<byte>();        // update 包缓冲（同上）
     private int nextNetworkId = 1;
 
     public ReplicationServer(EntityStore store, IReplicationServerTransport transport)
@@ -149,21 +151,58 @@ public sealed class ReplicationServer
 
     private void SendSpawn(int clientId, ClientState state, Entity entity, NetworkId netId)
     {
-        Span<byte> buf = stackalloc byte[512];
-        var writer = new ByteWriter(buf);
-        ReplicationPacket.WriteSpawn(entity, netId, ref writer);
-        transport.SendToClient(clientId, buf[..writer.BytesWritten]);
+        // 组件负载可能远超固定栈缓冲（大组件/多字段）→ ArrayPool 租用 + 越界翻倍扩容（跨帧复用，0 分配）。
+        // transport 同步拷贝 payload（loopback ToArray() 等），buffer 可安全复用。
+        if (spawnBuffer.Length < 512)
+            spawnBuffer = ArrayPool<byte>.Shared.Rent(512);
+        var writer = new ByteWriter(spawnBuffer);
+        while (true)
+        {
+            try
+            {
+                ReplicationPacket.WriteSpawn(entity, netId, ref writer);
+                break;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // 缓冲不足：归还旧缓冲并翻倍扩容后重写（ByteWriter 越界抛 ArgumentOutOfRangeException，未写入部分数据）
+                writer = GrowBuffer(ref spawnBuffer);
+            }
+        }
+        transport.SendToClient(clientId, spawnBuffer.AsSpan(0, writer.BytesWritten));
         state.Mirrored.Add(netId);
     }
 
     private void SendUpdate(int clientId, Entity entity, NetworkId netId, int typeId)
     {
-        Span<byte> buf = stackalloc byte[128];
-        var writer = new ByteWriter(buf);
-        ReplicationPacket.WriteType(EReplicationPacketType.Update, ref writer);
-        ReplicationPacket.WriteNetworkId(netId, ref writer);
-        ReplicationPacket.WriteSingleComponent(entity, typeId, ref writer);
-        transport.SendToClient(clientId, buf[..writer.BytesWritten]);
+        // 同上：单组件负载也可能超固定栈缓冲 → ArrayPool 扩容
+        if (updateBuffer.Length < 128)
+            updateBuffer = ArrayPool<byte>.Shared.Rent(128);
+        var writer = new ByteWriter(updateBuffer);
+        while (true)
+        {
+            try
+            {
+                ReplicationPacket.WriteType(EReplicationPacketType.Update, ref writer);
+                ReplicationPacket.WriteNetworkId(netId, ref writer);
+                ReplicationPacket.WriteSingleComponent(entity, typeId, ref writer);
+                break;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                writer = GrowBuffer(ref updateBuffer);
+            }
+        }
+        transport.SendToClient(clientId, updateBuffer.AsSpan(0, writer.BytesWritten));
+    }
+
+    /// <summary>缓冲不足时归还 ArrayPool 旧缓冲并翻倍扩容租用，返回以新缓冲构造的 writer（供重写整包）。</summary>
+    private static ByteWriter GrowBuffer(ref byte[] buffer)
+    {
+        int nextSize = buffer.Length * 2;
+        ArrayPool<byte>.Shared.Return(buffer);
+        buffer = ArrayPool<byte>.Shared.Rent(nextSize);
+        return new ByteWriter(buffer);
     }
 
     private void SendSnapshot(int clientId, ClientState state)

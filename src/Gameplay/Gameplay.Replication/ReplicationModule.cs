@@ -3,6 +3,11 @@ using Gameplay.Core;
 namespace Gameplay.Replication;
 
 /// <summary>状态复制模块——按 NetMode 挂载服务端/客户端复制。</summary>
+/// <remarks>
+/// 使用方必须在挂载本模块之外、首次 <see cref="World.Update"/> 之前调用一次
+/// <c>ReplicatedComponentRegistration.RegisterAll()</c>（源生成器生成，启动阶段调用一次即可），
+/// 否则复制集为空、静默无复制。
+/// </remarks>
 public sealed class ReplicationModule : IModule
 {
     public ReplicationServer? Server { get; }
