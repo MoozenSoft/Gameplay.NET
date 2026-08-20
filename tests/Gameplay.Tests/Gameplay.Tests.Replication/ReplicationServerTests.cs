@@ -192,4 +192,28 @@ public class ReplicationServerTests
         server.Tick();                                   // 若 shadow 未清理 → 新实体被误判"已有 shadow"→ 不 spawn
         Assert.Equal(2, transport.CountSpawns(0));
     }
+
+    [Fact]
+    public void LateJoinManyEntities_FullSnapshot_DoesNotOverflow()
+    {
+        SerializerRegistry.Register(new SyncTestSerializer());
+        ReplicationRegistry.Register<SyncTestComponent>(new SyncTestDiff());
+
+        var world = new World(ENetMode.DedicatedServer);
+        var transport = new RecordingTransport();
+        var server = new ReplicationServer(world.Store, transport);
+        EntityLifecycle.Subscribe(world, server.HandleLifecycle);
+
+        // 先创建足够多的实体（全量快照远超固定栈缓冲），再晚加入 → 走 ArrayPool 翻倍扩容路径
+        for (int i = 0; i < 200; i++)
+        {
+            var entity = world.Store.CreateEntity();
+            entity.AddComponent(new SyncTestComponent { Value = i });
+        }
+
+        server.AddClient(0);
+        server.Tick();   // 修复前：固定 stackalloc[2048] 溢出 → ArgumentOutOfRangeException 崩溃
+
+        Assert.Single(transport.Sent, x => x.ClientId == 0 && x.Type == EReplicationPacketType.FullSnapshot);
+    }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using Friflo.Engine.ECS;
 using Gameplay.Core;
@@ -23,6 +24,7 @@ public sealed class ReplicationServer
     private readonly Dictionary<NetworkId, int> netIdToEntity = new();
     private readonly Dictionary<int, IShadowStore> shadowStores = new();
     private readonly List<ReplicationDelta> deltas = new();   // 每帧复用，避免热路径分配（0 GC）
+    private byte[] snapshotBuffer = Array.Empty<byte>();      // 全量快照包缓冲（ArrayPool 租用，越界翻倍扩容，跨帧复用）
     private int nextNetworkId = 1;
 
     public ReplicationServer(EntityStore store, IReplicationServerTransport transport)
@@ -176,10 +178,28 @@ public sealed class ReplicationServer
             entries.Add((netId, entity));
         }
 
-        Span<byte> buf = stackalloc byte[2048];
-        var writer = new ByteWriter(buf);
-        ReplicationPacket.WriteFullSnapshot(entries, ref writer);
-        transport.SendToClient(clientId, buf[..writer.BytesWritten]);
+        // 快照包可能远超固定栈缓冲（实体多时可达数 KB）→ ArrayPool 租用 + 越界翻倍扩容（跨帧复用，0 分配）。
+        // transport 同步拷贝 payload（loopback ToArray() 等），buffer 可安全复用。
+        if (snapshotBuffer.Length < 1024)
+            snapshotBuffer = ArrayPool<byte>.Shared.Rent(1024);
+        var writer = new ByteWriter(snapshotBuffer);
+        while (true)
+        {
+            try
+            {
+                ReplicationPacket.WriteFullSnapshot(entries, ref writer);
+                break;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // 缓冲不足：归还旧缓冲并翻倍扩容后重写（ByteWriter 越界抛 ArgumentOutOfRangeException，未写入部分数据）
+                int nextSize = snapshotBuffer.Length * 2;
+                ArrayPool<byte>.Shared.Return(snapshotBuffer);
+                snapshotBuffer = ArrayPool<byte>.Shared.Rent(nextSize);
+                writer = new ByteWriter(snapshotBuffer);
+            }
+        }
+        transport.SendToClient(clientId, snapshotBuffer.AsSpan(0, writer.BytesWritten));
 
         foreach (var (id, _) in entries)
             state.Mirrored.Add(id);

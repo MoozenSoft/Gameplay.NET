@@ -42,13 +42,24 @@ public static class ReplicationPacket
         }
     }
 
-    private static readonly int[] singleTypeId = new int[1];   // WriteSingleComponent 共享单元素缓冲（0 GC）
+    [ThreadStatic]
+    private static int[]? singleTypeId;   // WriteSingleComponent 单元素缓冲（ThreadStatic，0 分配）
+
+    private static int[] SingleTypeId
+    {
+        get
+        {
+            var buf = singleTypeId;
+            if (buf == null) singleTypeId = buf = new int[1];
+            return buf;
+        }
+    }
 
     /// <summary>写单组件负载（复用 WriteComponents 容器格式）：[count=1][typeId][data]。</summary>
     public static void WriteSingleComponent(Entity entity, int typeId, ref ByteWriter writer)
     {
-        singleTypeId[0] = typeId;
-        WriteComponents(entity, singleTypeId, ref writer);
+        SingleTypeId[0] = typeId;
+        WriteComponents(entity, SingleTypeId, ref writer);
     }
 
     /// <summary>写 Spawn（组件全量）：NetworkId + [count][typeId+data]*。</summary>
