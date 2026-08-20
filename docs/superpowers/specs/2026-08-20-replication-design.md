@@ -1,14 +1,14 @@
-# Gameplay.Sync 设计文档（状态同步 v1）
+# Gameplay.Replication 设计文档（状态同步 v1）
 
 日期：2026-08-20
 状态：待评审
 
 ## 1. 概述
 
-`Gameplay.Sync` 是 Gameplay.NET 的**状态同步模块**——服务端权威 + 客户端镜像的单向复制（server-authoritative replication）。它建立在 `Gameplay.Core` 之上，解决「服务端改组件 → 客户端同步更新」的核心问题，并通过 **Bubble 可见性**管理「哪些实体同步给哪个客户端」。
+`Gameplay.Replication` 是 Gameplay.NET 的**状态同步模块**——服务端权威 + 客户端镜像的单向复制（server-authoritative replication）。它建立在 `Gameplay.Core` 之上，解决「服务端改组件 → 客户端同步更新」的核心问题，并通过 **Bubble 可见性**管理「哪些实体同步给哪个客户端」。
 
 **定位**：
-- 是 `Gameplay.Core` 之上的**独立模块**（`Gameplay.dll` 内的 namespace `Gameplay.Sync`），Core 不含网络
+- 是 `Gameplay.Core` 之上的**独立模块**（`Gameplay.dll` 内的 namespace `Gameplay.Replication`），Core 不含网络
 - **纯同步逻辑**：复制协议、Bubble 管理、权威复制、客户端镜像、变更检测——**不含 socket 传输**
 - 传输通过 `IReplicationTransport` 接口注入，真正的网络传输在 `Gameplay.Infrastructure`（或后续样本）实现
 - **v1 只做服务端权威单向复制**（含 Bubble）；客户端预测/回滚是**后续 spec**，不在本 spec 范围
@@ -19,7 +19,7 @@
 
 | 决策点 | 结论 |
 |--------|------|
-| 模块归属 | `Gameplay.dll` 内 `namespace Gameplay.Sync`，纯逻辑 + `IReplicationTransport` 注入（不碰 socket） |
+| 模块归属 | `Gameplay.dll` 内 `namespace Gameplay.Replication`，纯逻辑 + `IReplicationTransport` 注入（不碰 socket） |
 | 首个 spec 范围 | 复制协议 + 服务端权威单向复制（含 Bubble 可见性）；**预测回滚是后续 spec** |
 | 复制集标记 | `[Replicated]` 特性（`Gameplay.Shared`）+ 源生成器 `ReplicationGenerator`（`Gameplay.CodeGen`） |
 | 组件序列化 | 复用现有 `SerializerRegistry`（组件手写 `IComponentSerializer<T>`） |
@@ -36,7 +36,7 @@
 ## 3. 目录结构与命名空间
 
 ```
-src/Gameplay/Gameplay.Sync/            → namespace Gameplay.Sync
+src/Gameplay/Gameplay.Replication/            → namespace Gameplay.Replication
 ├── NetworkId.cs                       → 网络身份（struct）
 ├── IReplicationTransport.cs           → 传输接口
 ├── IReplicationDiff.cs                → 组件相等判定接口
@@ -53,7 +53,7 @@ src/Gameplay.Shared/ReplicatedAttribute.cs   → [Replicated] 标记特性
 src/Gameplay.CodeGen/ReplicationGenerator.cs → SG：扫描 [Replicated] 生成 diff + RegisterAll
 ```
 
-文件范围命名空间随目录走（`namespace Gameplay.Sync;`），枚举以 `E` 打头。
+文件范围命名空间随目录走（`namespace Gameplay.Replication;`），枚举以 `E` 打头。
 
 ## 4. 复制协议
 
@@ -62,7 +62,7 @@ src/Gameplay.CodeGen/ReplicationGenerator.cs → SG：扫描 [Replicated] 生成
 `Gameplay.Shared` 新增标记特性：
 
 ```csharp
-namespace Gameplay.Sync;
+namespace Gameplay.Replication;
 
 /// <summary>标记 struct 组件参与网络复制。SG 扫描生成 field-wise Equals + RegisterAll。</summary>
 [AttributeUsage(AttributeTargets.Struct)]
@@ -258,14 +258,14 @@ public sealed class ReplicationModule : IModule
 ## 8. 依赖方向
 
 ```
-Gameplay.Sync ──► Gameplay.Core ──► Friflo.Engine.ECS
+Gameplay.Replication ──► Gameplay.Core ──► Friflo.Engine.ECS
         │
         └──► IReplicationTransport（注入，传输在 Infrastructure / 样本）
 ```
 
-- `Gameplay.Sync` 消费 `Gameplay.Core` 的 `World` / `EntitySnapshot` / `SerializerRegistry` / `ENetMode` / `EntityLifecycle` / `ByteWriter`/`ByteReader`，单向。
-- `Gameplay.Sync` 不依赖任何 socket / 具体传输实现（依赖倒置：传输经接口注入）。
-- `Gameplay.Core` 不引用 `Gameplay.Sync`（Core 不含网络）。
+- `Gameplay.Replication` 消费 `Gameplay.Core` 的 `World` / `EntitySnapshot` / `SerializerRegistry` / `ENetMode` / `EntityLifecycle` / `ByteWriter`/`ByteReader`，单向。
+- `Gameplay.Replication` 不依赖任何 socket / 具体传输实现（依赖倒置：传输经接口注入）。
+- `Gameplay.Core` 不引用 `Gameplay.Replication`（Core 不含网络）。
 
 ## 9. 测试与成功标准
 
