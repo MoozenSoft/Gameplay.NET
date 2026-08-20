@@ -47,11 +47,17 @@ internal interface IReplicationEntry
 }
 
 /// <summary>shadow 状态（per-World 实例）。</summary>
-internal interface IShadowStore { }
+internal interface IShadowStore
+{
+    /// <summary>实体删除时清理 shadow——防 id 复用后新实体被误判为"已有 shadow"而跳过 spawn。</summary>
+    void RemoveEntity(int entityId);
+}
 
 internal sealed class ShadowStore<T> : IShadowStore where T : struct, IComponent
 {
     public readonly Dictionary<int, T> ByEntityId = new();
+
+    public void RemoveEntity(int entityId) => ByEntityId.Remove(entityId);
 }
 
 /// <summary>泛型适配器——IComponentSerializer&lt;T&gt; + IReplicationDiff&lt;T&gt; → IReplicationEntry。</summary>
