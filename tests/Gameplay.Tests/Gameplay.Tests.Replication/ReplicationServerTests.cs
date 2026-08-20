@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Linq;
 using Friflo.Engine.ECS;
 using Gameplay.Core;
@@ -275,4 +276,40 @@ public class ReplicationServerTests
 
         Assert.Single(transport.Sent, x => x.ClientId == 0 && x.Type == EReplicationPacketType.FullSnapshot);
     }
+
+    [Fact]
+    public void Dispose_ReturnsRentedArrayPoolBuffers()
+    {
+        SerializerRegistry.Register(new SyncTestSerializer());
+        ReplicationRegistry.Register<SyncTestComponent>(new SyncTestDiff());
+
+        var world = new World(ENetMode.DedicatedServer);
+        var server = new ReplicationServer(world.Store, new NullServerTransport());
+        EntityLifecycle.Subscribe(world, server.HandleLifecycle);
+        server.AddClient(0);
+        server.Tick();   // 首帧空全量快照 → 租借 snapshotBuffer
+
+        var entity = world.Store.CreateEntity();
+        entity.AddComponent(new SyncTestComponent { Value = 1 });
+        server.Tick();   // 增量 Spawn → 租借 spawnBuffer
+
+        ref var comp = ref entity.GetComponent<SyncTestComponent>();
+        comp.Value = 2;
+        server.Tick();   // dirty → SendUpdate → 租借 updateBuffer
+
+        Assert.True(GetBuffer(server, "snapshotBuffer").Length > 0);
+        Assert.True(GetBuffer(server, "spawnBuffer").Length > 0);
+        Assert.True(GetBuffer(server, "updateBuffer").Length > 0);
+
+        server.Dispose();
+
+        Assert.Empty(GetBuffer(server, "snapshotBuffer"));
+        Assert.Empty(GetBuffer(server, "spawnBuffer"));
+        Assert.Empty(GetBuffer(server, "updateBuffer"));
+    }
+
+    private static byte[] GetBuffer(ReplicationServer server, string fieldName)
+        => (byte[])(typeof(ReplicationServer)
+            .GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(server)!);
 }

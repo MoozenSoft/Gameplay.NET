@@ -15,7 +15,7 @@ internal sealed class ClientState
 }
 
 /// <summary>服务端权威——Bubble/Mirrored 双集合 + NetworkId 分配 + spawn/despawn。</summary>
-public sealed class ReplicationServer
+public sealed class ReplicationServer : IDisposable
 {
     private readonly EntityStore store;
     private readonly IReplicationServerTransport transport;
@@ -54,6 +54,22 @@ public sealed class ReplicationServer
     }
 
     public void RemoveClient(int clientId) => clients.Remove(clientId);
+
+    /// <summary>归还 ArrayPool 租借的跨帧缓冲（snapshot/spawn/update）。实例不再使用后调用。</summary>
+    public void Dispose()
+    {
+        ReturnBuffer(ref snapshotBuffer);
+        ReturnBuffer(ref spawnBuffer);
+        ReturnBuffer(ref updateBuffer);
+    }
+
+    /// <summary>归还单个租借缓冲并置空（Array.Empty 不可归还）。</summary>
+    private static void ReturnBuffer(ref byte[] buffer)
+    {
+        if (buffer.Length == 0) return;
+        ArrayPool<byte>.Shared.Return(buffer);
+        buffer = Array.Empty<byte>();
+    }
 
     /// <summary>EntityLifecycle 回调（由 ReplicationModule 经 EntityLifecycle.Subscribe 接线）。</summary>
     public void HandleLifecycle(in EntityLifecycleEvent evt)

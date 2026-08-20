@@ -1,3 +1,4 @@
+using System;
 using Gameplay.Core;
 
 namespace Gameplay.Replication;
@@ -8,7 +9,7 @@ namespace Gameplay.Replication;
 /// <c>ReplicatedComponentRegistration.RegisterAll()</c>（源生成器生成，启动阶段调用一次即可），
 /// 否则复制集为空、静默无复制。
 /// </remarks>
-public sealed class ReplicationModule : IModule
+public sealed class ReplicationModule : IModule, IDisposable
 {
     public ReplicationServer? Server { get; }
     public ReplicationClient? Client { get; }
@@ -38,4 +39,7 @@ public sealed class ReplicationModule : IModule
         }
 #endif
     }
+
+    /// <summary>释放权威端租借的 ArrayPool 缓冲（转发 ReplicationServer.Dispose）。</summary>
+    public void Dispose() => Server?.Dispose();
 }
