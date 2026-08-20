@@ -10,7 +10,7 @@
 **定位**：
 - 是 `Gameplay.Core` 之上的**独立模块**（`Gameplay.dll` 内的 namespace `Gameplay.Replication`），Core 不含网络
 - **纯同步逻辑**：复制协议、Bubble 管理、权威复制、客户端镜像、变更检测——**不含 socket 传输**
-- 传输通过 `IReplicationTransport` 接口注入，真正的网络传输在 `Gameplay.Infrastructure`（或后续样本）实现
+- 传输通过 `IReplicationServerTransport` / `IReplicationClientTransport` 接口注入，真正的网络传输在 `Gameplay.Infrastructure`（或后续样本）实现
 - **v1 只做服务端权威单向复制**（含 Bubble）；客户端预测/回滚是**后续 spec**，不在本 spec 范围
 
 **核心目标**：服务端是唯一真相源，客户端持有只读镜像副本；服务端按 Bubble 把权威 Component 状态增量同步给各客户端。
@@ -19,15 +19,20 @@
 
 | 决策点 | 结论 |
 |--------|------|
-| 模块归属 | `Gameplay.dll` 内 `namespace Gameplay.Replication`，纯逻辑 + `IReplicationTransport` 注入（不碰 socket） |
+| 模块归属 | `Gameplay.dll` 内 `namespace Gameplay.Replication`，纯逻辑 + 传输接口注入（不碰 socket） |
 | 首个 spec 范围 | 复制协议 + 服务端权威单向复制（含 Bubble 可见性）；**预测回滚是后续 spec** |
-| 复制集标记 | `[Replicated]` 特性（`Gameplay.Shared`）+ 源生成器 `ReplicationGenerator`（`Gameplay.CodeGen`） |
-| 组件序列化 | 复用现有 `SerializerRegistry`（组件手写 `IComponentSerializer<T>`） |
-| 实体跨进程身份 | **外部映射表** `NetworkId`——身份在 packet 信封、状态在 payload，`Dictionary<NetworkId, Entity>` 由复制层维护（对齐 UE5 NetGUID） |
-| 同步粒度 | **增量 delta（shadow-diff）+ 全量快照兜底** |
-| dirty 判定 | **字段级 `Equals(in T, in T)`**（SG 自动生成），dirty 发送粒度 = **整个组件** |
-| Bubble 相关性 | **规则驱动 Owner-based**：无 `OwnerComponent` 或 `PlayerId == -1` → 广播；有 owner → 仅 owner 的 Bubble |
-| 模块挂载 | `ReplicationModule : IModule`（构造注入 `World` + transport），按 `World.NetMode` 挂服务端/客户端 |
+| 复制集标记 | `[Replicated]` 特性（`Gameplay.Shared`，**`namespace Gameplay` 中性命名空间**）+ 源生成器 `ReplicationGenerator`（`Gameplay.CodeGen`） |
+| 组件序列化 | **SG 生成 Write/Read**（非手写）——`[Replicated]` 是完整自服务标记，不用 MemoryPack |
+| dirty 判定 | **SG 生成字段级 `Equals(in T, in T)`**，dirty 发送粒度 = **整个组件** |
+| 实体跨进程身份 | **外部映射表** `NetworkId`——身份在 packet 信封、状态在 payload（对齐 UE5 NetGUID） |
+| 同步粒度 | **增量 delta（shadow-diff）+ 全量快照兜底**（快照仅新连接触发，无周期快照） |
+| spawn 语义 | per-client **双集合**：`Bubble`（应可见）vs `Mirrored`（已发）——`ESpawn` = 在 Bubble 且未 Mirrored |
+| Bubble 相关性 | **规则驱动 Owner-based**，成员关系**进复制集时一次决定、不迁移** |
+| 客户端职责 | **纯镜像 World**——只挂 `ReplicationClientSystem`（+ 只读 System），不跑模拟 |
+| Host 模式 | **单权威 World**，只挂服务端复制；本地玩家直接读权威状态（无镜像 World） |
+| 传输接口 | 拆 **`IReplicationServerTransport`** + **`IReplicationClientTransport`** 两个角色 |
+| 连接生命周期 | **调用方驱动**（`AddClient`/`RemoveClient`），transport 是被动消息管道 |
+| 错误处理 | 未知 typeId / 畸形 packet → **fail-fast 抛异常** |
 
 ### 2.1 服务端权威声明
 
@@ -38,47 +43,49 @@
 ```
 src/Gameplay/Gameplay.Replication/            → namespace Gameplay.Replication
 ├── NetworkId.cs                       → 网络身份（struct）
-├── IReplicationTransport.cs           → 传输接口
+├── IReplicationServerTransport.cs     → 服务端传输接口
+├── IReplicationClientTransport.cs     → 客户端传输接口
 ├── IReplicationDiff.cs                → 组件相等判定接口
 ├── ReplicationRegistry.cs             → 复制集注册（含 IReplicationEntry / ReplicationEntry<T>）
 ├── ReplicationPacket.cs               → 包类型枚举 + 编解码
 ├── ReplicationDelta.cs                → 内部 dirty 增量结构
-├── ReplicationServer.cs               → 服务端权威（Bubble + NetworkId 分配）
+├── ReplicationServer.cs               → 服务端权威（Bubble/Mirrored + NetworkId 分配）
 ├── ReplicationClient.cs               → 客户端镜像（NetworkId → Entity 映射）
 ├── ReplicationSystem.cs               → 服务端每帧 System（shadow-diff + 发送）
 ├── ReplicationClientSystem.cs         → 客户端每帧 System（接收 + 应用）
 └── ReplicationModule.cs               → IModule（按 NetMode 挂载）
 
-src/Gameplay.Shared/ReplicatedAttribute.cs   → [Replicated] 标记特性
-src/Gameplay.CodeGen/ReplicationGenerator.cs → SG：扫描 [Replicated] 生成 diff + RegisterAll
+src/Gameplay.Shared/ReplicatedAttribute.cs   → [Replicated] 标记特性（namespace Gameplay）
+src/Gameplay.CodeGen/ReplicationGenerator.cs → SG：生成 serializer + diff + RegisterAll
 ```
 
 文件范围命名空间随目录走（`namespace Gameplay.Replication;`），枚举以 `E` 打头。
 
 ## 4. 复制协议
 
-### 4.1 复制集标记：`[Replicated]` + 源生成器
+### 4.1 复制集标记：`[Replicated]` + 源生成器（三件套）
 
-`Gameplay.Shared` 新增标记特性：
+`Gameplay.Shared` 新增标记特性（**`namespace Gameplay` 中性命名空间**，避免 Core 组件标它产生 Core→Replication 依赖）：
 
 ```csharp
-namespace Gameplay.Replication;
+namespace Gameplay;
 
-/// <summary>标记 struct 组件参与网络复制。SG 扫描生成 field-wise Equals + RegisterAll。</summary>
+/// <summary>标记 struct 组件参与网络复制。SG 扫描生成 serializer + diff + RegisterAll。</summary>
 [AttributeUsage(AttributeTargets.Struct)]
 public class ReplicatedAttribute : System.Attribute { }
 ```
 
-`Gameplay.CodeGen` 新增 `ReplicationGenerator : IIncrementalGenerator`，扫描带 `[Replicated]` 的 struct，对每个组件类型生成：
+`Gameplay.CodeGen` 新增 `ReplicationGenerator : IIncrementalGenerator`，扫描带 `[Replicated]` 的 struct，对每个组件类型生成**三件套**：
 
-1. **`readonly struct XxxReplication : IReplicationDiff<Xxx>`**——field-wise `Equals(in Xxx a, in Xxx b)`，逐字段 `==` 比较（`bool`/`int`/`enum`/`float` 用 `==`；`Vector3`/`Quaternion` 用其 `IEquatable<T>.Equals`）。v1 用精确比较（`0.0f == -0.0f` 为 true、`NaN != NaN` 为 true，语义正确）；**float 容差留作后续增强**。
-2. **`ReplicatedComponentRegistration.RegisterAll(ReplicationRegistry)`**——逐个 `registry.Register<Xxx>(new XxxReplication())`。
+1. **`XxxSerializer : IComponentSerializer<Xxx>`**——field-wise `Write(in Xxx, ref ByteWriter)` / `Read(ref Xxx, ref ByteReader)`（`bool`/`int`/`float`/`enum` 走 `Write/Read` 原语；`Vector3`/`Quaternion` 走其 `Write(in)`/`ReadVector3` 等）。
+2. **`readonly struct XxxReplication : IReplicationDiff<Xxx>`**——field-wise `Equals(in Xxx, in Xxx)`，逐字段 `==` 比较。v1 用精确比较（`0.0f == -0.0f` 为 true、`NaN != NaN` 为 true）；**float 容差留作后续增强**。
+3. **`ReplicatedComponentRegistration.RegisterAll(ReplicationRegistry)`**——逐个先 `SerializerRegistry.Register(new XxxSerializer())` 再 `registry.Register<Xxx>(new XxxReplication())`。
 
-生成器遵循现有 `GameplayEventGenerator` 的模式：用 `compilation` 判断「只在定义 `ReplicationRegistry` 的当前程序集生成 `RegisterAll`」（`HasReplicationRegistry(compilation)`），避免在引用程序集重复生成。
+生成器遵循现有 `GameplayEventGenerator` 的模式：用 `compilation` 判断「只在定义 `ReplicationRegistry` 的当前程序集生成 `RegisterAll`」（`HasReplicationRegistry(compilation)`），避免在引用程序集重复生成。字段类型按名字匹配（与 `GameplayAttribute`/`GameplayEvent` 生成器一致）。
 
-**启动注册流**：`ReplicatedComponentRegistration.RegisterAll(ReplicationRegistry)` 由使用方在启动时（World 创建后、首次 `Update` 前）调用一次，把全部 `[Replicated]` 组件装配进复制集。
+**启动注册流**：`ReplicatedComponentRegistration.RegisterAll(ReplicationRegistry)` 由使用方在启动时（World 创建后、首次 `Update` 前）调用一次，把全部 `[Replicated]` 组件的 serializer + diff 装配进 `SerializerRegistry` + `ReplicationRegistry`。
 
-**约束**：v1 复制组件字段只能是 primitive / `Vector3` / `Quaternion` / `enum`——**不含 `Entity` 类型字段**（跨实体引用翻译留后续）。
+**约束**：v1 复制组件字段只能是 primitive / `Vector3` / `Quaternion` / `enum`——**不含 `Entity` 类型字段**（跨实体引用翻译留后续）。SG 遇到不支持的字段类型生成编译诊断（fail-fast）。
 
 ### 4.2 复制条目：`ReplicationRegistry`
 
@@ -93,7 +100,7 @@ public static class ReplicationRegistry
 }
 ```
 
-- `Register<T>` 从 `SerializerRegistry.Get<T>()` 取序列化器（未注册则抛异常 fail-fast），`typeId` 复用 `SerializerRegistry.ComputeTypeId(typeof(T))`（FNV-1a，跨进程稳定、与 `EntitySnapshot` 一致），装配成 `ReplicationEntry<T>`。
+- `Register<T>` 从 `SerializerRegistry.Get<T>()` 取序列化器（未注册则抛异常 fail-fast，故 `RegisterAll` 必须先注册 serializer），`typeId` 复用 `SerializerRegistry.ComputeTypeId(typeof(T))`（FNV-1a，跨进程稳定、与 `EntitySnapshot` 一致），装配成 `ReplicationEntry<T>`。
 - `IReplicationEntry`（非泛型接口）+ `ReplicationEntry<T>`（泛型适配器）暴露：`TypeId` / `HasComponent` / `Capture`（写全量）/ `Apply`（读回并应用）/ `CreateShadowStore()`（每 World 新建 shadow 状态）。
 - **类型级 vs 实例级分离**（对齐 Core「类型级注册 static、实例级状态挂 World」原则）：`ReplicationRegistry` 与 `ReplicationEntry<T>` 是 `static` 类型级注册（serializer + diff，无状态、跨 World 共享）；**shadow 状态是 per-World 实例**，由 `ReplicationServer` 持有，多 World 互不污染。
 
@@ -110,7 +117,7 @@ public readonly struct NetworkId
 ```
 
 - 服务端分配**自增正数** NetworkId（从 1 起），每个复制实体唯一。
-- 身份**不在组件里**（对齐 UE5 NetGUID）：服务端 `ReplicationServer` 持 `Dictionary<int entityId, NetworkId>`，客户端 `ReplicationClient` 持 `Dictionary<NetworkId, Entity>`。
+- 身份**不在组件里**（对齐 UE5 NetGUID）：服务端 `ReplicationServer` 持 `Dictionary<int entityId, NetworkId>`（及反向 `Dictionary<NetworkId, int>` 供全量枚举/反查），客户端 `ReplicationClient` 持 `Dictionary<NetworkId, Entity>`。
 - **身份在 packet 信封、状态在 payload**——packet 头带 NetworkId，payload 带组件序列化数据，互不污染。
 
 ### 4.4 变更检测：shadow-diff
@@ -140,25 +147,26 @@ EFullSnapshot(4) [count(int)]{ NetworkId(int) + [count(int)][typeId(int)+data]* 
 - 编解码走 `ByteWriter`/`ByteReader`（复用 Core 序列化底层）。
 - **批量打包（多实体合并一条消息）是后续优化**，v1 一条消息一个实体操作。
 
-### 4.6 传输接口：`IReplicationTransport`
+### 4.6 传输接口（服务端/客户端两角色）
 
 ```csharp
-public interface IReplicationTransport
+public interface IReplicationServerTransport
 {
-    // 服务端侧
-    IReadOnlyList<int> ClientIds { get; }
     void SendToClient(int clientId, ReadOnlySpan<byte> payload);
-    // 客户端侧
+    bool TryReceiveFromClient(int clientId, out ReadOnlySpan<byte> payload); // v1 预留
+}
+
+public interface IReplicationClientTransport
+{
     bool TryReceiveFromServer(out ReadOnlySpan<byte> payload);
-    // 预留（v1 客户端→服务端单向，不上送）
-    void SendToServer(ReadOnlySpan<byte> payload);
-    bool TryReceiveFromClient(int clientId, out ReadOnlySpan<byte> payload);
+    void SendToServer(ReadOnlySpan<byte> payload); // v1 预留
 }
 ```
 
+- **服务端是纯消息管道**——只 `SendToClient` 路由，**不持有客户端集合**（连接集合由 `ReplicationServer.clients` 维护，见 §5.1；调用方驱动 `AddClient`/`RemoveClient`）。
 - **消息导向、拉模型**：`ReplicationClientSystem` 每帧 `TryReceiveFromServer` 轮询；服务端 `SendToClient` 主动发送。
 - `ReadOnlySpan<byte>` 由 transport 内部缓冲持有（`byte[]`/`ArrayPool`），有效到下一次接收。
-- 单测用 `LoopbackReplicationTransport`（内存实现，N 客户端 + 可选模拟延迟）。
+- 单测用 `LoopbackServerTransport` + N 个 `LoopbackClientTransport`（经共享队列互连，N 客户端 + 可选模拟延迟）。
 - **v1 假定 `clientId == PlayerId`**（连接与玩家 1:1），真正的连接↔玩家映射是 Infrastructure 职责。
 
 ## 5. 服务端权威
@@ -168,37 +176,44 @@ public interface IReplicationTransport
 ```csharp
 public sealed class ReplicationServer
 {
-    public ReplicationServer(IReplicationTransport transport);
+    public ReplicationServer(IReplicationServerTransport transport);
 
-    // 客户端状态（每客户端一个 Bubble）
+    // 客户端状态（每客户端一个 ClientState）
     private readonly Dictionary<int, ClientState> clients;  // clientId → ClientState
 
     // NetworkId 分配
     private int nextNetworkId = 1;
     private readonly Dictionary<int, NetworkId> entityToNetId;  // entityId → NetworkId
+    private readonly Dictionary<NetworkId, int> netIdToEntity;  // NetworkId → entityId（全量枚举/反查）
 
     public NetworkId GetNetworkId(int entityId);
     public void AddClient(int clientId);       // 新客户端加入（触发全量快照）
     public void RemoveClient(int clientId);
-    public void Tick(...);                      // 由 ReplicationSystem 驱动
+}
+
+internal sealed class ClientState
+{
+    public HashSet<NetworkId> Bubble;     // 应可见
+    public HashSet<NetworkId> Mirrored;   // 已发送（客户端已镜像）
+    public bool NeedsSnapshot;            // 新连接置位，触发 EFullSnapshot
 }
 ```
 
-### 5.2 Bubble 可见性（Owner-based relevancy）
+### 5.2 Bubble 可见性（Owner-based relevancy，一次决定）
 
-每个客户端一个 `Bubble = HashSet<NetworkId>`。实体首次挂上复制组件时（`EntityLifecycle.ComponentAdded`），按**规则**决定进哪些 Bubble：
+实体首次挂上复制组件时（`EntityLifecycle.ComponentAdded`），按**规则**决定进哪些 Bubble，**之后不再变**（直到删除）：
 
 - 无 `OwnerComponent` 或 `OwnerComponent.PlayerId == -1` → **广播**进所有客户端的 Bubble；
 - 有 owner → **仅进 owner 对应客户端**的 Bubble（`clientId == PlayerId`）。
 
-`ClientState` 含 `NeedsSnapshot` 标记：新连接（`AddClient`）或周期性触发时置位，下一帧发 `EFullSnapshot` 兜底防漂移。
+Owner 增删/字段变化导致的相关性迁移（换 owner/拾取）留后续——Friflo 无「组件字段修改」事件，需额外机制。
 
 ### 5.3 NetworkId 分配 + spawn/despawn（经 EntityLifecycle）
 
 `ReplicationServer` 订阅 `EntityLifecycle`：
 
-- **ComponentAdded**（组件是复制组件）：实体尚未分配 NetworkId → 分配自增 NetworkId，登记映射，按 Owner 规则加入 Bubble（触发 spawn）。
-- **EntityDeleted**：从 `entityToNetId` 取 NetworkId → 从各 Bubble 移除 → 广播 `EDespawn`。
+- **ComponentAdded**（组件是复制组件）：实体尚未分配 NetworkId → 分配自增 NetworkId，登记映射，按 Owner 规则加入 Bubble（**只加入 `Bubble`，不加入 `Mirrored`**）。
+- **EntityDeleted**：从 `entityToNetId` 取 NetworkId → 从各 Bubble/Mirrored 移除 → 广播 `EDespawn`。
 
 > 复制组件中途移除（replicated component removal）是 v1 已知边界：复制组件通常实体生命周期内稳定，移除语义留后续（包格式可加 `ComponentRemoved` 标记扩展）。
 
@@ -206,10 +221,14 @@ public sealed class ReplicationServer
 
 挂 `PostSimulation`（在 Simulation 全部 System 改完组件之后跑，保证当帧变更被捕获）：
 
-1. 对每个注册的复制组件类型 `entry.Diff(store, deltas)` 收集 dirty `(entity, typeId)`；
-2. 按实体聚合：实体 NetworkId 是否已在目标客户端 Bubble 中——不在（新进 Bubble / 新连接）→ 发 `ESpawn`；在 → 发 `EUpdate`（含 dirty 组件）；
-3. 每个 Bubble 按 `NeedsSnapshot` 触发 `EFullSnapshot`；
-4. 经 transport `SendToClient` 发送。
+1. 对每个注册的复制组件类型 `entry.Diff(shadows, store, deltas)` 收集 dirty `(entity, typeId)`；
+2. 按实体聚合，对每个客户端按**双集合**判定：
+   - **在 Bubble 且不在 Mirrored** → 发 `ESpawn`（组件全量），发完加入 `Mirrored`；
+   - **在 Bubble 且 Mirrored 且 dirty** → 发 `EUpdate`（只 dirty 组件）；
+3. `NeedsSnapshot` 置位的客户端发 `EFullSnapshot`（该 Bubble 内全部实体组件全量），清标志并重建 `Mirrored`；
+4. 经 `transport.SendToClient` 发送。
+
+> despawn（`EDespawn`）**不在本 System 内**——由 §5.3 的 `EntityDeleted` 处理器在帧末 `ProcessPendingDeletions` 时触发（实体删除后即时广播）。
 
 ## 6. 客户端镜像
 
@@ -218,20 +237,22 @@ public sealed class ReplicationServer
 ```csharp
 public sealed class ReplicationClient
 {
-    public ReplicationClient(EntityStore store, IReplicationTransport transport);
+    public ReplicationClient(EntityStore store, IReplicationClientTransport transport);
     private readonly Dictionary<NetworkId, Entity> mirror;  // NetworkId → 本地镜像实体
 }
 ```
 
 ### 6.2 `ReplicationClientSystem`（客户端每帧 System）
 
-挂 `PreSimulation`（在 Simulation 之前应用服务端状态，保证本帧模拟基于最新权威状态）：
+挂 `PreSimulation`（在 Simulation 之前应用服务端状态）。**v1 客户端是纯镜像 World**——只挂本 System（+ 可能的只读 System），**不挂任何写复制组件的模拟 System**（模拟是预测 spec 才引入的）。
 
 1. 轮询 `transport.TryReceiveFromServer`，按 `EReplicationPacketType` 分发：
    - `ESpawn`：创建镜像实体 → 按 `[count][typeId+data]*` 应用组件 → 登记 `mirror[NetworkId] = entity`；
    - `EUpdate`：`mirror` 查实体 → 应用 dirty 组件；
    - `EDespawn`：`mirror` 查实体 → 删除镜像 → 移除映射；
    - `EFullSnapshot`：对齐——创建缺失镜像、应用组件、删除本地多余镜像。
+
+镜像实体（有 NetworkId）与本地实体（无 NetworkId）靠 `NetworkId` 天然区分，无需额外标记组件。
 
 ## 7. `ReplicationModule` 与 Host/Standalone
 
@@ -241,43 +262,44 @@ public sealed class ReplicationModule : IModule
     public ReplicationServer? Server { get; }
     public ReplicationClient? Client { get; }
 
-    public ReplicationModule(World world, IReplicationTransport transport)
+    public ReplicationModule(World world, IReplicationServerTransport? serverTransport, IReplicationClientTransport? clientTransport)
     {
-        // 按 World.NetMode + 编译宏挂载
-        // DedicatedServer / ListenServer：挂 ReplicationServer + ReplicationSystem
-        // Client / ListenServer：       挂 ReplicationClient + ReplicationClientSystem
-        // Standalone：                  不挂任何（零网络）
+        // 按 World.NetMode + 编译宏挂载：
+        // DedicatedServer：挂 ReplicationServer + ReplicationSystem（serverTransport）
+        // Client：         挂 ReplicationClient + ReplicationClientSystem（clientTransport）
+        // ListenServer：   只挂服务端（serverTransport）；本地玩家直接读权威状态，不建镜像 World
+        // Standalone：     不挂任何（零网络）
     }
 }
 ```
 
 - 服务端类型以 `#if GP_WITH_SERVER_CODE` 包裹，客户端类型以 `#if !GP_SERVER` 包裹（对齐 `GameplayAbilitiesModule` 的 `CreateCueManager` 模式）。
-- 运行时 `world.NetMode` 决定挂载：`Standalone` 不挂；`DedicatedServer` 只挂服务端；`Client` 只挂客户端；`ListenServer`（Host）两者都挂。
-- **Host 模式**：本地客户端走 **in-process `LoopbackReplicationTransport`**（与真实客户端同一条代码路径，`NetworkId`/镜像逻辑完全复用），保证 Host 路径被测试覆盖。
+- **Host（ListenServer）= 单权威 World**：只挂服务端复制；本地玩家无网络延迟、无预测，直接读权威状态（镜像 ≡ 权威，冗余）。「loopback 双 World 本地客户端」是预测 spec（Spec C）才需要——当客户端有预测、需分离「预测状态 vs 权威状态」时。
 
 ## 8. 依赖方向
 
 ```
 Gameplay.Replication ──► Gameplay.Core ──► Friflo.Engine.ECS
         │
-        └──► IReplicationTransport（注入，传输在 Infrastructure / 样本）
+        └──► IReplicationServerTransport / IReplicationClientTransport（注入，传输在 Infrastructure / 样本）
 ```
 
 - `Gameplay.Replication` 消费 `Gameplay.Core` 的 `World` / `EntitySnapshot` / `SerializerRegistry` / `ENetMode` / `EntityLifecycle` / `ByteWriter`/`ByteReader`，单向。
+- `[Replicated]` 特性在 `namespace Gameplay`（中性），Core 组件标它**不产生 Core→Replication 依赖**（只依赖中性标记特性）。
 - `Gameplay.Replication` 不依赖任何 socket / 具体传输实现（依赖倒置：传输经接口注入）。
 - `Gameplay.Core` 不引用 `Gameplay.Replication`（Core 不含网络）。
 
 ## 9. 测试与成功标准
 
-测试目录 `tests/Gameplay.Tests/Gameplay.Tests.Sync/`，用 `LoopbackReplicationTransport` 建「一个 `DedicatedServer` 权威 World + N 个 `Client` 镜像 World」：
+测试目录 `tests/Gameplay.Tests/Gameplay.Tests.Replication/`，用 `LoopbackServerTransport` + N 个 `LoopbackClientTransport` 建「一个 `DedicatedServer` 权威 World + N 个 `Client` 镜像 World」：
 
 | 测试文件 | 覆盖 |
 |----------|------|
 | `ReplicationRegistryTests.cs` | `Register<T>`、序列化器缺失 fail-fast、typeId 一致 |
-| `ReplicationDiffTests.cs` | SG 生成 Equals 的 field-wise 正确性（改字段→不等、未改→等） |
-| `ReplicationServerTests.cs` | NetworkId 分配、Owner-based Bubble 相关性、spawn/despawn |
+| `ReplicationGeneratorTests.cs` | SG 生成的 Write/Read/Equals 往返一致、field-wise 正确性（改字段→不等、未改→等） |
+| `ReplicationServerTests.cs` | NetworkId 分配、Owner-based Bubble、spawn/despawn、双集合（Bubble vs Mirrored） |
 | `ReplicationClientTests.cs` | 镜像创建/应用/删除、NetworkId→Entity 映射 |
-| `ReplicationSyncTests.cs` | 端到端：服务端改组件 → 客户端镜像同步；dirty 只发变化组件；全量快照兜底 |
+| `ReplicationSyncTests.cs` | 端到端：服务端改组件 → 客户端镜像同步；dirty 只发变化组件；新连接全量快照 |
 | `ReplicationVisibilityTests.cs` | 不同客户端看到不同实体集（Owner-based） |
 | `LoopbackTransportTests.cs` | 消息往返、多客户端、可选延迟 |
 
@@ -289,10 +311,10 @@ Gameplay.Replication ──► Gameplay.Core ──► Friflo.Engine.ECS
 ## 10. v1 范围边界
 
 **做**：
-- `[Replicated]` 特性 + `ReplicationGenerator` SG
+- `[Replicated]` 特性（`namespace Gameplay`）+ `ReplicationGenerator` SG（生成 serializer + diff + RegisterAll）
 - `ReplicationRegistry` + `IReplicationDiff<T>` + `ReplicationEntry<T>`
-- `NetworkId` + `IReplicationTransport` + `LoopbackReplicationTransport`
-- `ReplicationServer`（Bubble + NetworkId 分配 + spawn/despawn）
+- `NetworkId` + `IReplicationServerTransport` / `IReplicationClientTransport` + loopback 实现
+- `ReplicationServer`（双集合 Bubble/Mirrored + NetworkId 分配 + spawn/despawn）
 - `ReplicationClient`（镜像 + 映射）
 - `ReplicationSystem` / `ReplicationClientSystem`（shadow-diff + 收发）
 - `ReplicationModule`（按 NetMode 挂载）
@@ -305,4 +327,5 @@ Gameplay.Replication ──► Gameplay.Core ──► Friflo.Engine.ECS
 - 插值（表现层视觉平滑）
 - 跨实体引用（`Entity` 字段）的 `Entity → NetworkId` 翻译
 - 字段级打包、多实体批量、压缩、带宽优化
-- `GameState`/`GameMode` 下推、对象池、真实 socket 传输
+- 周期快照、Owner 相关性迁移、Host loopback 双 World
+- `GameState`/`GameMode` 下推、对象池、真实 socket 传输、MemoryPack
