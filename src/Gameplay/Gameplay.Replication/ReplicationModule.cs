@@ -23,7 +23,7 @@ public sealed class ReplicationModule : IModule
             var server = new ReplicationServer(world.Store, serverTransport);
             Server = server;
             world.RegisterService(server);
-            world.AddSystem(new ReplicationSystem(server), ESimulationStage.PostSimulation);
+            world.AddSystem(new ReplicationServerSystem(server), ESimulationStage.PostSimulation);
             EntityLifecycle.Subscribe(world, server.HandleLifecycle);
         }
 #endif

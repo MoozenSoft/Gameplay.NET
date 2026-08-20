@@ -51,7 +51,7 @@ src/Gameplay/Gameplay.Replication/            → namespace Gameplay.Replication
 ├── ReplicationDelta.cs                → 内部 dirty 增量结构
 ├── ReplicationServer.cs               → 服务端权威（Bubble/Mirrored + NetworkId 分配）
 ├── ReplicationClient.cs               → 客户端镜像（NetworkId → Entity 映射）
-├── ReplicationSystem.cs               → 服务端每帧 System（shadow-diff + 发送）
+├── ReplicationServerSystem.cs               → 服务端每帧 System（shadow-diff + 发送）
 ├── ReplicationClientSystem.cs         → 客户端每帧 System（接收 + 应用）
 └── ReplicationModule.cs               → IModule（按 NetMode 挂载）
 
@@ -217,7 +217,7 @@ Owner 增删/字段变化导致的相关性迁移（换 owner/拾取）留后续
 
 > 复制组件中途移除（replicated component removal）是 v1 已知边界：复制组件通常实体生命周期内稳定，移除语义留后续（包格式可加 `ComponentRemoved` 标记扩展）。
 
-### 5.4 `ReplicationSystem`（服务端每帧 System）
+### 5.4 `ReplicationServerSystem`（服务端每帧 System）
 
 挂 `PostSimulation`（在 Simulation 全部 System 改完组件之后跑，保证当帧变更被捕获）：
 
@@ -265,7 +265,7 @@ public sealed class ReplicationModule : IModule
     public ReplicationModule(World world, IReplicationServerTransport? serverTransport, IReplicationClientTransport? clientTransport)
     {
         // 按 World.NetMode + 编译宏挂载：
-        // DedicatedServer：挂 ReplicationServer + ReplicationSystem（serverTransport）
+        // DedicatedServer：挂 ReplicationServer + ReplicationServerSystem（serverTransport）
         // Client：         挂 ReplicationClient + ReplicationClientSystem（clientTransport）
         // ListenServer：   只挂服务端（serverTransport）；本地玩家直接读权威状态，不建镜像 World
         // Standalone：     不挂任何（零网络）
@@ -324,7 +324,7 @@ Gameplay.Replication ──► Gameplay.Core ──► Friflo.Engine.ECS
 - `NetworkId` + `IReplicationServerTransport` / `IReplicationClientTransport` + loopback 实现
 - `ReplicationServer`（双集合 Bubble/Mirrored + NetworkId 分配 + spawn/despawn）
 - `ReplicationClient`（镜像 + 映射）
-- `ReplicationSystem` / `ReplicationClientSystem`（shadow-diff + 收发）
+- `ReplicationServerSystem` / `ReplicationClientSystem`（shadow-diff + 收发）
 - `ReplicationModule`（按 NetMode 挂载）
 - `ReplicationPacket`（Spawn/Update/Despawn/FullSnapshot 编解码）
 - 端到端 loopback 单测

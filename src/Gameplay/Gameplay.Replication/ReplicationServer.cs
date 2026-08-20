@@ -122,7 +122,7 @@ public sealed class ReplicationServer
             shadowStore.RemoveEntity(entity.Id);
     }
 
-    /// <summary>每帧由 ReplicationSystem 驱动（shadow-diff → spawn/update → 发送）。</summary>
+    /// <summary>每帧由 ReplicationServerSystem 驱动（shadow-diff → spawn/update → 发送）。</summary>
     public void Tick()
     {
         // 懒建 shadow store
