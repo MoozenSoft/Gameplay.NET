@@ -39,6 +39,23 @@ public class HealthSystemTests
         Assert.True(world.Store.GetEntityById(entity.Id).IsNull);
     }
 
+    [Fact]
+    public void Update_Fixed_DeathEventFiresOnceAcrossSubSteps()
+    {
+        var world = new World(ENetMode.Standalone, timeStep: ETimeStep.Fixed);
+        var deaths = 0;
+        world.Events.Subscribe<EntityDeathEvent>(new DeathCounter(() => deaths++));
+        world.AddSystem(new HealthSystem(world.Events, world.DeferDelete), ESimulationStage.Simulation);
+
+        var entity = world.Store.CreateEntity();
+        entity.AddComponent(new HealthComponent { Current = 0f, Max = 100f, IsAlive = true });
+
+        world.Update(world.Time.FixedDeltaTime * 2f);   // 消费 2 个子步
+
+        Assert.Equal(1, deaths);                                   // 死亡事件只触发一次（非每子步一次）
+        Assert.True(world.Store.GetEntityById(entity.Id).IsNull);  // 实体已删除
+    }
+
     private sealed class DeathCounter : IEventHandler<EntityDeathEvent>
     {
         private readonly System.Action _onDeath;

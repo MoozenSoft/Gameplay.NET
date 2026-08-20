@@ -93,8 +93,9 @@ public class World
     }
 
     /// <summary>推进一帧：时间 → 事件分发 → System 执行 → 本帧事件分发 → 延迟删除。
-    /// 双 Tick：第一发处理上一帧事件；System 入队本帧事件后第二次 Tick 立即分发（此时实体仍存活，可安全读组件），帧末才删除。
-    /// Fixed 模式：先 Feed 累积，再循环消费 0..MaxSubSteps 个固定子步（每子步执行一次 System），事件仍每帧分发一次。</summary>
+    /// 双 Tick：第一发处理上一帧事件；System 入队本帧事件后第二次 Tick 立即分发（此时实体仍存活，可安全读组件），之后才删除。
+    /// Fixed 模式：先 Feed 累积，再循环消费 0..MaxSubSteps 个固定子步——每个子步是一次完整 tick（执行 System → 分发事件 → 删除），
+    /// 子步末删除防同一死亡实体在后续子步被重复处理（重复 Enqueue 死亡事件）。</summary>
     public void Update(float deltaTime)
     {
         if (Time.Mode == ETimeStep.Fixed)
@@ -102,8 +103,11 @@ public class World
             Time.Feed(deltaTime);                   // 1. 累积（内部 clamp 到 FixedDeltaTime*MaxSubSteps）
             Events.Tick();                          // 2. 分发上一帧事件
             while (Time.TryConsumeFixedStep(out var stepDt))
-                root.Update(new UpdateTick(stepDt, Time.ElapsedTime));  // 3. 每子步执行 System
-            Events.Tick();                          // 4. 分发本帧 enqueue 的事件（死亡事件此时实体未删）
+            {
+                root.Update(new UpdateTick(stepDt, Time.ElapsedTime));  // 3. 子步执行 System
+                Events.Tick();                      // 4. 分发本子步事件（死亡事件此时实体未删）
+                ProcessPendingDeletions();          // 5. 子步末删除，防后续子步重复处理死亡实体
+            }
         }
         else
         {
@@ -111,8 +115,8 @@ public class World
             Events.Tick();                          // 2. 分发上一帧事件
             root.Update(new UpdateTick(Time.ScaledDeltaTime, Time.ElapsedTime));  // 3. System 执行
             Events.Tick();                          // 4. 分发本帧 enqueue 的事件（死亡事件此时实体未删）
+            ProcessPendingDeletions();              // 5. 帧末真正删除
         }
-        ProcessPendingDeletions();                  // 5. 帧末真正删除
     }
 
     private void ProcessPendingDeletions()

@@ -1,3 +1,5 @@
+using System;
+
 namespace Gameplay.Core;
 
 /// <summary>模拟时钟——所有 System 的时间基准。</summary>
@@ -24,8 +26,16 @@ public sealed class GameTime
     /// <summary>步长模式。</summary>
     public ETimeStep Mode { get; }
 
-    /// <summary>固定步长（仅 Fixed 模式使用，默认 60 Hz）。</summary>
-    public float FixedDeltaTime { get; set; } = 1f / 60f;
+    private float fixedDeltaTime = 1f / 60f;
+
+    /// <summary>固定步长（仅 Fixed 模式使用，默认 60 Hz）。非正值或 NaN 抛 <see cref="ArgumentOutOfRangeException"/>。</summary>
+    public float FixedDeltaTime
+    {
+        get => fixedDeltaTime;
+        set => fixedDeltaTime = value > 0f
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(value), "FixedDeltaTime 必须为正数");
+    }
 
     /// <summary>单帧最多子步数（防「螺旋死亡」：一帧耗时过长时丢弃溢出，模拟变慢而非雪崩）。</summary>
     public int MaxSubSteps { get; set; } = 8;

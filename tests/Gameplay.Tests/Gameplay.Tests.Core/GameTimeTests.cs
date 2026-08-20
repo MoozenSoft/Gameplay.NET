@@ -1,3 +1,4 @@
+using System;
 using Gameplay.Core;
 using Xunit;
 
@@ -78,5 +79,14 @@ public class GameTimeTests
         Assert.True(time.TryConsumeFixedStep(out var scaled));
         Assert.Equal(0f, scaled);
         Assert.Equal(1, time.Tick);
+    }
+
+    [Fact]
+    public void FixedDeltaTime_NonPositive_Throws()
+    {
+        var time = new GameTime(ETimeStep.Fixed);
+        Assert.Throws<ArgumentOutOfRangeException>(() => time.FixedDeltaTime = 0f);
+        Assert.Throws<ArgumentOutOfRangeException>(() => time.FixedDeltaTime = -0.1f);
+        Assert.Throws<ArgumentOutOfRangeException>(() => time.FixedDeltaTime = float.NaN);
     }
 }
