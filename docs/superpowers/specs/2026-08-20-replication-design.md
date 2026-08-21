@@ -1,7 +1,7 @@
 # Gameplay.Replication 设计文档（状态同步 v1）
 
 日期：2026-08-20
-状态：待评审
+状态：已实现（v1 完成，见 plans/2026-08-20-replication.md）
 
 ## 1. 概述
 
@@ -79,11 +79,11 @@ public class ReplicatedAttribute : System.Attribute { }
 
 1. **`XxxSerializer : IComponentSerializer<Xxx>`**——field-wise `Write(in Xxx, ref ByteWriter)` / `Read(ref Xxx, ref ByteReader)`（`bool`/`int`/`float`/`enum` 走 `Write/Read` 原语；`Vector3`/`Quaternion` 走其 `Write(in)`/`ReadVector3` 等）。
 2. **`readonly struct XxxReplication : IReplicationDiff<Xxx>`**——field-wise `Equals(in Xxx, in Xxx)`，逐字段 `==` 比较。v1 用精确比较（`0.0f == -0.0f` 为 true、`NaN != NaN` 为 true）；**float 容差留作后续增强**。
-3. **`ReplicatedComponentRegistration.RegisterAll(ReplicationRegistry)`**——逐个先 `SerializerRegistry.Register(new XxxSerializer())` 再 `registry.Register<Xxx>(new XxxReplication())`。
+3. **`ReplicatedComponentRegistration.RegisterAll()`**（static 无参）——逐个先 `SerializerRegistry.Register(new XxxSerializer())` 再 `ReplicationRegistry.Register<Xxx>(new XxxReplication())`。
 
 生成器遵循现有 `GameplayEventGenerator` 的模式：用 `compilation` 判断「只在定义 `ReplicationRegistry` 的当前程序集生成 `RegisterAll`」（`HasReplicationRegistry(compilation)`），避免在引用程序集重复生成。字段类型按名字匹配（与 `GameplayAttribute`/`GameplayEvent` 生成器一致）。
 
-**启动注册流**：`ReplicatedComponentRegistration.RegisterAll(ReplicationRegistry)` 由使用方在启动时（World 创建后、首次 `Update` 前）调用一次，把全部 `[Replicated]` 组件的 serializer + diff 装配进 `SerializerRegistry` + `ReplicationRegistry`。
+**启动注册流**：`ReplicatedComponentRegistration.RegisterAll()`（static 无参，与 `SerializerRegistry` 风格一致）由使用方在启动时（World 创建后、首次 `Update` 前）调用一次，把全部 `[Replicated]` 组件的 serializer + diff 装配进 `SerializerRegistry` + `ReplicationRegistry`。
 
 **约束**：v1 复制组件字段只能是 primitive / `Vector3` / `Quaternion` / `enum`——**不含 `Entity` 类型字段**（跨实体引用翻译留后续）。SG 遇到不支持的字段类型生成编译诊断（fail-fast）。
 
